@@ -1357,52 +1357,51 @@ const AppContent = () => {
         </div>
       )}
 
-      {/* フッター (タブバー) */}
+      {/* フッター */}
       <footer className="fixed bottom-0 left-0 right-0 bg-white border-t flex justify-around items-center h-16 z-30">
-        <button
-          onClick={() => setActiveTab('home')}
-          className={`flex flex-col items-center justify-center flex-1 h-full ${activeTab === 'home' ? 'text-black' : 'text-gray-500'}`}
-        >
-          <Home size={20} />
-          <span className="text-xs mt-1">ホーム</span>
-        </button>
-        <button
-          onClick={() => setActiveTab('explore')}
-          className={`flex flex-col items-center justify-center flex-1 h-full ${activeTab === 'explore' ? 'text-black' : 'text-gray-500'}`}
-        >
-          <Compass size={20} />
-          <span className="text-xs mt-1">探索</span>
-        </button>
-        {/* フッター (タブバー) に「旅程」タブを追加 */}
-<button
-  onClick={() => setActiveTab('trips')}
-  className={`flex flex-col items-center justify-center flex-1 h-full ${activeTab === 'trips' ? 'text-black' : 'text-gray-500'}`}
->
-  <Calendar size={20} />
-  <span className="text-xs mt-1">旅程</span>
-</button>
-        <button
-          onClick={() => setActiveTab('events')}
-          className={`flex flex-col items-center justify-center flex-1 h-full ${activeTab === 'events' ? 'text-black' : 'text-gray-500'}`}
-        >
-          <Calendar size={20} />
-          <span className="text-xs mt-1">イベント</span>
-        </button>
-        <button
-          onClick={() => setActiveTab('market')}
-          className={`flex flex-col items-center justify-center flex-1 h-full ${activeTab === 'market' ? 'text-black' : 'text-gray-500'}`}
-        >
-          <ShoppingBag size={20} />
-          <span className="text-xs mt-1">マーケット</span>
-        </button>
-        <button
-          onClick={() => setActiveTab('community')}
-          className={`flex flex-col items-center justify-center flex-1 h-full ${activeTab === 'community' ? 'text-black' : 'text-gray-500'}`}
-        >
-          <Users size={20} />
-          <span className="text-xs mt-1">コミュニティ</span>
-        </button>
-      </footer>
+  <button
+    onClick={() => setActiveTab('home')}
+    className={`flex flex-col items-center justify-center flex-1 h-full ${activeTab === 'home' ? 'text-black' : 'text-gray-500'}`}
+  >
+    <Home size={20} />
+    <span className="text-xs mt-1">ホーム</span>
+  </button>
+  <button
+    onClick={() => setActiveTab('explore')}
+    className={`flex flex-col items-center justify-center flex-1 h-full ${activeTab === 'explore' ? 'text-black' : 'text-gray-500'}`}
+  >
+    <Compass size={20} />
+    <span className="text-xs mt-1">探索</span>
+  </button>
+  <button
+    onClick={() => setActiveTab('trips')}
+    className={`flex flex-col items-center justify-center flex-1 h-full ${activeTab === 'trips' ? 'text-black' : 'text-gray-500'}`}
+  >
+    <Calendar size={20} />
+    <span className="text-xs mt-1">旅程</span>
+  </button>
+  <button
+    onClick={() => setActiveTab('events')}
+    className={`flex flex-col items-center justify-center flex-1 h-full ${activeTab === 'events' ? 'text-black' : 'text-gray-500'}`}
+  >
+    <Gift size={20} /> {/* カレンダーから別のアイコンに変更 */}
+    <span className="text-xs mt-1">イベント</span>
+  </button>
+  <button
+    onClick={() => setActiveTab('market')}
+    className={`flex flex-col items-center justify-center flex-1 h-full ${activeTab === 'market' ? 'text-black' : 'text-gray-500'}`}
+  >
+    <ShoppingBag size={20} />
+    <span className="text-xs mt-1">マーケット</span>
+  </button>
+  <button
+    onClick={() => setActiveTab('community')}
+    className={`flex flex-col items-center justify-center flex-1 h-full ${activeTab === 'community' ? 'text-black' : 'text-gray-500'}`}
+  >
+    <Users size={20} />
+    <span className="text-xs mt-1">コミュニティ</span>
+  </button>
+</footer>
     </div>
   );
 };
