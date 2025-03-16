@@ -520,12 +520,6 @@ const detailedAttendersData: AttenderDetailType[] = [
   }
 ];
 
-import React, { useState } from 'react';
-import { Star, MapPin, Clock, Calendar, MessageCircle, Heart, Share2, ArrowLeft, Bookmark, ChevronDown, Image, User, Music, Camera, Coffee, Gift } from 'lucide-react';
-import { useAuth } from './AuthComponents';
-import DirectRequestModal from './DirectRequestModal'; // 変更
-import { AttenderType, IconProps } from './types'; // 追加
-
 // アテンダー詳細に必要な型定義
 interface AttenderDetailType {
   id: number;
