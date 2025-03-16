@@ -1,13 +1,13 @@
 {
   "files": {
-    "main.css": "/tripworks-app/static/css/main.962bf5ef.css",
-    "main.js": "/tripworks-app/static/js/main.0a1c445c.js",
+    "main.css": "/tripworks-app/static/css/main.1a9c9d9d.css",
+    "main.js": "/tripworks-app/static/js/main.6282d8c9.js",
     "index.html": "/tripworks-app/index.html",
-    "main.962bf5ef.css.map": "/tripworks-app/static/css/main.962bf5ef.css.map",
-    "main.0a1c445c.js.map": "/tripworks-app/static/js/main.0a1c445c.js.map"
+    "main.1a9c9d9d.css.map": "/tripworks-app/static/css/main.1a9c9d9d.css.map",
+    "main.6282d8c9.js.map": "/tripworks-app/static/js/main.6282d8c9.js.map"
   },
   "entrypoints": [
-    "static/css/main.962bf5ef.css",
-    "static/js/main.0a1c445c.js"
+    "static/css/main.1a9c9d9d.css",
+    "static/js/main.6282d8c9.js"
   ]
 }
