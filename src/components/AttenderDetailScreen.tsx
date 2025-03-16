@@ -1,10 +1,14 @@
 import React, { useState } from 'react';
 import { Star, MapPin, Clock, Calendar, MessageCircle, Heart, Share2, ArrowLeft, Bookmark, ChevronDown, Image, User, Music, Camera, Coffee, Gift } from 'lucide-react';
-import { useAuth } from './AuthComponents';
-import DirectRequestModal from './components/DirectRequestModal'; // 変更
-import { AttenderType, IconProps } from './types'; // 追加
+import { useAuth } from '../AuthComponents'; 
+import DirectRequestModal from './DirectRequestModal';
+import { AttenderType, AttenderDetailType, Review, IconProps } from '../types'; // IconPropsを追加
+import { getReviewsByAttenderId, getAverageRating } from '../mockData';
+import ReviewsList from './ReviewsList';
 
-// アテンダー詳細に必要な型定義
+// 型定義が衝突しているので、自前の型定義を削除し、importsのものを使用するように修正
+// 以下の型定義をコメントアウトまたは削除
+/*
 interface AttenderDetailType {
   id: number;
   name: string;
@@ -18,10 +22,11 @@ interface AttenderDetailType {
   experiences: ExperienceType[];
   reviews: ReviewType[];
   availableDates: string[];
-  icon: React.ReactElement<IconProps>; // 修正
+  icon: React.ReactElement<IconProps>; // この行を修正
   gallery: string[];
   specialties: string[];
 }
+*/
 
 interface ExperienceType {
   id: number;
@@ -281,58 +286,23 @@ const AttenderDetailScreen: React.FC<AttenderDetailScreenProps> = ({ attenderId,
           )}
           
           {/* レビュータブ */}
-          {selectedTab === 'reviews' && (
-            <div>
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-bold">レビュー</h2>
-                <div className="flex items-center">
-                  <Star size={18} className="text-yellow-500 mr-1" />
-                  <span className="font-bold">{attender.rating}</span>
-                  <span className="text-gray-500 ml-1">({attender.reviewCount})</span>
-                </div>
-              </div>
-              
-              <div className="space-y-6">
-                {attender.reviews.map((review) => (
-                  <div key={review.id} className="border-b pb-4">
-                    <div className="flex items-start space-x-3">
-                      <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center">
-                        {review.userImage ? (
-                          <img src={review.userImage} alt={review.userName} className="w-full h-full rounded-full" />
-                        ) : (
-                          <User size={20} className="text-gray-400" />
-                        )}
-                      </div>
-                      <div className="flex-1">
-                        <div className="flex justify-between items-center">
-                          <h3 className="font-medium">{review.userName}</h3>
-                          <p className="text-sm text-gray-500">{review.date}</p>
-                        </div>
-                        <div className="flex mt-1 mb-2">
-                          {Array.from({ length: 5 }).map((_, index) => (
-                            <Star
-                              key={index}
-                              size={14}
-                              className={index < review.rating ? "text-yellow-500" : "text-gray-300"}
-                              fill={index < review.rating ? "currentColor" : "none"}
-                            />
-                          ))}
-                        </div>
-                        <p className="text-sm text-gray-700">{review.comment}</p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              
-              {/* すべてのレビューを見るボタン */}
-              {attender.reviews.length < attender.reviewCount && (
-                <button className="w-full mt-4 py-2 border border-gray-300 rounded-lg text-black font-medium text-sm">
-                  すべてのレビューを見る
-                </button>
-              )}
-            </div>
-          )}
+{selectedTab === 'reviews' && (
+  <div>
+    {/* モックデータからこのアテンダーのレビューを取得 */}
+    {(() => {
+      const reviews = getReviewsByAttenderId(attenderId);
+      const averageRating = getAverageRating(attenderId) || parseFloat(attender.rating);
+      
+      return (
+        <ReviewsList
+          reviews={reviews}
+          averageRating={averageRating}
+          reviewCount={reviews.length || attender.reviewCount}
+        />
+      );
+    })()}
+  </div>
+)}
         </div>
       </div>
       
@@ -361,6 +331,8 @@ const detailedAttendersData: AttenderDetailType[] = [
     id: 1,
     name: '鈴木 アキラ',
     type: 'バンドマン',
+    description: '東京の地下音楽シーンを知り尽くしたベテランミュージシャン。名ライブハウスから秘密のスタジオまでご案内します。',
+    distance: '2.3km先',
     rating: '4.9',
     reviewCount: 124,
     location: '東京都・新宿区',
@@ -424,6 +396,8 @@ const detailedAttendersData: AttenderDetailType[] = [
     id: 2,
     name: '山田 ユカリ',
     type: 'アーティスト',
+    description: '地元で活動する現代アーティスト。アトリエ巡りから創作体験まで、芸術の視点から街の魅力を再発見。',
+    distance: '1.5km先',
     rating: '4.8',
     reviewCount: 98,
     location: '東京都・目黒区',
@@ -473,6 +447,8 @@ const detailedAttendersData: AttenderDetailType[] = [
     id: 3,
     name: '佐藤 ケンジ',
     type: 'クラフトビール職人',
+    description: '地元醸造所のマスターブリュワー。ビール造りの過程から地域の食文化まで、職人視点の旅へ。',
+    distance: '3.1km先',
     rating: '4.7',
     reviewCount: 86,
     location: '東京都・墨田区',

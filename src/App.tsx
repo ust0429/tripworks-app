@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { Search, MapPin, Calendar, Clock, Star, ChevronDown, Menu, X, User, MessageCircle, Home, Compass, Heart, Users, ShoppingBag, Gift, Coffee, Sunrise, Info, Music, Camera, Headphones, Hammer, Utensils, Map, LogOut } from 'lucide-react';
 import { AuthProvider, useAuth } from './AuthComponents';
-import AttenderDetailScreen from './AttenderDetailScreen';
-import DirectRequestModal from './DirectRequestModal';
+import AttenderDetailScreen from './components/AttenderDetailScreen';
+import DirectRequestModal from './components/DirectRequestModal';
 import { AttenderType, IconProps } from './types';
 
 // TypeScript型定義
@@ -170,7 +170,7 @@ const AttenderCard = ({ attender, compact = false }: AttenderCardProps) => {
     return (
       <div className="bg-white rounded-lg shadow-sm p-3 flex items-center space-x-3">
         <div className="flex-shrink-0 w-12 h-12 bg-gray-100 rounded-full overflow-hidden flex items-center justify-center">
-          {attender.icon ? React.cloneElement(attender.icon, { size: 24, className: "text-gray-600" }) : null}
+        {attender.icon ? React.cloneElement(attender.icon as React.ReactElement<any>, { size: 24, className: "text-gray-600" }) : null}
         </div>
         <div className="flex-1">
           <div className="flex justify-between">
@@ -208,7 +208,7 @@ const AttenderCard = ({ attender, compact = false }: AttenderCardProps) => {
     <div className="bg-white rounded-lg shadow-sm overflow-hidden">
       <div className="h-40 bg-gray-100 relative flex items-center justify-center">
         {/* アテンダーのアイコン (大きく表示) */}
-        {attender.icon ? React.cloneElement(attender.icon, { size: 64, className: "text-gray-400 opacity-30" }) : null}
+        {attender.icon ? React.cloneElement(attender.icon as React.ReactElement<any>, { size: 64, className: "text-gray-400 opacity-30" }) : null}
         <div className="absolute bottom-3 left-3 bg-white rounded-full p-1 px-3 text-sm font-medium">
           {attender.type}
         </div>
@@ -222,7 +222,7 @@ const AttenderCard = ({ attender, compact = false }: AttenderCardProps) => {
         <div className="flex justify-between items-center">
           <div className="flex items-center space-x-2">
             <div className="w-10 h-10 bg-gray-200 rounded-full overflow-hidden flex items-center justify-center">
-              {attender.icon ? React.cloneElement(attender.icon, { size: 20, className: "text-gray-600" }) : null}
+            {attender.icon ? React.cloneElement(attender.icon as React.ReactElement<any>, { size: 20, className: "text-gray-600" }) : null}
             </div>
             <p className="font-medium">{attender.name}</p>
           </div>
@@ -274,20 +274,18 @@ const HomeScreen = ({ onAttenderClick }: HomeScreenProps) => {
 
   return (
     <div className="p-4 space-y-6">
-      {/* 見出し追加 */}
-      <h2 className="text-2xl font-bold">さぁ、なにをする？</h2>
-      
+      <h2 className="text-2xl font-bold mb-3">体験を検索</h2>    
       {/* 検索バー */}
-      <div className="relative">
-        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-          <Search size={20} className="text-gray-400" />
-        </div>
-        <input
-          type="text"
-          placeholder="行き先、アテンダー、体験を検索"
-          className="w-full pl-10 pr-4 py-3 bg-white border border-gray-300 rounded-full shadow-sm focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-gray-500"
-        />
-      </div>
+<div className="relative">
+  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+    <Search size={20} className="text-gray-400" />
+  </div>
+  <input
+    type="text"
+    placeholder="行き先、アテンダー、体験を検索"
+    className="w-full pl-10 pr-4 py-3 bg-white border border-gray-300 rounded-full shadow-sm focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-gray-500"
+  />
+</div>
 
       {/* 現在地と日時 - 変更なし */}
       <div className="flex items-center justify-between bg-white p-4 rounded-lg shadow-sm">
@@ -1375,6 +1373,14 @@ const AppContent = () => {
           <Compass size={20} />
           <span className="text-xs mt-1">探索</span>
         </button>
+        {/* フッター (タブバー) に「旅程」タブを追加 */}
+<button
+  onClick={() => setActiveTab('trips')}
+  className={`flex flex-col items-center justify-center flex-1 h-full ${activeTab === 'trips' ? 'text-black' : 'text-gray-500'}`}
+>
+  <Calendar size={20} />
+  <span className="text-xs mt-1">旅程</span>
+</button>
         <button
           onClick={() => setActiveTab('events')}
           className={`flex flex-col items-center justify-center flex-1 h-full ${activeTab === 'events' ? 'text-black' : 'text-gray-500'}`}
