@@ -274,6 +274,9 @@ const HomeScreen = ({ onAttenderClick }: HomeScreenProps) => {
 
   return (
     <div className="p-4 space-y-6">
+      {/* 見出し追加 */}
+      <h2 className="text-2xl font-bold">さぁ、なにをする？</h2>
+      
       {/* 検索バー */}
       <div className="relative">
         <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -309,7 +312,7 @@ const HomeScreen = ({ onAttenderClick }: HomeScreenProps) => {
         onClick={handleRequestClick}
         className="w-full bg-black text-white py-4 rounded-lg font-medium text-lg shadow-md hover:bg-gray-800 transition duration-200 flex items-center justify-center"
       >
-        <span>アテンダーをリクエスト</span>
+        <span className="font-bold">アテンダーをリクエスト</span>
       </button>
       
       {/* 人気リクエスト - 変更なし */}
