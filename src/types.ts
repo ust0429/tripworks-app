@@ -25,6 +25,13 @@ export interface ExperienceType {
   image?: string;
 }
 
+export interface PastExperience {
+  id: number;
+  title: string;
+  date: string;
+  isReviewed: boolean;
+}
+
 export interface ReviewType {
   id: number;
   userName: string;

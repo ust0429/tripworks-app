@@ -1,74 +1,60 @@
 import React, { useState } from 'react';
-import { User, Calendar } from 'lucide-react';
-import { useAuth } from '../AuthComponents';
-import ReviewForm from './ReviewForm'; // 正しいパスを確認してください
+import { User, Star } from 'lucide-react';
+import ReviewModal from './ReviewModal'; // パスは適宜調整してください
 
-const TripsScreen = () => {
+// 過去の体験データの型定義
+interface PastExperience {
+  id: number;
+  title: string;
+  date: string;
+  isReviewed: boolean;
+}
+
+const TripsScreen: React.FC = () => {
   const [showPastPlans, setShowPastPlans] = useState(false);
-  const { isAuthenticated, openLoginModal } = useAuth();
-  
-  // レビュー関連の状態変数を追加
-  const [reviewingExperience, setReviewingExperience] = useState<{
-    id: number;
-    title: string;
-    attenderId: number;
-  } | null>(null);
-
-  // レビュー投稿処理
-  const handleReviewSubmit = (review: { rating: number; comment: string }) => {
-    if (!reviewingExperience) return;
-    
-    // ここで実際にはAPIリクエストを送信してレビューを保存
-    console.log('レビュー投稿:', {
-      attenderId: reviewingExperience.attenderId,
-      experienceId: reviewingExperience.id,
-      experienceTitle: reviewingExperience.title,
-      ...review,
-      date: new Date().toISOString(),
-    });
-    
-    // レビュー投稿フォームを閉じる
-    setReviewingExperience(null);
-    
-    // 成功メッセージを表示
-    alert('レビューを投稿しました！');
-  };
+  const [reviewModalOpen, setReviewModalOpen] = useState(false);
+  const [selectedExperience, setSelectedExperience] = useState<PastExperience | null>(null);
   
   // サンプルの過去の体験データ
-  const pastExperiences = [
+  const initialPastExperiences: PastExperience[] = [
     {
       id: 101,
-      title: '大阪の食文化探訪',
-      date: '2023年6月10日',
-      attenderId: 1,
+      title: "大阪の食文化探訪",
+      date: "2023年6月10日",
+      isReviewed: false
     },
     {
       id: 102,
-      title: '京都の路地裏散策',
-      date: '2023年5月20日',
-      attenderId: 2,
+      title: "京都の路地裏散策",
+      date: "2023年5月20日",
+      isReviewed: false
     }
   ];
   
-  if (!isAuthenticated) {
-    return (
-      <div className="p-4 flex flex-col items-center justify-center h-full space-y-4">
-        <div className="bg-gray-100 rounded-full p-6">
-          <Calendar size={48} className="text-gray-400" />
-        </div>
-        <h2 className="text-xl font-bold text-center">あなたの旅程を確認</h2>
-        <p className="text-gray-600 text-center">
-          予約した体験やカスタム旅程を確認するには、ログインしてください。
-        </p>
-        <button 
-          onClick={openLoginModal}
-          className="mt-4 bg-black text-white py-2 px-6 rounded-lg font-medium"
-        >
-          ログイン / 新規登録
-        </button>
-      </div>
+  const [pastExperiences, setPastExperiences] = useState<PastExperience[]>(initialPastExperiences);
+  
+  const handleReviewClick = (experience: PastExperience) => {
+    setSelectedExperience(experience);
+    setReviewModalOpen(true);
+  };
+  
+  const handleReviewSubmit = (rating: number, comment: string) => {
+    console.log('レビュー投稿:', { 
+      experienceId: selectedExperience?.id,
+      rating,
+      comment
+    });
+    // 実際のAPIリクエストを行う実装をここに追加
+    
+    // UIの更新 (実際のアプリではAPIからの応答後に更新)
+    setPastExperiences(prev => 
+      prev.map(exp => 
+        exp.id === selectedExperience?.id 
+          ? { ...exp, isReviewed: true } 
+          : exp
+      )
     );
-  }
+  };
   
   return (
     <div className="p-4 space-y-6">
@@ -161,29 +147,31 @@ const TripsScreen = () => {
                 <p className="font-medium">{experience.title}</p>
                 <p className="text-sm text-gray-500">{experience.date}</p>
               </div>
-              <button 
-                onClick={() => setReviewingExperience(experience)}
-                className="text-black text-sm"
-              >
-                レビューを書く
-              </button>
+              {experience.isReviewed ? (
+                <div className="flex items-center">
+                  <Star size={16} className="text-yellow-500 mr-1" />
+                  <span className="text-green-600 text-sm">レビュー済み</span>
+                </div>
+              ) : (
+                <button 
+                  onClick={() => handleReviewClick(experience)} 
+                  className="text-black text-sm font-medium hover:underline"
+                >
+                  レビューを書く
+                </button>
+              )}
             </div>
           ))}
         </div>
       </div>
       
-      {/* レビュー投稿モーダル */}
-      {reviewingExperience && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-          <div className="w-full max-w-md">
-            <ReviewForm
-              attenderId={reviewingExperience.attenderId}
-              experienceTitle={reviewingExperience.title}
-              onSubmit={handleReviewSubmit}
-              onCancel={() => setReviewingExperience(null)}
-            />
-          </div>
-        </div>
+      {/* レビューモーダル */}
+      {reviewModalOpen && selectedExperience && (
+        <ReviewModal 
+          experienceName={selectedExperience.title}
+          onClose={() => setReviewModalOpen(false)}
+          onSubmit={handleReviewSubmit}
+        />
       )}
     </div>
   );

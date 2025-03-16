@@ -3,7 +3,8 @@ import { Search, MapPin, Calendar, Clock, Star, ChevronDown, Menu, X, User, Mess
 import { AuthProvider, useAuth } from './AuthComponents';
 import AttenderDetailScreen from './components/AttenderDetailScreen';
 import DirectRequestModal from './components/DirectRequestModal';
-import { AttenderType, IconProps } from './types';
+import ReviewModal from './components/ReviewModal'; // 追加
+import { AttenderType, IconProps, PastExperience } from './types'; // PastExperience を追加
 
 // TypeScript型定義
 interface DirectRequestModalProps {
@@ -575,27 +576,52 @@ const ExploreScreen = ({ onAttenderClick }: ExploreScreenProps) => {
 // 旅程画面
 const TripsScreen = () => {
   const [showPastPlans, setShowPastPlans] = useState(false);
-  const { isAuthenticated, openLoginModal } = useAuth();
+  const [reviewModalOpen, setReviewModalOpen] = useState(false);
+  const [selectedExperience, setSelectedExperience] = useState<PastExperience | null>(null);
   
-  if (!isAuthenticated) {
-    return (
-      <div className="p-4 flex flex-col items-center justify-center h-full space-y-4">
-        <div className="bg-gray-100 rounded-full p-6">
-          <Calendar size={48} className="text-gray-400" />
-        </div>
-        <h2 className="text-xl font-bold text-center">あなたの旅程を確認</h2>
-        <p className="text-gray-600 text-center">
-          予約した体験やカスタム旅程を確認するには、ログインしてください。
-        </p>
-        <button 
-          onClick={openLoginModal}
-          className="mt-4 bg-black text-white py-2 px-6 rounded-lg font-medium"
-        >
-          ログイン / 新規登録
-        </button>
-      </div>
+  // サンプルの過去の体験データ
+  const initialPastExperiences: PastExperience[] = [
+    {
+      id: 101,
+      title: "大阪の食文化探訪",
+      date: "2023年6月10日",
+      isReviewed: false
+    },
+    {
+      id: 102,
+      title: "京都の路地裏散策",
+      date: "2023年5月20日",
+      isReviewed: false
+    }
+  ];
+  
+  const [pastExperiences, setPastExperiences] = useState<PastExperience[]>(initialPastExperiences);
+  
+  const handleReviewClick = (experience: PastExperience) => {
+    console.log("レビューボタンがクリックされました:", experience);
+    setSelectedExperience(experience);
+    setReviewModalOpen(true);
+  };
+  
+  const handleReviewSubmit = (rating: number, comment: string) => {
+    console.log('レビュー投稿:', { 
+      experienceId: selectedExperience?.id,
+      rating,
+      comment
+    });
+    
+    // UIの更新
+    setPastExperiences(prev => 
+      prev.map(exp => 
+        exp.id === selectedExperience?.id 
+          ? { ...exp, isReviewed: true } 
+          : exp
+      )
     );
-  }
+    
+    // モーダルを閉じる
+    setReviewModalOpen(false);
+  };
   
   return (
     <div className="p-4 space-y-6">
@@ -682,22 +708,38 @@ const TripsScreen = () => {
       <div>
         <h2 className="text-xl font-bold mb-3">過去の体験</h2>
         <div className="space-y-3">
-          <div className="bg-white rounded-lg shadow-sm p-3 flex justify-between items-center">
-            <div>
-              <p className="font-medium">大阪の食文化探訪</p>
-              <p className="text-sm text-gray-500">2023年6月10日</p>
+          {pastExperiences.map((experience) => (
+            <div key={experience.id} className="bg-white rounded-lg shadow-sm p-3 flex justify-between items-center">
+              <div>
+                <p className="font-medium">{experience.title}</p>
+                <p className="text-sm text-gray-500">{experience.date}</p>
+              </div>
+              {experience.isReviewed ? (
+                <div className="flex items-center">
+                  <Star size={16} className="text-yellow-500 mr-1" />
+                  <span className="text-green-600 text-sm">レビュー済み</span>
+                </div>
+              ) : (
+                <button 
+                  onClick={() => handleReviewClick(experience)} 
+                  className="text-black text-sm font-medium cursor-pointer"
+                >
+                  レビューを書く
+                </button>
+              )}
             </div>
-            <button className="text-black text-sm">レビューを書く</button>
-          </div>
-          <div className="bg-white rounded-lg shadow-sm p-3 flex justify-between items-center">
-            <div>
-              <p className="font-medium">京都の路地裏散策</p>
-              <p className="text-sm text-gray-500">2023年5月20日</p>
-            </div>
-            <button className="text-black text-sm">レビューを書く</button>
-          </div>
+          ))}
         </div>
       </div>
+      
+      {/* レビューモーダル */}
+      {reviewModalOpen && selectedExperience && (
+        <ReviewModal 
+          experienceName={selectedExperience.title}
+          onClose={() => setReviewModalOpen(false)}
+          onSubmit={handleReviewSubmit}
+        />
+      )}
     </div>
   );
 };
