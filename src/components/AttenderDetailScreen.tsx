@@ -1,11 +1,30 @@
+// src/components/AttenderDetailScreen.tsx
 import React, { useState } from 'react';
 import { Star, MapPin, Clock, Calendar, MessageCircle, Heart, Share2, ArrowLeft, Bookmark, ChevronDown, Image, User, Music, Camera, Coffee, Gift } from 'lucide-react';
 import { useAuth } from '../AuthComponents';
 import DirectRequestModal from './DirectRequestModal';
-import ReviewModal from './ReviewModal';
-import { AttenderType, AttenderDetailType, Review, IconProps } from '../types';
-import { getReviewsByAttenderId, getAverageRating, addReview } from '../mockData';
 import ReviewsList from './ReviewsList';
+import AttenderDetailMap from './AttenderDetailMap'; // 新しく追加
+import { getReviewsByAttenderId, getAverageRating } from '../mockData';
+import { AttenderType, AttenderDetailType, Review, IconProps } from '../types';
+
+interface ExperienceType {
+  id: number;
+  title: string;
+  duration: string;
+  price: number;
+  description: string;
+  image?: string;
+}
+
+interface ReviewType {
+  id: number;
+  userName: string;
+  date: string;
+  rating: number;
+  comment: string;
+  userImage?: string;
+}
 
 // アテンダー詳細画面コンポーネント
 interface AttenderDetailScreenProps {
@@ -17,8 +36,8 @@ const AttenderDetailScreen: React.FC<AttenderDetailScreenProps> = ({ attenderId,
   const [showFullAbout, setShowFullAbout] = useState(false);
   const [selectedTab, setSelectedTab] = useState('about'); // 'about', 'experiences', 'reviews'
   const [requestModalOpen, setRequestModalOpen] = useState(false);
-  const [reviewModalOpen, setReviewModalOpen] = useState(false);
-  const { isAuthenticated, openLoginModal, user } = useAuth();
+  const [isFavorite, setIsFavorite] = useState(false); // お気に入り状態
+  const { isAuthenticated, openLoginModal } = useAuth();
 
   // サンプルデータから対象のアテンダーを取得
   const attender = detailedAttendersData.find(a => a.id === attenderId) || detailedAttendersData[0];
@@ -36,24 +55,12 @@ const AttenderDetailScreen: React.FC<AttenderDetailScreenProps> = ({ attenderId,
   const handleFavoriteClick = () => {
     if (!isAuthenticated) {
       openLoginModal();
+      return;
     }
-    // お気に入り登録処理（ログイン済みの場合）
-  };
-  
-  // レビュー投稿処理
-  const handleReviewSubmit = (rating: number, comment: string) => {
-    // 現在のユーザー情報を取得
-    const newReview = addReview({
-      attenderId: attenderId,
-      userId: 'current-user', // 実際のアプリではログイン中のユーザーIDを使用
-      userName: user?.name || 'ゲスト', // ログイン中のユーザー名
-      rating: rating,
-      comment: comment,
-      experienceTitle: attender.experiences[0]?.title || '体験プラン' // 最初の体験プラン名
-    });
     
-    console.log('投稿されたレビュー:', newReview);
-    setReviewModalOpen(false);
+    // お気に入り状態を切り替え
+    setIsFavorite(!isFavorite);
+    // 実際のアプリではここでAPIリクエストを送信
   };
 
   return (
@@ -81,7 +88,10 @@ const AttenderDetailScreen: React.FC<AttenderDetailScreenProps> = ({ attenderId,
               onClick={handleFavoriteClick}
               className="p-2 bg-white rounded-full shadow-md"
             >
-              <Heart size={20} className="text-gray-800" />
+              <Heart 
+                size={20} 
+                className={isFavorite ? "text-red-500 fill-current" : "text-gray-800"} 
+              />
             </button>
           </div>
         </div>
@@ -197,35 +207,42 @@ const AttenderDetailScreen: React.FC<AttenderDetailScreenProps> = ({ attenderId,
         <div className="pb-4">
           {/* 概要タブ */}
           {selectedTab === 'about' && (
-            <div>
-              <h2 className="text-lg font-bold mb-2">自己紹介</h2>
-              <div className={`text-gray-700 text-sm ${!showFullAbout && 'line-clamp-3'}`}>
-                {attender.about}
-              </div>
-              {attender.about.length > 150 && (
-                <button
-                  onClick={() => setShowFullAbout(!showFullAbout)}
-                  className="text-black font-medium text-sm mt-2 flex items-center"
-                >
-                  {showFullAbout ? '閉じる' : 'もっと見る'}
-                  <ChevronDown
-                    size={16}
-                    className={`ml-1 transform ${showFullAbout ? 'rotate-180' : ''}`}
-                  />
-                </button>
-              )}
-              
-              {/* ギャラリー（モック） */}
-              <h2 className="text-lg font-bold mt-6 mb-2">ギャラリー</h2>
-              <div className="grid grid-cols-3 gap-2">
-                {[1, 2, 3, 4, 5, 6].map((item) => (
-                  <div key={item} className="aspect-square bg-gray-100 rounded-lg flex items-center justify-center">
-                    <Image size={24} className="text-gray-400" />
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+  <div>
+    <h2 className="text-lg font-bold mb-2">自己紹介</h2>
+    <div className={`text-gray-700 text-sm ${!showFullAbout && 'line-clamp-3'}`}>
+      {attender.about}
+    </div>
+    {attender.about.length > 150 && (
+      <button
+        onClick={() => setShowFullAbout(!showFullAbout)}
+        className="text-black font-medium text-sm mt-2 flex items-center"
+      >
+        {showFullAbout ? '閉じる' : 'もっと見る'}
+        <ChevronDown
+          size={16}
+          className={`ml-1 transform ${showFullAbout ? 'rotate-180' : ''}`}
+        />
+      </button>
+    )}
+    
+    {/* 活動地域の地図（新しく追加） */}
+    <h2 className="text-lg font-bold mt-6 mb-2">活動エリア</h2>
+    <AttenderDetailMap attender={attender} height={200} />
+    <p className="text-xs text-gray-500 mt-1 text-center">
+      {attender.name}さんの主な活動エリア: {attender.location}
+    </p>
+    
+    {/* ギャラリー（モック） */}
+    <h2 className="text-lg font-bold mt-6 mb-2">ギャラリー</h2>
+    <div className="grid grid-cols-3 gap-2">
+      {[1, 2, 3, 4, 5, 6].map((item) => (
+        <div key={item} className="aspect-square bg-gray-100 rounded-lg flex items-center justify-center">
+          <Image size={24} className="text-gray-400" />
+        </div>
+      ))}
+    </div>
+  </div>
+)}
           
           {/* 体験プランタブ */}
           {selectedTab === 'experiences' && (
@@ -266,38 +283,17 @@ const AttenderDetailScreen: React.FC<AttenderDetailScreenProps> = ({ attenderId,
           {/* レビュータブ */}
           {selectedTab === 'reviews' && (
             <div>
+              {/* モックデータからこのアテンダーのレビューを取得 */}
               {(() => {
                 const reviews = getReviewsByAttenderId(attenderId);
                 const averageRating = getAverageRating(attenderId) || parseFloat(attender.rating);
                 
                 return (
-                  <>
-                    <ReviewsList
-                      reviews={reviews}
-                      averageRating={averageRating}
-                      reviewCount={reviews.length || attender.reviewCount}
-                    />
-                    
-                    {/* レビュー投稿ボタン（ログイン済みの場合のみ表示） */}
-                    {isAuthenticated && (
-                      <button 
-                        onClick={() => setReviewModalOpen(true)}
-                        className="w-full mt-4 py-2 border border-black text-black rounded-lg font-medium text-sm"
-                      >
-                        この体験のレビューを書く
-                      </button>
-                    )}
-                    
-                    {/* 未ログインの場合はログインを促す */}
-                    {!isAuthenticated && (
-                      <button 
-                        onClick={openLoginModal}
-                        className="w-full mt-4 py-2 border border-gray-300 text-gray-700 rounded-lg font-medium text-sm"
-                      >
-                        レビューを書くにはログインしてください
-                      </button>
-                    )}
-                  </>
+                  <ReviewsList
+                    reviews={reviews}
+                    averageRating={averageRating}
+                    reviewCount={reviews.length || attender.reviewCount}
+                  />
                 );
               })()}
             </div>
@@ -320,27 +316,18 @@ const AttenderDetailScreen: React.FC<AttenderDetailScreenProps> = ({ attenderId,
           onClose={() => setRequestModalOpen(false)}
         />
       )}
-      
-      {/* レビューモーダル */}
-      {reviewModalOpen && (
-        <ReviewModal 
-          experienceName={attender.experiences[0]?.title || `${attender.name}の体験`}
-          onClose={() => setReviewModalOpen(false)}
-          onSubmit={handleReviewSubmit}
-        />
-      )}
     </div>
   );
 };
 
-// サンプルデータ
+// サンプルデータは現在のものを使用
 const detailedAttendersData: AttenderDetailType[] = [
   {
     id: 1,
     name: '鈴木 アキラ',
     type: 'バンドマン',
     description: '東京の地下音楽シーンを知り尽くしたベテランミュージシャン。名ライブハウスから秘密のスタジオまでご案内します。',
-distance: '2.3km先',
+    distance: '2.3km先',
     rating: '4.9',
     reviewCount: 124,
     location: '東京都・新宿区',
@@ -405,7 +392,7 @@ distance: '2.3km先',
     name: '山田 ユカリ',
     type: 'アーティスト',
     description: '地元で活動する現代アーティスト。アトリエ巡りから創作体験まで、芸術の視点から街の魅力を再発見。',
-distance: '1.5km先',
+    distance: '1.5km先',
     rating: '4.8',
     reviewCount: 98,
     location: '東京都・目黒区',
@@ -456,7 +443,7 @@ distance: '1.5km先',
     name: '佐藤 ケンジ',
     type: 'クラフトビール職人',
     description: '地元醸造所のマスターブリュワー。ビール造りの過程から地域の食文化まで、職人視点の旅へ。',
-distance: '3.1km先',
+    distance: '3.1km先',
     rating: '4.7',
     reviewCount: 86,
     location: '東京都・墨田区',
