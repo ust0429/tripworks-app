@@ -1,5 +1,6 @@
+// src/components/ReviewModal.tsx
 import React, { useState } from 'react';
-import { Star, X } from 'lucide-react';
+import { Star, X, AlertCircle, Camera } from 'lucide-react';
 
 interface ReviewModalProps {
   experienceName: string;
@@ -12,15 +13,26 @@ const ReviewModal: React.FC<ReviewModalProps> = ({ experienceName, onClose, onSu
   const [hoverRating, setHoverRating] = useState(0);
   const [comment, setComment] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [validationError, setValidationError] = useState('');
+  const [photoAdded, setPhotoAdded] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // バリデーション
     if (rating === 0) {
-      alert('評価を選択してください');
+      setValidationError('評価を選択してください');
       return;
     }
-
+    
+    if (comment.trim().length < 10) {
+      setValidationError('コメントは最低10文字入力してください');
+      return;
+    }
+    
+    setValidationError('');
     setIsSubmitting(true);
+    
     try {
       // 実際のAPIリクエストはここで行う
       // モックの遅延を追加
@@ -28,10 +40,16 @@ const ReviewModal: React.FC<ReviewModalProps> = ({ experienceName, onClose, onSu
       onSubmit(rating, comment);
     } catch (error) {
       console.error('レビュー投稿エラー:', error);
-      alert('レビューの投稿中にエラーが発生しました');
+      setValidationError('レビューの投稿中にエラーが発生しました');
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleAddPhoto = () => {
+    // 実際のアプリでは写真アップロード機能を実装
+    // ここではモックとして成功したことにする
+    setPhotoAdded(true);
   };
 
   return (
@@ -43,6 +61,13 @@ const ReviewModal: React.FC<ReviewModalProps> = ({ experienceName, onClose, onSu
             <X size={24} />
           </button>
         </div>
+
+        {validationError && (
+          <div className="bg-red-50 text-red-600 p-3 rounded-lg mb-4 flex items-start">
+            <AlertCircle size={18} className="mr-2 mt-0.5 flex-shrink-0" />
+            <p className="text-sm">{validationError}</p>
+          </div>
+        )}
 
         <div className="mb-6">
           <h3 className="font-medium mb-2">{experienceName}</h3>
@@ -69,6 +94,15 @@ const ReviewModal: React.FC<ReviewModalProps> = ({ experienceName, onClose, onSu
                 </button>
               ))}
             </div>
+            {/* 評価の説明テキスト */}
+            <p className="text-sm text-gray-600 mt-1">
+              {rating === 1 && "非常に不満"}
+              {rating === 2 && "不満"}
+              {rating === 3 && "普通"}
+              {rating === 4 && "満足"}
+              {rating === 5 && "非常に満足"}
+              {rating === 0 && "評価をタップしてください"}
+            </p>
           </div>
         </div>
 
@@ -84,6 +118,24 @@ const ReviewModal: React.FC<ReviewModalProps> = ({ experienceName, onClose, onSu
               rows={5}
               placeholder="体験についての感想を入力してください..."
             ></textarea>
+            <p className="text-xs text-gray-500 mt-1">
+              {comment.length} / 最低10文字
+            </p>
+          </div>
+
+          {/* 写真追加ボタン */}
+          <div className="mb-4">
+            <button 
+              type="button"
+              onClick={handleAddPhoto}
+              className={`w-full py-2 border border-gray-300 rounded-lg text-sm flex items-center justify-center ${
+                photoAdded ? 'bg-gray-100 text-gray-700' : 'text-black'
+              }`}
+              disabled={photoAdded}
+            >
+              <Camera size={16} className="mr-2" />
+              {photoAdded ? '写真を追加しました' : '写真を追加する (任意)'}
+            </button>
           </div>
 
           <div className="flex space-x-3">
@@ -97,8 +149,8 @@ const ReviewModal: React.FC<ReviewModalProps> = ({ experienceName, onClose, onSu
             </button>
             <button
               type="submit"
-              className="flex-1 py-3 bg-black text-white rounded-lg font-medium"
-              disabled={isSubmitting}
+              className="flex-1 py-3 bg-black text-white rounded-lg font-medium disabled:bg-gray-400"
+              disabled={isSubmitting || rating === 0 || comment.trim().length < 10}
             >
               {isSubmitting ? '送信中...' : 'レビューを投稿'}
             </button>

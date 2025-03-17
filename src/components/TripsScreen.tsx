@@ -1,19 +1,16 @@
+// src/components/TripsScreen.tsx
 import React, { useState } from 'react';
-import { User, Star } from 'lucide-react';
-import ReviewModal from './ReviewModal'; // パスは適宜調整してください
-
-// 過去の体験データの型定義
-interface PastExperience {
-  id: number;
-  title: string;
-  date: string;
-  isReviewed: boolean;
-}
+import { User, Star, Calendar } from 'lucide-react';
+import ReviewModal from './ReviewModal';
+import { useAuth } from '../AuthComponents';
+import { PastExperience } from '../types';
+import { addReview } from '../mockData'; // addReview関数をインポート
 
 const TripsScreen: React.FC = () => {
   const [showPastPlans, setShowPastPlans] = useState(false);
   const [reviewModalOpen, setReviewModalOpen] = useState(false);
   const [selectedExperience, setSelectedExperience] = useState<PastExperience | null>(null);
+  const { isAuthenticated, openLoginModal, user } = useAuth();
   
   // サンプルの過去の体験データ
   const initialPastExperiences: PastExperience[] = [
@@ -34,27 +31,62 @@ const TripsScreen: React.FC = () => {
   const [pastExperiences, setPastExperiences] = useState<PastExperience[]>(initialPastExperiences);
   
   const handleReviewClick = (experience: PastExperience) => {
-    setSelectedExperience(experience);
-    setReviewModalOpen(true);
+    if (isAuthenticated) {
+      setSelectedExperience(experience);
+      setReviewModalOpen(true);
+    } else {
+      openLoginModal();
+    }
   };
   
   const handleReviewSubmit = (rating: number, comment: string) => {
-    console.log('レビュー投稿:', { 
-      experienceId: selectedExperience?.id,
-      rating,
-      comment
-    });
-    // 実際のAPIリクエストを行う実装をここに追加
+    if (!selectedExperience) return;
     
-    // UIの更新 (実際のアプリではAPIからの応答後に更新)
+    // mockData内のaddReview関数を使用
+    const newReview = addReview({
+      attenderId: 1, // 仮のアテンダーID
+      userId: 'current-user', // 仮のユーザーID
+      userName: user?.name || 'ゲスト', // 現在ログインしているユーザー名
+      rating: rating,
+      comment: comment,
+      experienceTitle: selectedExperience.title
+    });
+    
+    console.log('投稿されたレビュー:', newReview);
+    
+    // UIの更新
     setPastExperiences(prev => 
       prev.map(exp => 
-        exp.id === selectedExperience?.id 
+        exp.id === selectedExperience.id 
           ? { ...exp, isReviewed: true } 
           : exp
       )
     );
+    
+    // モーダルを閉じる
+    setReviewModalOpen(false);
   };
+  
+  // 未ログインの場合はログインを促す
+  if (!isAuthenticated) {
+    return (
+      <div className="p-4 flex flex-col items-center justify-center h-full space-y-4">
+        <div className="bg-gray-100 rounded-full p-6">
+          <Calendar size={48} className="text-gray-400" />
+        </div>
+        <h2 className="text-xl font-bold text-center">旅程を管理</h2>
+        <p className="text-gray-600 text-center">
+          予約やレビューを管理するには、ログインしてください。
+        </p>
+        <button 
+          onClick={openLoginModal}
+          className="mt-4 bg-black text-white py-2 px-6 rounded-lg font-medium"
+        >
+          ログイン / 新規登録
+        </button>
+      </div>
+    );
+  }
   
   return (
     <div className="p-4 space-y-6">

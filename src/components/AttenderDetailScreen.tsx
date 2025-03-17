@@ -1,50 +1,11 @@
 import React, { useState } from 'react';
 import { Star, MapPin, Clock, Calendar, MessageCircle, Heart, Share2, ArrowLeft, Bookmark, ChevronDown, Image, User, Music, Camera, Coffee, Gift } from 'lucide-react';
-import { useAuth } from '../AuthComponents'; 
+import { useAuth } from '../AuthComponents';
 import DirectRequestModal from './DirectRequestModal';
-import { AttenderType, AttenderDetailType, Review, IconProps } from '../types'; // IconPropsを追加
-import { getReviewsByAttenderId, getAverageRating } from '../mockData';
+import ReviewModal from './ReviewModal';
+import { AttenderType, AttenderDetailType, Review, IconProps } from '../types';
+import { getReviewsByAttenderId, getAverageRating, addReview } from '../mockData';
 import ReviewsList from './ReviewsList';
-
-// 型定義が衝突しているので、自前の型定義を削除し、importsのものを使用するように修正
-// 以下の型定義をコメントアウトまたは削除
-/*
-interface AttenderDetailType {
-  id: number;
-  name: string;
-  type: string;
-  rating: string;
-  reviewCount: number;
-  location: string;
-  responseTime: string;
-  languages: string[];
-  about: string;
-  experiences: ExperienceType[];
-  reviews: ReviewType[];
-  availableDates: string[];
-  icon: React.ReactElement<IconProps>; // この行を修正
-  gallery: string[];
-  specialties: string[];
-}
-*/
-
-interface ExperienceType {
-  id: number;
-  title: string;
-  duration: string;
-  price: number;
-  description: string;
-  image?: string;
-}
-
-interface ReviewType {
-  id: number;
-  userName: string;
-  date: string;
-  rating: number;
-  comment: string;
-  userImage?: string;
-}
 
 // アテンダー詳細画面コンポーネント
 interface AttenderDetailScreenProps {
@@ -56,7 +17,8 @@ const AttenderDetailScreen: React.FC<AttenderDetailScreenProps> = ({ attenderId,
   const [showFullAbout, setShowFullAbout] = useState(false);
   const [selectedTab, setSelectedTab] = useState('about'); // 'about', 'experiences', 'reviews'
   const [requestModalOpen, setRequestModalOpen] = useState(false);
-  const { isAuthenticated, openLoginModal } = useAuth();
+  const [reviewModalOpen, setReviewModalOpen] = useState(false);
+  const { isAuthenticated, openLoginModal, user } = useAuth();
 
   // サンプルデータから対象のアテンダーを取得
   const attender = detailedAttendersData.find(a => a.id === attenderId) || detailedAttendersData[0];
@@ -76,6 +38,22 @@ const AttenderDetailScreen: React.FC<AttenderDetailScreenProps> = ({ attenderId,
       openLoginModal();
     }
     // お気に入り登録処理（ログイン済みの場合）
+  };
+  
+  // レビュー投稿処理
+  const handleReviewSubmit = (rating: number, comment: string) => {
+    // 現在のユーザー情報を取得
+    const newReview = addReview({
+      attenderId: attenderId,
+      userId: 'current-user', // 実際のアプリではログイン中のユーザーIDを使用
+      userName: user?.name || 'ゲスト', // ログイン中のユーザー名
+      rating: rating,
+      comment: comment,
+      experienceTitle: attender.experiences[0]?.title || '体験プラン' // 最初の体験プラン名
+    });
+    
+    console.log('投稿されたレビュー:', newReview);
+    setReviewModalOpen(false);
   };
 
   return (
@@ -286,23 +264,44 @@ const AttenderDetailScreen: React.FC<AttenderDetailScreenProps> = ({ attenderId,
           )}
           
           {/* レビュータブ */}
-{selectedTab === 'reviews' && (
-  <div>
-    {/* モックデータからこのアテンダーのレビューを取得 */}
-    {(() => {
-      const reviews = getReviewsByAttenderId(attenderId);
-      const averageRating = getAverageRating(attenderId) || parseFloat(attender.rating);
-      
-      return (
-        <ReviewsList
-          reviews={reviews}
-          averageRating={averageRating}
-          reviewCount={reviews.length || attender.reviewCount}
-        />
-      );
-    })()}
-  </div>
-)}
+          {selectedTab === 'reviews' && (
+            <div>
+              {(() => {
+                const reviews = getReviewsByAttenderId(attenderId);
+                const averageRating = getAverageRating(attenderId) || parseFloat(attender.rating);
+                
+                return (
+                  <>
+                    <ReviewsList
+                      reviews={reviews}
+                      averageRating={averageRating}
+                      reviewCount={reviews.length || attender.reviewCount}
+                    />
+                    
+                    {/* レビュー投稿ボタン（ログイン済みの場合のみ表示） */}
+                    {isAuthenticated && (
+                      <button 
+                        onClick={() => setReviewModalOpen(true)}
+                        className="w-full mt-4 py-2 border border-black text-black rounded-lg font-medium text-sm"
+                      >
+                        この体験のレビューを書く
+                      </button>
+                    )}
+                    
+                    {/* 未ログインの場合はログインを促す */}
+                    {!isAuthenticated && (
+                      <button 
+                        onClick={openLoginModal}
+                        className="w-full mt-4 py-2 border border-gray-300 text-gray-700 rounded-lg font-medium text-sm"
+                      >
+                        レビューを書くにはログインしてください
+                      </button>
+                    )}
+                  </>
+                );
+              })()}
+            </div>
+          )}
         </div>
       </div>
       
@@ -321,6 +320,15 @@ const AttenderDetailScreen: React.FC<AttenderDetailScreenProps> = ({ attenderId,
           onClose={() => setRequestModalOpen(false)}
         />
       )}
+      
+      {/* レビューモーダル */}
+      {reviewModalOpen && (
+        <ReviewModal 
+          experienceName={attender.experiences[0]?.title || `${attender.name}の体験`}
+          onClose={() => setReviewModalOpen(false)}
+          onSubmit={handleReviewSubmit}
+        />
+      )}
     </div>
   );
 };
@@ -332,7 +340,7 @@ const detailedAttendersData: AttenderDetailType[] = [
     name: '鈴木 アキラ',
     type: 'バンドマン',
     description: '東京の地下音楽シーンを知り尽くしたベテランミュージシャン。名ライブハウスから秘密のスタジオまでご案内します。',
-    distance: '2.3km先',
+distance: '2.3km先',
     rating: '4.9',
     reviewCount: 124,
     location: '東京都・新宿区',
@@ -397,7 +405,7 @@ const detailedAttendersData: AttenderDetailType[] = [
     name: '山田 ユカリ',
     type: 'アーティスト',
     description: '地元で活動する現代アーティスト。アトリエ巡りから創作体験まで、芸術の視点から街の魅力を再発見。',
-    distance: '1.5km先',
+distance: '1.5km先',
     rating: '4.8',
     reviewCount: 98,
     location: '東京都・目黒区',
@@ -448,7 +456,7 @@ const detailedAttendersData: AttenderDetailType[] = [
     name: '佐藤 ケンジ',
     type: 'クラフトビール職人',
     description: '地元醸造所のマスターブリュワー。ビール造りの過程から地域の食文化まで、職人視点の旅へ。',
-    distance: '3.1km先',
+distance: '3.1km先',
     rating: '4.7',
     reviewCount: 86,
     location: '東京都・墨田区',
