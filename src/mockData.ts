@@ -223,21 +223,33 @@ export const addReview = (review: Omit<Review, 'id' | 'date'>, photos?: File[]) 
     helpfulCount: 0
   };
   
+  console.log('レビュー投稿 - 写真データの確認:', { 
+    reviewId: newReviewId,
+    hasPhotos: Boolean(photos),
+    photoCount: photos ? photos.length : 0,
+    photoDetails: photos ? photos.map(p => ({ name: p.name, type: p.type, size: p.size })) : []
+  });
+  
   // 写真がある場合の処理（Base64サンプル画像を使用）
   if (photos && photos.length > 0) {
-    // ランダムにサンプル画像を割り当て
-    const photoUrls = photos.map(() => {
+    // 実際のアプリではここでFile objectsをアップロードサーバーに送信
+    // モックではランダムにサンプル画像を割り当て
+    const photoUrls = photos.map(photo => {
+      // 各写真に対してランダムなサンプル画像を割り当て
       const randomIndex = Math.floor(Math.random() * sampleBase64Images.length);
+      console.log(`写真 ${photo.name} に対して ${randomIndex} のサンプル画像を使用`);
       return sampleBase64Images[randomIndex];
     });
     
     // 写真URLを追加
     newReview.photoUrls = photoUrls;
+    console.log('レビューに追加された写真URL:', photoUrls.length, '枚');
     
     // モックの写真データをmockReviewPhotosに追加
-    photos.forEach((_, index) => {
+    photos.forEach((photo, index) => {
+      const photoId = `photo-${Date.now()}-${index}`;
       mockReviewPhotos.push({
-        id: `photo-${Date.now()}-${index}`,
+        id: photoId,
         reviewId: newReviewId,
         url: photoUrls[index],
         thumbnail: photoUrls[index],
@@ -245,6 +257,7 @@ export const addReview = (review: Omit<Review, 'id' | 'date'>, photos?: File[]) 
         height: 24,
         createdAt: new Date().toISOString()
       });
+      console.log(`写真データ追加: ${photoId} (${photo.name})`);
     });
   }
   

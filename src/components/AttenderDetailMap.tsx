@@ -3,62 +3,39 @@ import React from 'react';
 import { MapPin } from 'lucide-react';
 import { AttenderDetailType } from '../types';
 
-// 実際にはMapboxなどのライブラリを使用
 interface AttenderDetailMapProps {
   attender: AttenderDetailType;
-  height?: number | string;
+  height?: number;
+  onClick?: () => void;
 }
 
 const AttenderDetailMap: React.FC<AttenderDetailMapProps> = ({ 
   attender, 
-  height = 200 
+  height = 200, 
+  onClick 
 }) => {
-  // ロケーション情報を解析（実際のアプリではDBから座標を取得）
-  // ここではモックマップを表示する簡易実装
+  // 実際のアプリでは地図APIを使用して実際の地図を表示する
+  // 今回はモックの表示のみ
   
   return (
     <div 
-      style={{ 
-        height, 
-        borderRadius: '0.5rem', 
-        overflow: 'hidden',
-        backgroundColor: '#e5e7eb',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        position: 'relative'
-      }}
+      className="bg-gray-100 rounded-lg flex items-center justify-center relative overflow-hidden"
+      style={{ height: `${height}px` }}
+      onClick={onClick}
     >
-      {/* モックマップ表示 */}
-      <div className="text-gray-400 text-center">
-        <div className="flex justify-center mb-2">
-          <MapPin size={32} className="text-gray-500" />
-        </div>
-        <p className="text-sm text-gray-600">
-          {attender.name}さんの活動エリア: {attender.location}
-        </p>
-        <p className="text-xs text-gray-500 mt-1">
-          （地図データ読み込み中）
-        </p>
+      <div className="text-center">
+        <MapPin size={32} className="text-gray-400 mx-auto mb-2" />
+        <p className="text-gray-500 text-sm font-medium">{attender.location}</p>
       </div>
       
-      {/* モック地図のポイント */}
-      <div className="absolute left-1/4 top-1/3">
-        <div className="w-2 h-2 bg-black rounded-full" />
-      </div>
-      <div className="absolute right-1/3 top-1/2">
-        <div className="w-2 h-2 bg-black rounded-full" />
-      </div>
-      <div className="absolute left-1/2 bottom-1/4">
-        <div className="w-2 h-2 bg-black rounded-full" />
-      </div>
-      
-      {/* メインロケーション */}
-      <div className="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2">
-        <div className="p-1 bg-black rounded-full">
-          <MapPin size={16} className="text-white" />
+      {/* 地図をクリック可能なことを示すオーバーレイ（オプション） */}
+      {onClick && (
+        <div className="absolute inset-0 bg-black bg-opacity-0 hover:bg-opacity-10 flex items-center justify-center">
+          <div className="bg-white text-gray-800 rounded-full px-3 py-1 text-sm font-medium opacity-0 hover:opacity-100">
+            大きな地図で見る
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };

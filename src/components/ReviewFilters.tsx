@@ -1,196 +1,171 @@
+// src/components/ReviewFilters.tsx
 import React, { useState } from 'react';
-import { Search, Star, Filter, X } from 'lucide-react';
-
-interface ReviewFiltersProps {
-  onFilterChange: (filters: FilterState) => void;
-  totalReviews: number;
-  reviewCounts: number[]; // 各評価のレビュー数 [5星の数, 4星の数, ...]
-}
+import { Search, Filter, Star } from 'lucide-react';
 
 export interface FilterState {
   ratingFilter: number | null;
   searchTerm: string;
-  sortBy: 'newest' | 'highest' | 'lowest' | 'helpful';
+  sortBy: string;
+}
+
+interface ReviewFiltersProps {
+  onFilterChange: (filters: FilterState) => void;
+  totalReviews: number;
+  reviewCounts: number[];
 }
 
 const ReviewFilters: React.FC<ReviewFiltersProps> = ({ 
   onFilterChange, 
-  totalReviews,
+  totalReviews, 
   reviewCounts 
 }) => {
-  const [ratingFilter, setRatingFilter] = useState<number | null>(null);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [sortBy, setSortBy] = useState<'newest' | 'highest' | 'lowest' | 'helpful'>('newest');
-  const [filtersExpanded, setFiltersExpanded] = useState(false);
-
-  // フィルター変更時に親コンポーネントに通知
-  const applyFilters = (
-    newRating: number | null = ratingFilter,
-    newSearchTerm: string = searchTerm,
-    newSortBy: 'newest' | 'highest' | 'lowest' | 'helpful' = sortBy
-  ) => {
-    onFilterChange({
-      ratingFilter: newRating,
-      searchTerm: newSearchTerm,
-      sortBy: newSortBy
-    });
-  };
-
-  // 評価フィルターの変更処理
-  const handleRatingFilter = (rating: number) => {
-    const newRating = ratingFilter === rating ? null : rating;
-    setRatingFilter(newRating);
-    applyFilters(newRating);
-  };
-
-  // 検索語の変更処理
+  const [filters, setFilters] = useState<FilterState>({
+    ratingFilter: null,
+    searchTerm: '',
+    sortBy: 'newest'
+  });
+  
+  const [showFilters, setShowFilters] = useState(false);
+  
+  // 検索語の変更を処理
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchTerm(e.target.value);
-    applyFilters(ratingFilter, e.target.value);
+    const newFilters = {
+      ...filters,
+      searchTerm: e.target.value
+    };
+    setFilters(newFilters);
+    onFilterChange(newFilters);
   };
-
-  // ソート方法の変更処理
-  const handleSortChange = (newSortBy: 'newest' | 'highest' | 'lowest' | 'helpful') => {
-    setSortBy(newSortBy);
-    applyFilters(ratingFilter, searchTerm, newSortBy);
+  
+  // 評価フィルターの変更を処理
+  const handleRatingFilter = (rating: number | null) => {
+    const newFilters = {
+      ...filters,
+      ratingFilter: filters.ratingFilter === rating ? null : rating
+    };
+    setFilters(newFilters);
+    onFilterChange(newFilters);
   };
-
-  // フィルターをリセット
-  const resetFilters = () => {
-    setRatingFilter(null);
-    setSearchTerm('');
-    applyFilters(null, '');
+  
+  // ソート方法の変更を処理
+  const handleSortChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const newFilters = {
+      ...filters,
+      sortBy: e.target.value
+    };
+    setFilters(newFilters);
+    onFilterChange(newFilters);
   };
-
+  
   return (
-    <div className="bg-white rounded-lg shadow-sm mb-4">
+    <div className="mb-6">
       {/* 検索バー */}
-      <div className="relative mb-3">
+      <div className="relative mb-4">
         <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
           <Search size={18} className="text-gray-400" />
         </div>
         <input
           type="text"
-          className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-black focus:border-black"
-          placeholder="レビュー内を検索..."
-          value={searchTerm}
+          placeholder="レビューを検索"
+          className="w-full pl-10 pr-4 py-2 bg-white border border-gray-300 rounded-lg focus:ring-gray-500 focus:border-gray-500"
+          value={filters.searchTerm}
           onChange={handleSearchChange}
         />
       </div>
-
-      {/* フィルターとソートのヘッダー */}
-      <div className="flex justify-between items-center">
-        <button
-          onClick={() => setFiltersExpanded(!filtersExpanded)}
-          className="flex items-center text-gray-700 hover:text-black"
+      
+      {/* フィルターヘッダー */}
+      <div className="flex justify-between items-center mb-4">
+        <button 
+          onClick={() => setShowFilters(!showFilters)}
+          className="flex items-center space-x-1 text-sm font-medium text-gray-700"
         >
-          <Filter size={18} className="mr-1" />
-          <span className="text-sm font-medium">フィルター</span>
-          {ratingFilter && (
-            <span className="ml-2 bg-black text-white text-xs rounded-full px-2 py-0.5">
-              {ratingFilter}★
-            </span>
-          )}
+          <Filter size={16} />
+          <span>フィルター</span>
         </button>
-
+        
         <div className="flex items-center">
-          <span className="text-sm text-gray-500 mr-2">並び替え:</span>
+          <label className="text-sm text-gray-700 mr-2">並べ替え: </label>
           <select
-            value={sortBy}
-            onChange={(e) => handleSortChange(e.target.value as any)}
-            className="text-sm border-gray-300 rounded-lg focus:ring-black focus:border-black"
+            className="p-1 border border-gray-300 rounded-md text-sm"
+            value={filters.sortBy}
+            onChange={handleSortChange}
           >
-            <option value="newest">新しい順</option>
-            <option value="highest">高評価順</option>
-            <option value="lowest">低評価順</option>
-            <option value="helpful">役立つ順</option>
+            <option value="newest">最新順</option>
+            <option value="highest">評価の高い順</option>
+            <option value="lowest">評価の低い順</option>
+            <option value="most_helpful">参考になった順</option>
           </select>
         </div>
       </div>
-
-      {/* 拡張フィルター */}
-      {filtersExpanded && (
-        <div className="mt-3 pt-3 border-t">
-          <p className="text-sm font-medium mb-2">評価でフィルター:</p>
-          <div className="flex flex-wrap gap-2">
+      
+      {/* 展開可能なフィルターパネル */}
+      {showFilters && (
+        <div className="bg-gray-50 p-4 rounded-lg mb-4">
+          <h3 className="font-medium mb-2">評価でフィルター</h3>
+          <div className="space-y-2">
             {[5, 4, 3, 2, 1].map((rating) => (
               <button
                 key={rating}
                 onClick={() => handleRatingFilter(rating)}
-                className={`flex items-center px-3 py-1.5 rounded-lg border ${
-                  ratingFilter === rating
-                    ? 'bg-black text-white border-black'
-                    : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                className={`w-full flex items-center justify-between p-2 rounded-md ${
+                  filters.ratingFilter === rating ? 'bg-gray-200' : 'hover:bg-gray-100'
                 }`}
               >
-                <span className="mr-1">{rating}</span>
-                <Star size={14} fill={ratingFilter === rating ? 'white' : 'none'} />
-                <span className="ml-1 text-xs">({reviewCounts[5 - rating]})</span>
+                <div className="flex items-center">
+                  <span className="mr-2">{rating}</span>
+                  <Star size={16} className="text-yellow-500 fill-current" />
+                  <span className="ml-1">以上</span>
+                </div>
+                <span className="text-sm text-gray-500">
+                  {reviewCounts[5 - rating]} ({totalReviews > 0 ? Math.round((reviewCounts[5 - rating] / totalReviews) * 100) : 0}%)
+                </span>
               </button>
             ))}
-            
-            {ratingFilter && (
-              <button
-                onClick={resetFilters}
-                className="text-sm text-gray-700 hover:text-black underline"
-              >
-                リセット
-              </button>
-            )}
-          </div>
-          
-          <div className="mt-2 text-xs text-gray-500">
-            {totalReviews}件中 
-            {(ratingFilter || searchTerm) 
-              ? <span className="font-medium"> フィルター適用中</span> 
-              : <span> すべて表示</span>
-            }
           </div>
         </div>
       )}
-
-      {/* アクティブなフィルターの表示 */}
-      {(searchTerm || ratingFilter) && (
-        <div className="mt-3 pt-3 border-t flex items-center justify-between">
-          <div className="flex flex-wrap gap-2 items-center">
-            <span className="text-xs text-gray-600">適用中:</span>
-            
-            {ratingFilter && (
-              <div className="flex items-center bg-gray-100 px-2 py-1 rounded text-xs">
-                <span>{ratingFilter}★のみ</span>
-                <button 
-                  onClick={() => {
-                    setRatingFilter(null);
-                    applyFilters(null);
-                  }}
-                  className="ml-1 text-gray-400 hover:text-gray-600"
-                >
-                  <X size={12} />
-                </button>
-              </div>
-            )}
-            
-            {searchTerm && (
-              <div className="flex items-center bg-gray-100 px-2 py-1 rounded text-xs">
-                <span>「{searchTerm}」</span>
-                <button 
-                  onClick={() => {
-                    setSearchTerm('');
-                    applyFilters(ratingFilter, '');
-                  }}
-                  className="ml-1 text-gray-400 hover:text-gray-600"
-                >
-                  <X size={12} />
-                </button>
-              </div>
-            )}
-          </div>
-          
-          <button 
-            onClick={resetFilters}
-            className="text-xs text-black hover:underline"
+      
+      {/* アクティブなフィルター表示 */}
+      {(filters.ratingFilter !== null || filters.searchTerm) && (
+        <div className="flex items-center text-sm mb-4">
+          <span className="text-gray-700 mr-2">適用中のフィルター:</span>
+          {filters.ratingFilter !== null && (
+            <div className="px-2 py-1 bg-gray-200 rounded-full flex items-center mr-2">
+              <span>{filters.ratingFilter}</span>
+              <Star size={12} className="text-yellow-500 fill-current mx-1" />
+              <span>以上</span>
+              <button
+                onClick={() => handleRatingFilter(filters.ratingFilter)}
+                className="ml-1 text-gray-500 hover:text-gray-700"
+              >
+                &times;
+              </button>
+            </div>
+          )}
+          {filters.searchTerm && (
+            <div className="px-2 py-1 bg-gray-200 rounded-full flex items-center">
+              <span>「{filters.searchTerm}」</span>
+              <button
+                onClick={() => {
+                  const newFilters = { ...filters, searchTerm: '' };
+                  setFilters(newFilters);
+                  onFilterChange(newFilters);
+                }}
+                className="ml-1 text-gray-500 hover:text-gray-700"
+              >
+                &times;
+              </button>
+            </div>
+          )}
+          <button
+            onClick={() => {
+              const newFilters = { ...filters, ratingFilter: null, searchTerm: '' };
+              setFilters(newFilters);
+              onFilterChange(newFilters);
+            }}
+            className="ml-auto text-black text-sm hover:underline"
           >
-            すべてクリア
+            クリア
           </button>
         </div>
       )}

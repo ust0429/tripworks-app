@@ -10,6 +10,9 @@ const TripsScreen: React.FC = () => {
   const [showPastPlans, setShowPastPlans] = useState(false);
   const [reviewModalOpen, setReviewModalOpen] = useState(false);
   const [selectedExperience, setSelectedExperience] = useState<PastExperience | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [reviewError, setReviewError] = useState<string | null>(null);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const { isAuthenticated, openLoginModal, user } = useAuth();
   
   // サンプルの過去の体験データ
@@ -76,10 +79,7 @@ const TripsScreen: React.FC = () => {
     }
   };
   
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [reviewError, setReviewError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
   
   // データの更新処理
   const refreshData = () => {

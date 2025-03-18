@@ -1,12 +1,13 @@
 // src/components/AttenderDetailScreen.tsx
 import React, { useState, useEffect } from 'react';
-import { Star, MapPin, Clock, Calendar, MessageCircle, Heart, Share2, ArrowLeft, Bookmark, ChevronDown, Image, User, Music, Camera, Coffee, Gift, Loader } from 'lucide-react';
+import { Star, MapPin, Clock, Calendar, MessageCircle, Heart, Share2, ArrowLeft, Bookmark, ChevronDown, Image, User, Music, Camera, Coffee, Gift, Loader, Plus } from 'lucide-react';
 import { useAuth } from '../AuthComponents';
 import DirectRequestModal from './DirectRequestModal';
 import ReviewsList from './ReviewsList';
 import ReviewCard from './ReviewCard';
+import ReviewForm from './ReviewForm';
 import AttenderDetailMap from './AttenderDetailMap';
-import { getReviewsByAttenderId, getAverageRating, sortReviews, filterReviewsByRating, toggleReviewHelpful } from '../mockData';
+import { getReviewsByAttenderId, getAverageRating, sortReviews, filterReviewsByRating, toggleReviewHelpful, addReview } from '../mockData';
 import { AttenderType, AttenderDetailType, Review, IconProps } from '../types';
 
 interface ExperienceType {
@@ -38,7 +39,7 @@ const AttenderDetailScreen: React.FC<AttenderDetailScreenProps> = ({ attenderId,
   const [selectedTab, setSelectedTab] = useState('about'); // 'about', 'experiences', 'reviews'
   const [requestModalOpen, setRequestModalOpen] = useState(false);
   const [isFavorite, setIsFavorite] = useState(false); // お気に入り状態
-  const { isAuthenticated, openLoginModal } = useAuth();
+  const { isAuthenticated, user, openLoginModal } = useAuth();
 
   // レビュー関連の状態
   const [reviews, setReviews] = useState<Review[]>([]);
@@ -47,6 +48,8 @@ const AttenderDetailScreen: React.FC<AttenderDetailScreenProps> = ({ attenderId,
   const [sortType, setSortType] = useState<'newest' | 'highest' | 'lowest' | 'most_helpful'>('newest');
   const [isLoadingReviews, setIsLoadingReviews] = useState(false);
   const [reviewPhotosOnly, setReviewPhotosOnly] = useState(false);
+  const [showReviewForm, setShowReviewForm] = useState(false);
+  const [experienceTitle, setExperienceTitle] = useState('');
   
   // サンプルデータから対象のアテンダーを取得
   const attender = detailedAttendersData.find(a => a.id === attenderId) || detailedAttendersData[0];
@@ -118,8 +121,106 @@ const AttenderDetailScreen: React.FC<AttenderDetailScreenProps> = ({ attenderId,
     applyReviewFilters(reviews, sortType, rating);
   };
   
+  // レビューを投稿済みかチェック
+  const hasReviewed = isAuthenticated && reviews.some(
+    review => review.userId === (user?.id || 'user1') // 継続性のためにモックユーザー・実際はログイン中のユーザーIDを使う
+  );
+
+  // アテンダーの体験に参加済みかチェック
+  // 実際のアプリではここでAPIリクエストを使って確認
+  const hasAttended = isAuthenticated; // モックとしてログイン済みなら体験済みとする
+
+  // レビュー投稿ボタンをクリック
+  const handleAddReviewClick = () => {
+    if (!isAuthenticated) {
+      openLoginModal();
+      return;
+    }
+    
+    if (!hasAttended) {
+      alert('このアテンダーの体験に参加後にレビューを投稿できます。');
+      return;
+    }
+    
+    setShowReviewForm(true);
+  };
+  
+  // レビューを投稿
+  const handleSubmitReview = (reviewData: { rating: number; comment: string; photos?: File[] }) => {
+    if (!isAuthenticated || !user) {
+      openLoginModal();
+      return;
+    }
+    
+    // 必要なフィールドがあるか確認
+    if (!experienceTitle) {
+      alert('体験名を選択してください');
+      return;
+    }
+    
+    // 写真の最大数を確認
+    if (reviewData.photos && reviewData.photos.length > 5) {
+      alert('写真は最大5枚までアップロードできます');
+      return;
+    }
+    
+    console.log('レビュー投稿開始:', { 
+      rating: reviewData.rating, 
+      commentLength: reviewData.comment.length,
+      photos: reviewData.photos ? `${reviewData.photos.length}枚の写真` : 'なし',
+      experienceTitle
+    });
+    
+    try {
+      // 写真データを確認
+      if (reviewData.photos && reviewData.photos.length > 0) {
+        console.log('写真データ:', reviewData.photos.map(photo => ({
+          name: photo.name,
+          type: photo.type,
+          size: photo.size,
+          lastModified: new Date(photo.lastModified).toISOString()
+        })));
+      }
+      
+      // 新しいレビューを追加
+      const newReview = addReview({
+        attenderId,
+        userId: user.id,
+        userName: user.name,
+        rating: reviewData.rating,
+        comment: reviewData.comment,
+        experienceTitle
+      }, reviewData.photos);
+      
+      console.log('返却されたレビューデータ:', {
+        id: newReview.id,
+        photoUrls: newReview.photoUrls ? `${newReview.photoUrls.length}枚の写真` : 'なし',
+        hasPhotoUrls: Boolean(newReview.photoUrls)
+      });
+      
+      // レビューリストを更新
+      setReviews([newReview, ...reviews]);
+      setShowReviewForm(false);
+      setExperienceTitle(''); // 体験名をリセット
+      
+      // フィルタリングを再適用
+      applyReviewFilters([newReview, ...reviews], sortType, filterRating);
+      
+      // 成功メッセージ
+      alert('レビューを投稿しました。ありがとうございます！');
+    } catch (error) {
+      console.error('レビュー投稿エラー:', error);
+      alert('レビューの投稿に失敗しました。もう一度お試しください。');
+    }
+  };
+
   // レビューの「役立った」トグルハンドラー
   const handleHelpfulToggle = (reviewId: string, isHelpful: boolean) => {
+    if (!isAuthenticated) {
+      openLoginModal();
+      return;
+    }
+    
     // 実際のアプリではここでAPIリクエストを送信
     
     // UIを更新
@@ -390,54 +491,67 @@ const AttenderDetailScreen: React.FC<AttenderDetailScreenProps> = ({ attenderId,
           {/* レビュータブ */}
           {selectedTab === 'reviews' && (
             <div>
+              {/* レビュー投稿ボタン */}
+              {!hasReviewed && hasAttended && (
+                <div className="mb-6 bg-gray-50 p-4 rounded-lg">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-medium">このアテンダーの体験を評価しましょう</p>
+                      <p className="text-sm text-gray-600">あなたのレビューは他の人の参考になります</p>
+                    </div>
+                    <button 
+                      onClick={handleAddReviewClick}
+                      className="bg-black text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center"
+                    >
+                      <Plus size={16} className="mr-1" />
+                      レビューを書く
+                    </button>
+                  </div>
+                </div>
+              )}
+              
+              {/* レビュー投稿フォーム */}
+              {showReviewForm && (
+                <div className="mb-6">
+                  <div className="mb-2 flex items-center">
+                    <label className="block text-sm font-medium text-gray-700 mr-2">
+                      体験名: <span className="text-gray-500 text-xs">(必須)</span>
+                    </label>
+                    <select
+                      value={experienceTitle}
+                      onChange={(e) => setExperienceTitle(e.target.value)}
+                      className="w-full p-2 border border-gray-300 rounded-lg text-sm focus:ring-gray-500 focus:border-gray-500"
+                      required
+                    >
+                      <option value="">体験名を選択してください</option>
+                      {attender.experiences.map(exp => (
+                        <option key={exp.id} value={exp.title}>{exp.title}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <ReviewForm
+                    attenderId={attenderId}
+                    experienceTitle={experienceTitle || '未選択'}
+                    onSubmit={handleSubmitReview}
+                    onCancel={() => setShowReviewForm(false)}
+                  />
+                </div>
+              )}
+              
               {isLoadingReviews ? (
                 <div className="py-10 flex flex-col items-center justify-center">
                   <Loader size={32} className="text-gray-400 animate-spin mb-3" />
                   <p className="text-gray-500">レビューを読み込み中...</p>
                 </div>
               ) : (
-                <>
-                  {/* 写真付きレビューフィルター */}
-                  <div className="flex justify-end mb-3">
-                    <button 
-                      onClick={() => {
-                        // 写真付きレビューのみに切り替え
-                        setReviewPhotosOnly(!reviewPhotosOnly);
-                        // フィルタリングを適用
-                        if (!reviewPhotosOnly) {
-                          // 写真付きのみに絞り込む
-                          setFilteredReviews(filteredReviews.filter(review => 
-                            review.photoUrls && review.photoUrls.length > 0
-                          ));
-                        } else {
-                          // 元のフィルタリングを適用
-                          applyReviewFilters(reviews, sortType, filterRating);
-                        }
-                      }}
-                      className={`flex items-center text-sm ${
-                        reviewPhotosOnly 
-                          ? 'text-black font-medium'
-                          : 'text-gray-600'
-                      }`}
-                    >
-                      <Camera size={16} className="mr-1" />
-                      写真付きのみ表示
-                    </button>
-                  </div>
                 <ReviewsList
-                  reviews={filteredReviews}
+                  reviews={filteredReviews.length > 0 ? filteredReviews : reviews}
                   averageRating={getAverageRating(attenderId) || parseFloat(attender.rating)}
-                  reviewCount={attender.reviewCount}
+                  reviewCount={reviews.length || attender.reviewCount}
                   onSortChange={handleSortChange}
                   onFilterChange={handleFilterChange}
-                  onHelpfulToggle={(reviewId, isHelpful) => {
-                    // 実際のAPIリクエストを送信（モック）
-                    toggleReviewHelpful(reviewId, 'current-user', isHelpful);
-                    // レビューデータを更新
-                    handleHelpfulToggle(reviewId, isHelpful);
-                  }}
+                  onHelpfulToggle={handleHelpfulToggle}
                 />
-                </>
               )}
             </div>
           )}
