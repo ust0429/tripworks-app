@@ -1,10 +1,10 @@
 // src/components/TripsScreen.tsx
-import React, { useState } from 'react';
-import { User, Star, Calendar } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { User, Star, Calendar, Check, RefreshCcw } from 'lucide-react';
 import ReviewModal from './ReviewModal';
 import { useAuth } from '../AuthComponents';
 import { PastExperience } from '../types';
-import { addReview } from '../mockData'; // addReview関数をインポート
+import { addReview, getReviewsByAttenderId } from '../mockData'; // 必要な関数をインポート
 
 const TripsScreen: React.FC = () => {
   const [showPastPlans, setShowPastPlans] = useState(false);
@@ -18,17 +18,54 @@ const TripsScreen: React.FC = () => {
       id: 101,
       title: "大阪の食文化探訪",
       date: "2023年6月10日",
-      isReviewed: false
+      isReviewed: false,
+      attenderId: 3 // 佐藤さんを指定
     },
     {
       id: 102,
       title: "京都の路地裏散策",
       date: "2023年5月20日",
-      isReviewed: false
+      isReviewed: false,
+      attenderId: 2 // 山田さんを指定
+    },
+    {
+      id: 103,
+      title: "下北沢インディーシーン探訪ツアー",
+      date: "2023年6月30日",
+      isReviewed: true,
+      attenderId: 1 // 鈴木さんを指定
     }
   ];
   
   const [pastExperiences, setPastExperiences] = useState<PastExperience[]>(initialPastExperiences);
+  
+  // 過去の体験に対するレビューステータスを確認
+  useEffect(() => {
+    // 実際のアプリではここでAPIリクエストを送信してデータを取得
+    
+    // レビュー済みの体験を確認するロジックを実装可能
+    const checkReviewedExperiences = () => {
+      // APIデータの代わりにモックデータを使用
+      pastExperiences.forEach(exp => {
+        if (!exp.attenderId) return;
+        
+        const reviews = getReviewsByAttenderId(exp.attenderId);
+        // レビューが存在するか確認
+        const hasReviewed = reviews.some(review => 
+          review.experienceTitle?.includes(exp.title) && 
+          review.userId === (user?.id || 'current-user')
+        );
+        
+        if (hasReviewed && !exp.isReviewed) {
+          setPastExperiences(prev => 
+            prev.map(e => e.id === exp.id ? { ...e, isReviewed: true } : e)
+          );
+        }
+      });
+    };
+    
+    checkReviewedExperiences();
+  }, []);
   
   const handleReviewClick = (experience: PastExperience) => {
     if (isAuthenticated) {
@@ -39,32 +76,96 @@ const TripsScreen: React.FC = () => {
     }
   };
   
-  const handleReviewSubmit = (rating: number, comment: string) => {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [reviewError, setReviewError] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  
+  // データの更新処理
+  const refreshData = () => {
+    setRefreshing(true);
+    // 実際のアプリではここで最新データを取得
+    
+    // 更新成功をシミュレート
+    setTimeout(() => {
+      setRefreshing(false);
+    }, 1000);
+  };
+
+  const handleReviewSubmit = async (rating: number, comment: string, photos?: File[]) => {
     if (!selectedExperience) return;
     
-    // mockData内のaddReview関数を使用
-    const newReview = addReview({
-      attenderId: 1, // 仮のアテンダーID
-      userId: 'current-user', // 仮のユーザーID
-      userName: user?.name || 'ゲスト', // 現在ログインしているユーザー名
-      rating: rating,
-      comment: comment,
-      experienceTitle: selectedExperience.title
-    });
+    setIsSubmitting(true);
+    setReviewError(null);
+    setUploadProgress(0);
     
-    console.log('投稿されたレビュー:', newReview);
-    
-    // UIの更新
-    setPastExperiences(prev => 
-      prev.map(exp => 
-        exp.id === selectedExperience.id 
-          ? { ...exp, isReviewed: true } 
-          : exp
-      )
-    );
-    
-    // モーダルを閉じる
-    setReviewModalOpen(false);
+    try {
+      // 写真がある場合は、アップロード進捗をシミュレート
+      if (photos && photos.length > 0) {
+        // 進捗シミュレーション
+        const simulateUploadProgress = () => {
+          let progress = 0;
+          const interval = setInterval(() => {
+            progress += Math.floor(Math.random() * 10) + 1;
+            if (progress >= 100) {
+              progress = 100;
+              clearInterval(interval);
+            }
+            setUploadProgress(progress);
+          }, 300);
+          
+          // 実際のアプリではアップロード完了時にクリア
+          return interval;
+        };
+        
+        const progressInterval = simulateUploadProgress();
+        
+        // 進捗シミュレーションのクリーンアップ
+        setTimeout(() => {
+          clearInterval(progressInterval);
+          setUploadProgress(100);
+        }, 3000);
+      }
+      
+      // mockData内のaddReview関数を使用
+      const newReview = addReview({
+        attenderId: selectedExperience.attenderId || 1, // アテンダーID
+        userId: user?.id || 'current-user', // ユーザーID
+        userName: user?.name || 'ゲスト', // ユーザー名
+        rating: rating,
+        comment: comment,
+        experienceTitle: selectedExperience.title,
+        helpfulCount: 0 // 初期値
+      }, photos); // 写真を追加
+      
+      console.log('投稿されたレビュー:', newReview);
+      
+      // UIの更新
+      setPastExperiences(prev => 
+        prev.map(exp => 
+          exp.id === selectedExperience.id 
+            ? { ...exp, isReviewed: true } 
+            : exp
+        )
+      );
+      
+      // 成功時の処理
+      setTimeout(() => {
+        setReviewModalOpen(false);
+        setUploadProgress(0);
+        
+        // レビュー完了メッセージ
+        setTimeout(() => {
+          alert('レビューを投稿いただきありがとうございます！');
+        }, 500);
+      }, 1000);
+      
+    } catch (error) {
+      console.error('レビュー投稿エラー:', error);
+      setReviewError(error instanceof Error ? error.message : 'レビューの投稿中にエラーが発生しました');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
   
   // 未ログインの場合はログインを促す
@@ -171,38 +272,72 @@ const TripsScreen: React.FC = () => {
       
       {/* 過去の体験 */}
       <div>
-        <h2 className="text-xl font-bold mb-3">過去の体験</h2>
-        <div className="space-y-3">
-          {pastExperiences.map((experience) => (
-            <div key={experience.id} className="bg-white rounded-lg shadow-sm p-3 flex justify-between items-center">
-              <div>
-                <p className="font-medium">{experience.title}</p>
-                <p className="text-sm text-gray-500">{experience.date}</p>
-              </div>
-              {experience.isReviewed ? (
-                <div className="flex items-center">
-                  <Star size={16} className="text-yellow-500 mr-1" />
-                  <span className="text-green-600 text-sm">レビュー済み</span>
-                </div>
-              ) : (
-                <button 
-                  onClick={() => handleReviewClick(experience)} 
-                  className="text-black text-sm font-medium hover:underline"
-                >
-                  レビューを書く
-                </button>
-              )}
-            </div>
-          ))}
+        <div className="flex justify-between items-center mb-3">
+          <h2 className="text-xl font-bold">過去の体験</h2>
+          <button 
+            onClick={refreshData}
+            className="flex items-center text-sm text-gray-600 hover:text-black transition-colors"
+            disabled={refreshing}
+          >
+            {refreshing ? (
+              <>
+                <RefreshCcw size={16} className="mr-1 animate-spin" />
+                更新中...
+              </>
+            ) : (
+              <>
+                <RefreshCcw size={16} className="mr-1" />
+                更新
+              </>
+            )}
+          </button>
         </div>
+        
+        {pastExperiences.length > 0 ? (
+          <div className="space-y-3">
+            {pastExperiences.map((experience) => (
+              <div key={experience.id} className="bg-white rounded-lg shadow-sm p-3 flex justify-between items-center">
+                <div>
+                  <p className="font-medium">{experience.title}</p>
+                  <p className="text-sm text-gray-500">{experience.date}</p>
+                </div>
+                {experience.isReviewed ? (
+                  <div className="flex items-center bg-green-50 text-green-700 px-2 py-1 rounded-full">
+                    <Check size={14} className="mr-1" />
+                    <span className="text-xs">レビュー済み</span>
+                  </div>
+                ) : (
+                  <button 
+                    onClick={() => handleReviewClick(experience)} 
+                    className="px-3 py-1 bg-black text-white rounded-full text-xs font-medium hover:bg-gray-800 transition-colors"
+                  >
+                    レビューを書く
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="bg-gray-50 p-6 rounded-lg text-center">
+            <p className="text-gray-500 mb-2">過去の体験はまだありません</p>
+            <p className="text-sm text-gray-400">体験に参加すると、ここに表示されます</p>
+          </div>
+        )}
       </div>
       
       {/* レビューモーダル */}
       {reviewModalOpen && selectedExperience && (
         <ReviewModal 
           experienceName={selectedExperience.title}
-          onClose={() => setReviewModalOpen(false)}
+          onClose={() => {
+            setReviewModalOpen(false);
+            setReviewError(null);
+          }}
           onSubmit={handleReviewSubmit}
+          isSubmitting={isSubmitting}
+          error={reviewError}
+          enableCamera={true} // カメラ機能を有効化
+          uploadProgress={uploadProgress} // アップロード進捗を渡す
         />
       )}
     </div>

@@ -1,6 +1,8 @@
 // src/components/ReviewsList.tsx
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Star } from 'lucide-react';
+import ReviewStats from './ReviewStats';
+import ReviewFilters, { FilterState } from './ReviewFilters';
 import ReviewCard from './ReviewCard';
 import { Review } from '../types';
 
@@ -8,113 +10,165 @@ interface ReviewsListProps {
   reviews: Review[];
   averageRating: number;
   reviewCount: number;
+  onSortChange?: (sortType: 'newest' | 'highest' | 'lowest' | 'most_helpful') => void;
+  onFilterChange?: (rating: number | null) => void;
+  onHelpfulToggle?: (reviewId: string, isHelpful: boolean) => void;
 }
 
 const ReviewsList: React.FC<ReviewsListProps> = ({ 
   reviews, 
   averageRating, 
-  reviewCount 
+  reviewCount,
+  onSortChange,
+  onFilterChange,
+  onHelpfulToggle
 }) => {
+  // フィルター状態
+  const [filterRating, setFilterRating] = useState<number | null>(null);
+  const [searchTerm, setSearchTerm] = useState<string>('');
+  const [sortBy, setSortBy] = useState<'newest' | 'highest' | 'lowest' | 'most_helpful'>('newest');
+  
+  // 表示するレビュー
+  const [displayedReviews, setDisplayedReviews] = useState<Review[]>(reviews);
+  
+  // 評価ごとのレビュー数
+  const reviewCountsByRating = [
+    reviews.filter(r => r.rating === 5).length,
+    reviews.filter(r => r.rating === 4).length,
+    reviews.filter(r => r.rating === 3).length,
+    reviews.filter(r => r.rating === 2).length,
+    reviews.filter(r => r.rating === 1).length
+  ];
+  
+  // レビューをフィルタリングして並べ替える
+  useEffect(() => {
+    // フィルターを適用
+    let filtered = reviews.filter(review => {
+      // 評価フィルター
+      if (filterRating !== null && review.rating !== filterRating) {
+        return false;
+      }
+      
+      // 検索フィルター
+      if (searchTerm) {
+        const lowercaseSearch = searchTerm.toLowerCase();
+        const matchesName = review.userName.toLowerCase().includes(lowercaseSearch);
+        const matchesComment = review.comment.toLowerCase().includes(lowercaseSearch);
+        const matchesExperience = review.experienceTitle 
+          ? review.experienceTitle.toLowerCase().includes(lowercaseSearch) 
+          : false;
+          
+        if (!matchesName && !matchesComment && !matchesExperience) {
+          return false;
+        }
+      }
+      
+      return true;
+    });
+    
+    // 並べ替えを適用
+    const sorted = [...filtered];
+    
+    switch (sortBy) {
+      case 'newest':
+        sorted.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        break;
+      case 'highest':
+        sorted.sort((a, b) => b.rating - a.rating);
+        break;
+      case 'lowest':
+        sorted.sort((a, b) => a.rating - b.rating);
+        break;
+      case 'most_helpful':
+        sorted.sort((a, b) => (b.helpfulCount || 0) - (a.helpfulCount || 0));
+        break;
+    }
+    
+    setDisplayedReviews(sorted);
+  }, [reviews, filterRating, searchTerm, sortBy]);
+  
+  // フィルターを全てクリア
+  const clearFilters = () => {
+    setFilterRating(null);
+    setSearchTerm('');
+    if (onFilterChange) onFilterChange(null);
+  };
+  
+  // フィルター状態の変更を処理
+  const handleFilterChange = (filters: FilterState) => {
+    // 検索キーワード
+    setSearchTerm(filters.searchTerm);
+    
+    // 評価フィルター
+    setFilterRating(filters.ratingFilter);
+    if (onFilterChange) {
+      onFilterChange(filters.ratingFilter);
+    }
+    
+    // 並べ替え
+    const newSortBy = filters.sortBy as 'newest' | 'highest' | 'lowest' | 'most_helpful';
+    setSortBy(newSortBy);
+    if (onSortChange) {
+      onSortChange(newSortBy);
+    }
+  };
+  
   return (
     <div>
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-bold">レビュー</h2>
-        <div className="flex items-center">
-          <Star size={18} className="text-yellow-500 mr-1" />
-          <span className="font-bold">{averageRating.toFixed(1)}</span>
-          <span className="text-gray-500 ml-1">({reviewCount})</span>
-        </div>
-      </div>
+      <h2 className="text-lg font-bold mb-4">レビュー</h2>
       
-      {/* レビューのサマリー */}
-      <div className="bg-gray-50 p-4 rounded-lg mb-4">
-        <div className="flex mb-3">
-          <div className="w-1/2">
-            <div className="flex items-center mb-1">
-              <div className="w-1/3 text-sm text-right pr-2">5</div>
-              <div className="w-2/3 bg-gray-200 rounded-full h-2">
-                <div 
-                  className="bg-yellow-500 h-2 rounded-full" 
-                  style={{ width: `${calcPercentage(reviews, 5)}%` }}
-                ></div>
-              </div>
-            </div>
-            <div className="flex items-center mb-1">
-              <div className="w-1/3 text-sm text-right pr-2">4</div>
-              <div className="w-2/3 bg-gray-200 rounded-full h-2">
-                <div 
-                  className="bg-yellow-500 h-2 rounded-full" 
-                  style={{ width: `${calcPercentage(reviews, 4)}%` }}
-                ></div>
-              </div>
-            </div>
-            <div className="flex items-center mb-1">
-              <div className="w-1/3 text-sm text-right pr-2">3</div>
-              <div className="w-2/3 bg-gray-200 rounded-full h-2">
-                <div 
-                  className="bg-yellow-500 h-2 rounded-full" 
-                  style={{ width: `${calcPercentage(reviews, 3)}%` }}
-                ></div>
-              </div>
-            </div>
-          </div>
-          <div className="w-1/2 pl-4">
-            <div className="flex items-center mb-1">
-              <div className="w-1/3 text-sm text-right pr-2">2</div>
-              <div className="w-2/3 bg-gray-200 rounded-full h-2">
-                <div 
-                  className="bg-yellow-500 h-2 rounded-full" 
-                  style={{ width: `${calcPercentage(reviews, 2)}%` }}
-                ></div>
-              </div>
-            </div>
-            <div className="flex items-center mb-1">
-              <div className="w-1/3 text-sm text-right pr-2">1</div>
-              <div className="w-2/3 bg-gray-200 rounded-full h-2">
-                <div 
-                  className="bg-yellow-500 h-2 rounded-full" 
-                  style={{ width: `${calcPercentage(reviews, 1)}%` }}
-                ></div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <p className="text-center text-sm text-gray-600">
-          {reviews.length > 0 
-            ? `${reviews.length}件のレビューから` 
-            : '評価はまだありません'}
-        </p>
-      </div>
+      {/* 統計情報 */}
+      <ReviewStats
+        reviews={reviews}
+        averageRating={averageRating}
+        reviewCount={reviewCount}
+      />
+      
+      {/* フィルターコンポーネント */}
+      <ReviewFilters
+        onFilterChange={handleFilterChange}
+        totalReviews={reviews.length}
+        reviewCounts={reviewCountsByRating}
+      />
       
       {/* レビュー一覧 */}
-      {reviews.length > 0 ? (
+      {displayedReviews.length > 0 ? (
         <div className="space-y-6">
-          {reviews.map((review) => (
-            <ReviewCard key={review.id} review={review} />
+          {/* レビューカード */}
+          {displayedReviews.map((review) => (
+            <ReviewCard 
+              key={review.id} 
+              review={review} 
+              onHelpfulToggle={onHelpfulToggle}
+            />
           ))}
+          
+          {/* 全てのレビューをロードするボタン */}
+          {reviews.length > 0 && reviews.length < reviewCount && (
+            <button className="w-full mt-4 py-2 border border-gray-300 rounded-lg text-black font-medium text-sm">
+              すべてのレビューを見る
+            </button>
+          )}
         </div>
       ) : (
-        <p className="text-gray-500 text-center py-4">
-          まだレビューがありません
-        </p>
-      )}
-      
-      {/* レビューが一定数以上ある場合は「もっと見る」ボタン */}
-      {reviews.length > 3 && reviews.length < reviewCount && (
-        <button className="w-full mt-4 py-2 border border-gray-300 rounded-lg text-black font-medium text-sm">
-          すべてのレビューを見る
-        </button>
+        <div className="bg-gray-50 p-8 rounded-lg text-center">
+          {reviews.length > 0 ? (
+            <>
+              <p className="text-gray-600 font-medium mb-2">フィルターに一致するレビューがありません</p>
+              <button
+                onClick={clearFilters}
+                className="text-black underline text-sm"
+              >
+                すべてのレビューを表示
+              </button>
+            </>
+          ) : (
+            <p className="text-gray-500">まだレビューがありません</p>
+          )}
+        </div>
       )}
     </div>
   );
-};
-
-// 特定の評価の割合を計算する関数
-const calcPercentage = (reviews: Review[], rating: number): number => {
-  if (reviews.length === 0) return 0;
-  
-  const count = reviews.filter(review => review.rating === rating).length;
-  return (count / reviews.length) * 100;
 };
 
 export default ReviewsList;

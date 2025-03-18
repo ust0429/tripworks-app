@@ -1,11 +1,12 @@
 // src/components/AttenderDetailScreen.tsx
-import React, { useState } from 'react';
-import { Star, MapPin, Clock, Calendar, MessageCircle, Heart, Share2, ArrowLeft, Bookmark, ChevronDown, Image, User, Music, Camera, Coffee, Gift } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Star, MapPin, Clock, Calendar, MessageCircle, Heart, Share2, ArrowLeft, Bookmark, ChevronDown, Image, User, Music, Camera, Coffee, Gift, Loader } from 'lucide-react';
 import { useAuth } from '../AuthComponents';
 import DirectRequestModal from './DirectRequestModal';
 import ReviewsList from './ReviewsList';
-import AttenderDetailMap from './AttenderDetailMap'; // 新しく追加
-import { getReviewsByAttenderId, getAverageRating } from '../mockData';
+import ReviewCard from './ReviewCard';
+import AttenderDetailMap from './AttenderDetailMap';
+import { getReviewsByAttenderId, getAverageRating, sortReviews, filterReviewsByRating, toggleReviewHelpful } from '../mockData';
 import { AttenderType, AttenderDetailType, Review, IconProps } from '../types';
 
 interface ExperienceType {
@@ -39,8 +40,114 @@ const AttenderDetailScreen: React.FC<AttenderDetailScreenProps> = ({ attenderId,
   const [isFavorite, setIsFavorite] = useState(false); // お気に入り状態
   const { isAuthenticated, openLoginModal } = useAuth();
 
+  // レビュー関連の状態
+  const [reviews, setReviews] = useState<Review[]>([]);
+  const [filteredReviews, setFilteredReviews] = useState<Review[]>([]);
+  const [filterRating, setFilterRating] = useState<number | null>(null);
+  const [sortType, setSortType] = useState<'newest' | 'highest' | 'lowest' | 'most_helpful'>('newest');
+  const [isLoadingReviews, setIsLoadingReviews] = useState(false);
+  const [reviewPhotosOnly, setReviewPhotosOnly] = useState(false);
+  
   // サンプルデータから対象のアテンダーを取得
   const attender = detailedAttendersData.find(a => a.id === attenderId) || detailedAttendersData[0];
+
+  // 初期レビューの取得とソート
+  useEffect(() => {
+    // レビュータブが選択された時だけレビューを取得
+    if (selectedTab === 'reviews') {
+      setIsLoadingReviews(true);
+      
+      // 実際のアプリではここでAPIリクエストを送信
+      // 少し遅延を入れてモックAPI呼び出しをシミュレート
+      setTimeout(() => {
+        try {
+          const fetchedReviews = getReviewsByAttenderId(attenderId);
+          setReviews(fetchedReviews);
+          // レビューをソート
+          applyReviewFilters(fetchedReviews, sortType, filterRating);
+        } catch (error) {
+          console.error('レビュー取得エラー:', error);
+        } finally {
+          setIsLoadingReviews(false);
+        }
+      }, 500);
+    }
+  }, [attenderId, selectedTab]);
+  
+  // フィルター状態が変更された時にフィルタリングを再適用
+  useEffect(() => {
+    if (reviews.length > 0) {
+      applyReviewFilters(reviews, sortType, filterRating);
+    }
+  }, [reviewPhotosOnly]);
+  
+  // レビューのフィルタリングとソートを適用
+  const applyReviewFilters = (
+    reviewsToFilter: Review[], 
+    currentSortType: 'newest' | 'highest' | 'lowest' | 'most_helpful',
+    currentFilterRating: number | null
+  ) => {
+    // まずソート
+    let sorted = sortReviews(reviewsToFilter, currentSortType === 'most_helpful' ? 'newest' : currentSortType);
+    
+    // 役立つ順の特別処理
+    if (currentSortType === 'most_helpful') {
+      sorted = [...sorted].sort((a, b) => (b.helpfulCount || 0) - (a.helpfulCount || 0));
+    }
+    
+    // 評価でフィルタリングを適用
+    let filtered = filterReviewsByRating(sorted, currentFilterRating);
+    
+    // 写真付きのみフィルターを適用
+    if (reviewPhotosOnly) {
+      filtered = filtered.filter(review => review.photoUrls && review.photoUrls.length > 0);
+    }
+    
+    setFilteredReviews(filtered);
+  };
+  
+  // レビュー並び替えハンドラー
+  const handleSortChange = (type: 'newest' | 'highest' | 'lowest' | 'most_helpful') => {
+    setSortType(type);
+    applyReviewFilters(reviews, type, filterRating);
+  };
+  
+  // レビューフィルターハンドラー
+  const handleFilterChange = (rating: number | null) => {
+    setFilterRating(rating);
+    applyReviewFilters(reviews, sortType, rating);
+  };
+  
+  // レビューの「役立った」トグルハンドラー
+  const handleHelpfulToggle = (reviewId: string, isHelpful: boolean) => {
+    // 実際のアプリではここでAPIリクエストを送信
+    
+    // UIを更新
+    setReviews(prev => prev.map(review => 
+      review.id === reviewId 
+        ? { 
+            ...review, 
+            helpfulCount: isHelpful 
+              ? (review.helpfulCount || 0) + 1
+              : Math.max((review.helpfulCount || 0) - 1, 0)
+          }
+        : review
+    ));
+    
+    // フィルタリングを再適用
+    const updatedReviews = reviews.map(review => 
+      review.id === reviewId 
+        ? { 
+            ...review, 
+            helpfulCount: isHelpful 
+              ? (review.helpfulCount || 0) + 1
+              : Math.max((review.helpfulCount || 0) - 1, 0)
+          }
+        : review
+    );
+    
+    applyReviewFilters(updatedReviews, sortType, filterRating);
+  };
 
   // ログイン状態に応じたリクエスト処理
   const handleRequestClick = () => {
@@ -207,42 +314,42 @@ const AttenderDetailScreen: React.FC<AttenderDetailScreenProps> = ({ attenderId,
         <div className="pb-4">
           {/* 概要タブ */}
           {selectedTab === 'about' && (
-  <div>
-    <h2 className="text-lg font-bold mb-2">自己紹介</h2>
-    <div className={`text-gray-700 text-sm ${!showFullAbout && 'line-clamp-3'}`}>
-      {attender.about}
-    </div>
-    {attender.about.length > 150 && (
-      <button
-        onClick={() => setShowFullAbout(!showFullAbout)}
-        className="text-black font-medium text-sm mt-2 flex items-center"
-      >
-        {showFullAbout ? '閉じる' : 'もっと見る'}
-        <ChevronDown
-          size={16}
-          className={`ml-1 transform ${showFullAbout ? 'rotate-180' : ''}`}
-        />
-      </button>
-    )}
-    
-    {/* 活動地域の地図（新しく追加） */}
-    <h2 className="text-lg font-bold mt-6 mb-2">活動エリア</h2>
-    <AttenderDetailMap attender={attender} height={200} />
-    <p className="text-xs text-gray-500 mt-1 text-center">
-      {attender.name}さんの主な活動エリア: {attender.location}
-    </p>
-    
-    {/* ギャラリー（モック） */}
-    <h2 className="text-lg font-bold mt-6 mb-2">ギャラリー</h2>
-    <div className="grid grid-cols-3 gap-2">
-      {[1, 2, 3, 4, 5, 6].map((item) => (
-        <div key={item} className="aspect-square bg-gray-100 rounded-lg flex items-center justify-center">
-          <Image size={24} className="text-gray-400" />
-        </div>
-      ))}
-    </div>
-  </div>
-)}
+            <div>
+              <h2 className="text-lg font-bold mb-2">自己紹介</h2>
+              <div className={`text-gray-700 text-sm ${!showFullAbout && 'line-clamp-3'}`}>
+                {attender.about}
+              </div>
+              {attender.about.length > 150 && (
+                <button
+                  onClick={() => setShowFullAbout(!showFullAbout)}
+                  className="text-black font-medium text-sm mt-2 flex items-center"
+                >
+                  {showFullAbout ? '閉じる' : 'もっと見る'}
+                  <ChevronDown
+                    size={16}
+                    className={`ml-1 transform ${showFullAbout ? 'rotate-180' : ''}`}
+                  />
+                </button>
+              )}
+              
+              {/* 活動地域の地図 */}
+              <h2 className="text-lg font-bold mt-6 mb-2">活動エリア</h2>
+              <AttenderDetailMap attender={attender} height={200} />
+              <p className="text-xs text-gray-500 mt-1 text-center">
+                {attender.name}さんの主な活動エリア: {attender.location}
+              </p>
+              
+              {/* ギャラリー（モック） */}
+              <h2 className="text-lg font-bold mt-6 mb-2">ギャラリー</h2>
+              <div className="grid grid-cols-3 gap-2">
+                {[1, 2, 3, 4, 5, 6].map((item) => (
+                  <div key={item} className="aspect-square bg-gray-100 rounded-lg flex items-center justify-center">
+                    <Image size={24} className="text-gray-400" />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
           
           {/* 体験プランタブ */}
           {selectedTab === 'experiences' && (
@@ -283,19 +390,55 @@ const AttenderDetailScreen: React.FC<AttenderDetailScreenProps> = ({ attenderId,
           {/* レビュータブ */}
           {selectedTab === 'reviews' && (
             <div>
-              {/* モックデータからこのアテンダーのレビューを取得 */}
-              {(() => {
-                const reviews = getReviewsByAttenderId(attenderId);
-                const averageRating = getAverageRating(attenderId) || parseFloat(attender.rating);
-                
-                return (
-                  <ReviewsList
-                    reviews={reviews}
-                    averageRating={averageRating}
-                    reviewCount={reviews.length || attender.reviewCount}
-                  />
-                );
-              })()}
+              {isLoadingReviews ? (
+                <div className="py-10 flex flex-col items-center justify-center">
+                  <Loader size={32} className="text-gray-400 animate-spin mb-3" />
+                  <p className="text-gray-500">レビューを読み込み中...</p>
+                </div>
+              ) : (
+                <>
+                  {/* 写真付きレビューフィルター */}
+                  <div className="flex justify-end mb-3">
+                    <button 
+                      onClick={() => {
+                        // 写真付きレビューのみに切り替え
+                        setReviewPhotosOnly(!reviewPhotosOnly);
+                        // フィルタリングを適用
+                        if (!reviewPhotosOnly) {
+                          // 写真付きのみに絞り込む
+                          setFilteredReviews(filteredReviews.filter(review => 
+                            review.photoUrls && review.photoUrls.length > 0
+                          ));
+                        } else {
+                          // 元のフィルタリングを適用
+                          applyReviewFilters(reviews, sortType, filterRating);
+                        }
+                      }}
+                      className={`flex items-center text-sm ${
+                        reviewPhotosOnly 
+                          ? 'text-black font-medium'
+                          : 'text-gray-600'
+                      }`}
+                    >
+                      <Camera size={16} className="mr-1" />
+                      写真付きのみ表示
+                    </button>
+                  </div>
+                <ReviewsList
+                  reviews={filteredReviews}
+                  averageRating={getAverageRating(attenderId) || parseFloat(attender.rating)}
+                  reviewCount={attender.reviewCount}
+                  onSortChange={handleSortChange}
+                  onFilterChange={handleFilterChange}
+                  onHelpfulToggle={(reviewId, isHelpful) => {
+                    // 実際のAPIリクエストを送信（モック）
+                    toggleReviewHelpful(reviewId, 'current-user', isHelpful);
+                    // レビューデータを更新
+                    handleHelpfulToggle(reviewId, isHelpful);
+                  }}
+                />
+                </>
+              )}
             </div>
           )}
         </div>
@@ -320,7 +463,7 @@ const AttenderDetailScreen: React.FC<AttenderDetailScreenProps> = ({ attenderId,
   );
 };
 
-// サンプルデータは現在のものを使用
+// サンプルデータ
 const detailedAttendersData: AttenderDetailType[] = [
   {
     id: 1,

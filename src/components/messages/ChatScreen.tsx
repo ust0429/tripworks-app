@@ -1,13 +1,15 @@
 // src/components/messages/ChatScreen.tsx
 import React, { useState, useEffect, useRef } from 'react';
 import { ArrowLeft, Send, X, Search, Paperclip } from 'lucide-react';
-import { Message, MessageAttachment } from '../../types';
+import { Message, MessageAttachment, MessageStatus } from '../../types';
 import { getMessagesByConversationId, addMessage, markConversationAsRead } from '../../mockData';
 import { useAuth } from '../../AuthComponents';
-import { webSocketService } from '../../utils/websocketService';
+import { webSocketService, ConnectionStatus } from '../../utils/websocketService';
 import MessageSearch from './MessageSearch';
 import ChatMessage from './ChatMessage';
 import AttachmentOptions from './AttachmentOptions';
+import TypingIndicator from './TypingIndicator';
+import ConnectionStatusIndicator from './ConnectionStatusIndicator';
 
 interface ChatScreenProps {
   conversationId: string;
@@ -24,7 +26,10 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ conversationId, onBack }) => {
   const [showAttachmentOptions, setShowAttachmentOptions] = useState(false);
   const [currentAttachment, setCurrentAttachment] = useState<MessageAttachment | null>(null);
   const [showSearch, setShowSearch] = useState(false);
-  const [connectionStatus, setConnectionStatus] = useState<'connected' | 'disconnected' | 'error'>('disconnected');
+  const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>(ConnectionStatus.DISCONNECTED);
+  const [isTyping, setIsTyping] = useState(false);
+  const [otherUserTyping, setOtherUserTyping] = useState(false);
+  const typingTimerRef = useRef<NodeJS.Timeout | null>(null);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messageInputRef = useRef<HTMLInputElement>(null);
@@ -67,6 +72,17 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ conversationId, onBack }) => {
         setConnectionStatus(status);
       });
       
+      // タイピング状態のリスナー
+      const removeTypingListener = webSocketService.subscribeToTypingEvent(
+        conversationId,
+        (userId, isTyping) => {
+          // 自分以外のユーザーのタイピング状態を更新
+          if (userId === otherParticipantId) {
+            setOtherUserTyping(isTyping);
+          }
+        }
+      );
+      
       // メッセージリスナー
       const removeMessageListener = webSocketService.addMessageListener((newMsg) => {
         // 当該会話のメッセージかチェック
@@ -86,6 +102,13 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ conversationId, onBack }) => {
       return () => {
         removeConnectionListener();
         removeMessageListener();
+        removeTypingListener();
+        
+        // タイピングタイマーのクリーンアップ
+        if (typingTimerRef.current) {
+          clearTimeout(typingTimerRef.current);
+        }
+        
         webSocketService.disconnect();
       };
     }
@@ -125,30 +148,108 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ conversationId, onBack }) => {
     setCurrentAttachment(null);
   };
   
+  // 入力中のタイピング状態を処理
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const text = e.target.value;
+    setNewMessage(text);
+    
+    // タイピング状態の送信
+    const shouldSendTypingEvent = text.length > 0 && !isTyping;
+    const shouldCancelTypingEvent = text.length === 0 && isTyping;
+    
+    if (shouldSendTypingEvent) {
+      setIsTyping(true);
+      webSocketService.sendTypingEvent(conversationId, true);
+    } else if (shouldCancelTypingEvent) {
+      setIsTyping(false);
+      webSocketService.sendTypingEvent(conversationId, false);
+    }
+    
+    // タイピング状態のリセット（3秒後に自動的に入力完了とする）
+    if (typingTimerRef.current) {
+      clearTimeout(typingTimerRef.current);
+    }
+    
+    if (text.length > 0) {
+      typingTimerRef.current = setTimeout(() => {
+        setIsTyping(false);
+        webSocketService.sendTypingEvent(conversationId, false);
+      }, 3000);
+    }
+  };
+  
   // メッセージ送信処理
   const handleSendMessage = () => {
     if ((!newMessage.trim() && !currentAttachment) || !user || !otherParticipantId) return;
+    
+    // タイピング状態をリセット
+    if (isTyping) {
+      setIsTyping(false);
+      webSocketService.sendTypingEvent(conversationId, false);
+      
+      if (typingTimerRef.current) {
+        clearTimeout(typingTimerRef.current);
+        typingTimerRef.current = null;
+      }
+    }
     
     // 実際のアプリではAPIリクエストを送信
     const messageData = {
       senderId: user.id,
       receiverId: otherParticipantId,
       content: newMessage,
-      attachments: currentAttachment ? [currentAttachment] : undefined
+      attachments: currentAttachment ? [currentAttachment] : undefined,
+      conversationId: conversationId
     };
     
+    // モック用に一時的なIDを生成
+    const tempId = `temp-${Date.now()}`;
+    
+    // メッセージを仮表示（送信中状態）
+    const optimisticMessage: Message = {
+      id: tempId,
+      senderId: user.id,
+      receiverId: otherParticipantId,
+      content: newMessage,
+      timestamp: new Date().toISOString(),
+      isRead: false,
+      status: MessageStatus.SENDING,
+      attachments: currentAttachment ? [currentAttachment] : undefined,
+      conversationId: conversationId
+    };
+    
+    // 画面上に仮表示
+    setMessages(prev => [...prev, optimisticMessage]);
+    
     // リアルタイム通信が可能な場合はWebSocketで送信
-    if (connectionStatus === 'connected') {
+    if (connectionStatus === ConnectionStatus.CONNECTED) {
       const sent = webSocketService.sendMessage(messageData);
       if (!sent) {
         // WebSocketで送信できなかった場合は通常の方法で送信
         const sentMessage = addMessage(messageData);
-        setMessages(prev => [...prev, sentMessage]);
+        
+        // 仮表示を実際のメッセージに置き換え
+        setMessages(prev => prev.map(m => 
+          m.id === tempId ? { ...sentMessage, status: MessageStatus.SENT } : m
+        ));
+      } else {
+        // 送信完了ステータスに更新
+        setTimeout(() => {
+          setMessages(prev => prev.map(m => 
+            m.id === tempId ? { ...m, status: MessageStatus.SENT } : m
+          ));
+        }, 500); // 送信に要する時間をシミュレート
       }
     } else {
-      // 通常の方法で送信
-      const sentMessage = addMessage(messageData);
-      setMessages(prev => [...prev, sentMessage]);
+      // オフライン時はモックの送信処理
+      setTimeout(() => {
+        const sentMessage = addMessage(messageData);
+        
+        // 仮表示を実際のメッセージに置き換え
+        setMessages(prev => prev.map(m => 
+          m.id === tempId ? { ...sentMessage, status: MessageStatus.SENT } : m
+        ));
+      }, 500); // オフライン送信をシミュレート
     }
     
     // 入力をクリア
@@ -157,6 +258,52 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ conversationId, onBack }) => {
     
     // 添付ファイルオプションを閉じる
     setShowAttachmentOptions(false);
+  };
+  
+  // 送信失敗時の再送処理
+  const handleRetryMessage = (messageId: string) => {
+    const failedMessage = messages.find(m => m.id === messageId);
+    if (!failedMessage) return;
+    
+    // メッセージのステータスを送信中に更新
+    setMessages(prev => prev.map(m => 
+      m.id === messageId ? { ...m, status: MessageStatus.SENDING } : m
+    ));
+    
+    // 再送信試行
+    if (connectionStatus === ConnectionStatus.CONNECTED) {
+      const messageData = {
+        senderId: failedMessage.senderId,
+        receiverId: failedMessage.receiverId,
+        content: failedMessage.content,
+        attachments: failedMessage.attachments,
+        conversationId: failedMessage.conversationId
+      };
+      
+      const sent = webSocketService.sendMessage(messageData);
+      if (sent) {
+        // 再送信成功
+        setTimeout(() => {
+          setMessages(prev => prev.map(m => 
+            m.id === messageId ? { ...m, status: MessageStatus.SENT } : m
+          ));
+        }, 500);
+      } else {
+        // 再送信失敗
+        setTimeout(() => {
+          setMessages(prev => prev.map(m => 
+            m.id === messageId ? { ...m, status: MessageStatus.FAILED } : m
+          ));
+        }, 500);
+      }
+    } else {
+      // オフラインの場合
+      setTimeout(() => {
+        setMessages(prev => prev.map(m => 
+          m.id === messageId ? { ...m, status: MessageStatus.FAILED } : m
+        ));
+      }, 500);
+    }
   };
   
   // メッセージの日時をフォーマット
@@ -187,6 +334,12 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ conversationId, onBack }) => {
         </button>
         <div className="flex-1">
           <h2 className="font-bold">{otherParticipantName}</h2>
+          {connectionStatus === ConnectionStatus.CONNECTED && (
+            <div className="text-xs text-green-600 flex items-center">
+              <div className="w-2 h-2 bg-green-500 rounded-full mr-1"></div>
+              オンライン
+            </div>
+          )}
         </div>
         
         {/* 検索ボタン */}
@@ -205,6 +358,13 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ conversationId, onBack }) => {
           onResultSelect={handleSearchResultSelect}
           onClose={() => setShowSearch(false)}
         />
+      )}
+      
+      {/* 接続状態インジケーター */}
+      {connectionStatus !== ConnectionStatus.CONNECTED && (
+        <div className="px-4 py-2">
+          <ConnectionStatusIndicator />
+        </div>
       )}
       
       {/* メッセージエリア */}
@@ -232,6 +392,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ conversationId, onBack }) => {
                     <ChatMessage 
                       message={message} 
                       isOwn={isOwn}
+                      onRetry={handleRetryMessage}
                     />
                   </div>
                 );
@@ -239,19 +400,17 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ conversationId, onBack }) => {
             </div>
           ))
         )}
+        
+        {/* タイピングインジケータ */}
+        {otherUserTyping && (
+          <TypingIndicator 
+            isTyping={otherUserTyping} 
+            userName={otherParticipantName}
+          />
+        )}
+        
         <div ref={messagesEndRef} />
       </div>
-      
-      {/* 接続状態インジケータ */}
-      {connectionStatus !== 'connected' && (
-        <div className={`text-xs text-center py-1 ${
-          connectionStatus === 'error' ? 'bg-red-100 text-red-600' : 'bg-yellow-100 text-yellow-600'
-        }`}>
-          {connectionStatus === 'error' 
-            ? 'サーバーに接続できません。メッセージはローカルに保存されます。' 
-            : 'サーバーに接続中...'}
-        </div>
-      )}
       
       {/* 現在の添付ファイルプレビュー */}
       {currentAttachment && (
@@ -306,7 +465,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ conversationId, onBack }) => {
               type="text"
               ref={messageInputRef}
               value={newMessage}
-              onChange={(e) => setNewMessage(e.target.value)}
+              onChange={handleInputChange}
               placeholder="メッセージを入力..."
               className="w-full py-2 px-4 bg-gray-100 rounded-full focus:outline-none focus:ring-2 focus:ring-gray-500"
               onKeyPress={(e) => {
