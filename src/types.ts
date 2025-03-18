@@ -53,6 +53,27 @@ export interface Review {
   experienceTitle?: string;
 }
 
+// 添付ファイル関連の型定義
+export interface MessageAttachment {
+  id: string;
+  type: 'image' | 'file' | 'location' | 'date';
+  url?: string;
+  name?: string;
+  size?: number;
+  mimeType?: string;
+  thumbnailUrl?: string;
+  location?: {
+    latitude: number;
+    longitude: number;
+    address?: string;
+  };
+  date?: {
+    start: string;
+    end?: string;
+    title?: string;
+  };
+}
+
 // メッセージ関連の型定義
 export interface Message {
   id: string;
@@ -61,6 +82,8 @@ export interface Message {
   content: string;
   timestamp: string;
   isRead: boolean;
+  attachments?: MessageAttachment[];
+  // 後方互換性のため残す
   attachmentUrl?: string;
   attachmentType?: 'image' | 'location' | 'file';
 }
@@ -71,6 +94,8 @@ export interface Conversation {
   lastMessage?: Message;
   updatedAt: string;
   unreadCount: number;
+  isArchived?: boolean;
+  isMuted?: boolean;
 }
 
 // AttenderDetailType を AttenderType から拡張して定義

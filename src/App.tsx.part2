@@ -1,0 +1,604 @@
+ border border-gray-300'
+          }`}
+        >
+          工芸品
+        </button>
+        <button 
+          onClick={() => setSelectedCategory('beverage')}
+          className={`px-3 py-1 rounded-full text-sm whitespace-nowrap ${
+            selectedCategory === 'beverage' ? 'bg-black text-white' : 'bg-white border border-gray-300'
+          }`}
+        >
+          飲料
+        </button>
+      </div>
+      
+      {/* 体験から選ぶ */}
+      <div>
+        <h2 className="text-xl font-bold mb-3">あなたの体験から</h2>
+        <div className="bg-gray-50 p-4 rounded-lg">
+          <div className="flex items-center mb-3">
+            <div className="w-12 h-12 bg-gray-200 rounded-full mr-3 flex items-center justify-center">
+              <User size={24} className="text-gray-600" />
+            </div>
+            <div>
+              <p className="font-medium">鈴木 アキラさんの案内で巡った</p>
+              <p className="text-sm text-gray-700">東京音楽シーンツアー</p>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="bg-white rounded-lg overflow-hidden shadow-sm">
+              <div className="h-24 bg-gray-100 flex items-center justify-center">
+                <Music size={24} className="text-gray-400" />
+              </div>
+              <div className="p-2">
+                <p className="font-medium text-sm">下北沢限定レコード</p>
+                <p className="text-xs text-gray-600">¥3,200〜</p>
+              </div>
+            </div>
+            <div className="bg-white rounded-lg overflow-hidden shadow-sm">
+              <div className="h-24 bg-gray-100 flex items-center justify-center">
+                <Headphones size={24} className="text-gray-400" />
+              </div>
+              <div className="p-2">
+                <p className="font-medium text-sm">ローカルバンドセット</p>
+                <p className="text-xs text-gray-600">¥4,500〜</p>
+              </div>
+            </div>
+          </div>
+          <button className="w-full mt-3 py-2 text-black text-sm font-medium">
+            すべての商品を見る
+          </button>
+        </div>
+      </div>
+      
+      {/* アテンダーおすすめ商品 */}
+      <div>
+        <h2 className="text-xl font-bold mb-3">アテンダーおすすめ</h2>
+        <div className="space-y-3">
+          {marketItems.map(item => (
+            <div key={item.id} className="bg-white rounded-lg shadow-sm overflow-hidden">
+              <div className="flex">
+                <div className="w-1/3 bg-gray-100 flex items-center justify-center">
+                  {item.icon && React.cloneElement(item.icon, { size: 32, className: "text-gray-400" })}
+                </div>
+                <div className="w-2/3 p-3">
+                  <div className="flex justify-between">
+                    <p className="font-medium">{item.name}</p>
+                    <p className="text-black font-medium">¥{item.price.toLocaleString()}</p>
+                  </div>
+                  <p className="text-sm text-gray-600 mt-1">{item.description}</p>
+                  <div className="flex items-center mt-2">
+                    <div className="flex items-center text-xs text-gray-500">
+                      <User size={12} className="mr-1" />
+                      <span>{item.attender}</span>
+                    </div>
+                    <div className="mx-2 text-gray-300">|</div>
+                    <div className="text-xs text-gray-500">{item.region}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+      
+      {/* 定期便サブスクリプション */}
+      <div className="bg-gradient-to-r from-gray-800 to-black rounded-lg p-4 text-white">
+        <h3 className="font-bold text-lg mb-2">地域の特産品定期便</h3>
+        <p className="text-sm mb-3">
+          あなたが体験した地域から、季節の特産品や限定アイテムを毎月お届け
+        </p>
+        <button className="bg-white text-black font-medium py-2 px-4 rounded-lg text-sm">
+          サブスクリプションを見る
+        </button>
+      </div>
+    </div>
+  );
+};
+
+// コミュニティへの貢献画面
+const CommunityScreen = () => {
+  return (
+    <div className="p-4 space-y-6">
+      <h1 className="text-2xl font-bold">地域コミュニティ</h1>
+      
+      {/* あなたの貢献 */}
+      <div className="bg-white rounded-lg shadow-sm p-4">
+        <h2 className="text-xl font-bold mb-2">あなたの貢献</h2>
+        <div className="flex items-center justify-between mb-3">
+          <p className="text-gray-700">これまでの貢献額</p>
+          <p className="text-xl font-bold text-black">¥2,850</p>
+        </div>
+        <div className="w-full bg-gray-200 rounded-full h-2.5">
+          <div className="bg-black h-2.5 rounded-full" style={{ width: '65%' }}></div>
+        </div>
+        <p className="text-sm text-gray-600 mt-1">次のレベルまで ¥1,150</p>
+      </div>
+      
+      {/* サポート中のプロジェクト */}
+      <div>
+        <h2 className="text-xl font-bold mb-3">サポート中のプロジェクト</h2>
+        <div className="space-y-3">
+          {communityProjects.map(project => (
+            <div key={project.id} className="bg-white rounded-lg shadow-sm overflow-hidden">
+              <div className="h-32 bg-gray-100 relative flex items-center justify-center">
+                {project.icon && React.cloneElement(project.icon, { size: 48, className: "text-gray-300" })}
+                <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black to-transparent p-3">
+                  <p className="text-white font-medium">{project.title}</p>
+                </div>
+              </div>
+              <div className="p-3">
+                <div className="flex justify-between items-center mb-2">
+                  <div className="text-sm text-gray-600">{project.location}</div>
+                  <div className="bg-gray-100 text-gray-800 text-xs py-1 px-2 rounded-full">
+                    {project.status}
+                  </div>
+                </div>
+                <p className="text-sm text-gray-700 mb-3">{project.description}</p>
+                <div className="mb-2">
+                  <div className="flex justify-between text-sm mb-1">
+                    <span>達成率</span>
+                    <span>{project.progress}%</span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div 
+                      className="bg-black h-2 rounded-full" 
+                      style={{ width: `${project.progress}%` }}
+                    ></div>
+                  </div>
+                </div>
+                <button className="w-full py-2 bg-black text-white rounded-lg text-sm">
+                  さらに貢献する
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+      
+      {/* 地域イベントボランティア */}
+      <div className="bg-gray-50 rounded-lg p-4">
+        <h3 className="font-bold text-lg mb-2">イベントボランティア募集</h3>
+        <p className="text-sm text-gray-700 mb-3">
+          地域のお祭りや文化イベントのボランティアに参加して、地元住民と共に楽しみながら貢献しませんか？
+        </p>
+        <button className="bg-black text-white font-medium py-2 px-4 rounded-lg text-sm w-full">
+          募集中のボランティアを見る
+        </button>
+      </div>
+    </div>
+  );
+};
+
+// 季節限定イベント画面
+const SeasonalEventsScreen = () => {
+  const [viewType, setViewType] = useState('list'); // 'list' or 'calendar'
+  
+  return (
+    <div className="p-4 space-y-6">
+      <div className="flex justify-between items-center">
+        <h1 className="text-2xl font-bold">季節限定体験</h1>
+        <div className="flex space-x-1 bg-gray-100 rounded-lg p-1">
+          <button 
+            onClick={() => setViewType('list')}
+            className={`px-3 py-1 rounded text-sm ${
+              viewType === 'list' ? 'bg-white shadow-sm' : ''
+            }`}
+          >
+            リスト
+          </button>
+          <button 
+            onClick={() => setViewType('calendar')}
+            className={`px-3 py-1 rounded text-sm ${
+              viewType === 'calendar' ? 'bg-white shadow-sm' : ''
+            }`}
+          >
+            カレンダー
+          </button>
+        </div>
+      </div>
+      
+      {/* 特集イベント */}
+      <div className="bg-gradient-to-r from-gray-800 to-black rounded-lg p-4 text-white relative overflow-hidden">
+        <div className="relative z-10">
+          <div className="flex items-center mb-2">
+            <Calendar size={20} className="mr-2" />
+            <span className="font-medium">7月2日〜7月7日</span>
+          </div>
+          <h2 className="text-xl font-bold mb-1">七夕祭り特別体験</h2>
+          <p className="text-sm opacity-90 mb-3">
+            伝統的な七夕飾り作りから夜空観察まで、季節限定のスペシャルプログラム
+          </p>
+          <button className="bg-white text-black font-medium py-2 px-4 rounded-lg text-sm">
+            詳細を見る
+          </button>
+        </div>
+        <div className="absolute top-0 right-0 opacity-20 text-9xl">
+          🎋
+        </div>
+      </div>
+      
+      {/* 時間帯別体験 */}
+      <div>
+        <h2 className="text-xl font-bold mb-3">時間帯別の特別体験</h2>
+        <div className="grid grid-cols-2 gap-3">
+          <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+            <div className="bg-gray-100 p-3 flex items-center">
+              <Sunrise size={20} className="text-gray-600 mr-2" />
+              <span className="font-medium">早朝体験</span>
+            </div>
+            <div className="p-3">
+              <p className="font-medium text-sm">漁港の朝市ツアー</p>
+              <p className="text-xs text-gray-600 mt-1">5:00〜7:00限定</p>
+              <div className="flex items-center mt-2">
+                <Star size={14} className="text-yellow-500" />
+                <span className="text-xs ml-1">4.9 (27件)</span>
+              </div>
+            </div>
+          </div>
+          <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+            <div className="bg-gray-100 p-3 flex items-center">
+              <Coffee size={20} className="text-gray-600 mr-2" />
+              <span className="font-medium">午後体験</span>
+            </div>
+            <div className="p-3">
+              <p className="font-medium text-sm">職人の工房見学</p>
+              <p className="text-xs text-gray-600 mt-1">14:00〜16:00限定</p>
+              <div className="flex items-center mt-2">
+                <Star size={14} className="text-yellow-500" />
+                <span className="text-xs ml-1">4.8 (42件)</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      {/* 季節イベント一覧 */}
+      <div>
+        <h2 className="text-xl font-bold mb-3">今月の季節イベント</h2>
+        <div className="space-y-3">
+          {seasonalEvents.map(event => (
+            <div key={event.id} className="bg-white rounded-lg shadow-sm p-3">
+              <div className="flex justify-between items-start">
+                <div className="flex items-start space-x-3">
+                  <div className="bg-gray-100 rounded-lg p-2 text-center w-12">
+                    <p className="text-xs text-gray-600">7月</p>
+                    <p className="text-lg font-bold text-gray-800">{event.day}</p>
+                  </div>
+                  <div>
+                    <p className="font-medium">{event.title}</p>
+                    <p className="text-xs text-gray-600 mt-1">{event.time}</p>
+                    <div className="flex items-center mt-1">
+                      <User size={12} className="text-gray-500 mr-1" />
+                      <span className="text-xs text-gray-600">{event.attender}</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="bg-green-100 text-green-800 text-xs py-1 px-2 rounded-full">
+                  {event.period}
+                </div>
+              </div>
+              <div className="mt-2 pt-2 border-t flex justify-between items-center">
+                <div className="flex items-center">
+                  <Info size={14} className="text-gray-500 mr-1" />
+                  <span className="text-xs text-gray-600">{event.note}</span>
+                </div>
+                <button className="text-black text-sm font-medium">
+                  予約する
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// 新しく追加するプロフィール画面
+const ProfileScreen = () => {
+  const { user, logout } = useAuth();
+  
+  return (
+    <div className="p-4 space-y-6">
+      <h1 className="text-2xl font-bold">プロフィール</h1>
+      
+      <div className="bg-white rounded-lg shadow-sm p-6">
+        <div className="flex items-center space-x-4 mb-6">
+          <div className="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center text-gray-700 text-2xl font-medium">
+            {user?.name.charAt(0)}
+          </div>
+          <div>
+            <h2 className="text-xl font-bold">{user?.name}</h2>
+            <p className="text-gray-600">{user?.email}</p>
+          </div>
+        </div>
+        
+        <div className="space-y-4">
+          <div className="border-b pb-4">
+            <h3 className="font-medium text-gray-700 mb-2">アカウント情報</h3>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <p className="text-sm text-gray-500">名前</p>
+                <p>{user?.name}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-500">メールアドレス</p>
+                <p>{user?.email}</p>
+              </div>
+            </div>
+          </div>
+          
+          <div className="border-b pb-4">
+            <h3 className="font-medium text-gray-700 mb-2">通知設定</h3>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <p>メッセージ通知</p>
+                <input type="checkbox" defaultChecked className="h-4 w-4 text-black focus:ring-black border-gray-300 rounded" />
+              </div>
+              <div className="flex items-center justify-between">
+                <p>予約リマインダー</p>
+                <input type="checkbox" defaultChecked className="h-4 w-4 text-black focus:ring-black border-gray-300 rounded" />
+              </div>
+              <div className="flex items-center justify-between">
+                <p>特別オファー</p>
+                <input type="checkbox" className="h-4 w-4 text-black focus:ring-black border-gray-300 rounded" />
+              </div>
+            </div>
+          </div>
+          
+          <div>
+            <h3 className="font-medium text-gray-700 mb-2">お支払い情報</h3>
+            <div className="flex justify-between items-center">
+              <p className="text-gray-500">お支払い方法は登録されていません</p>
+              <button className="px-3 py-1 bg-gray-100 text-black rounded-md text-sm">
+                追加
+              </button>
+            </div>
+          </div>
+        </div>
+        
+        <div className="mt-8 flex justify-between">
+          <button className="px-4 py-2 bg-gray-100 text-black rounded-lg">
+            プロフィールを編集
+          </button>
+          <button 
+            onClick={logout}
+            className="px-4 py-2 bg-red-50 text-red-600 rounded-lg"
+          >
+            ログアウト
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// メインアプリコンポーネント
+const TripworksApp = () => {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
+  );
+};
+
+// アプリのコンテンツ部分
+const AppContent = () => {
+  const [activeTab, setActiveTab] = useState('home');
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [selectedAttenderId, setSelectedAttenderId] = useState<number | null>(null);
+  const { isAuthenticated, user, logout, openLoginModal } = useAuth();
+
+  // アテンダー詳細ページに遷移する関数
+  const handleAttenderClick = (id: number) => {
+    setSelectedAttenderId(id);
+  };
+
+  // アテンダー詳細ページから戻る関数
+  const handleBackFromDetail = () => {
+    setSelectedAttenderId(null);
+  };
+
+  return (
+    <div className="flex flex-col h-screen bg-gray-100">
+      {/* ヘッダー */}
+      <header className="bg-black text-white p-4 flex justify-between items-center">
+        <div className="flex items-center">
+          <h1 className="text-2xl" style={{ fontFamily: 'sans-serif' }}>
+            <span className="font-bold">e</span>
+            <span className="font-light">cho</span>
+            <span className="text-xs align-top ml-1" style={{ opacity: 0.7 }}>β</span>
+          </h1>
+        </div>
+        <div className="flex items-center space-x-2">
+          {isAuthenticated ? (
+            <button
+              onClick={() => setMenuOpen(!menuOpen)}
+              className="p-2 rounded-full hover:bg-gray-800 flex items-center space-x-2"
+            >
+              <div className="w-8 h-8 bg-gray-600 rounded-full flex items-center justify-center text-white text-sm">
+                {user?.name.charAt(0)}
+              </div>
+              {menuOpen ? <X size={20} /> : <Menu size={20} />}
+            </button>
+          ) : (
+            <>
+              <button
+                onClick={openLoginModal}
+                className="py-1 px-3 border border-white rounded-full text-sm hover:bg-white hover:text-black transition duration-200"
+              >
+                ログイン
+              </button>
+              <button onClick={() => setMenuOpen(!menuOpen)} className="p-2 rounded-full hover:bg-gray-800">
+                {menuOpen ? <X size={20} /> : <Menu size={20} />}
+              </button>
+            </>
+          )}
+        </div>
+      </header>
+
+      {/* メインコンテンツ */}
+      <main className="flex-1 overflow-auto pb-16">
+        {selectedAttenderId ? (
+          <AttenderDetailScreen attenderId={selectedAttenderId} onBack={handleBackFromDetail} />
+        ) : (
+          <>
+            {activeTab === 'home' && <HomeScreen onAttenderClick={handleAttenderClick} />}
+            {activeTab === 'explore' && <ExploreScreen onAttenderClick={handleAttenderClick} attendersData={attendersData} />}
+            {activeTab === 'trips' && <TripsScreen />}
+            {activeTab === 'saved' && <SavedScreen onAttenderClick={handleAttenderClick} />}
+            {activeTab === 'market' && <MarketScreen />}
+            {activeTab === 'community' && <CommunityScreen />}
+            {activeTab === 'events' && <SeasonalEventsScreen />}
+            {activeTab === 'profile' && <ProfileScreen />}
+            {activeTab === 'messages' && <MessagesScreen />}
+          </>
+        )}
+      </main>
+
+      {/* メニュー (サイドバー) */}
+      {menuOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-40" onClick={() => setMenuOpen(false)}>
+          <div className="absolute right-0 top-0 bottom-0 w-64 bg-white shadow-lg z-50" onClick={(e) => e.stopPropagation()}>
+            <div className="p-4 border-b">
+              {isAuthenticated ? (
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center text-gray-700 text-lg font-medium">
+                    {user?.name.charAt(0)}
+                  </div>
+                  <div>
+                    <p className="font-medium">{user?.name}</p>
+                    <p className="text-sm text-gray-500">{user?.email}</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-center space-x-3">
+                  <div className="bg-gray-100 rounded-full p-2">
+                    <User size={24} className="text-gray-600" />
+                  </div>
+                  <div>
+                    <p className="font-medium">ゲストさん</p>
+                    <p className="text-sm text-gray-500">
+                      <button
+                        onClick={() => {
+                          setMenuOpen(false);
+                          openLoginModal();
+                        }}
+                        className="text-black hover:underline"
+                      >
+                        ログイン / 新規登録
+                      </button>
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+            <div className="p-4">
+              <ul className="space-y-4">
+                {isAuthenticated && (
+                  <li
+                    className="flex items-center space-x-3 text-gray-700 hover:text-black cursor-pointer"
+                    onClick={() => {
+                      setActiveTab('profile');
+                      setMenuOpen(false);
+                    }}
+                  >
+                    <User size={20} />
+                    <span>プロフィール</span>
+                  </li>
+                )}
+                <li 
+                  className="flex items-center space-x-3 text-gray-700 hover:text-black cursor-pointer"
+                  onClick={() => {
+                    setActiveTab('messages');
+                    setMenuOpen(false);
+                  }}
+                >
+                  <div className="relative">
+                    <MessageCircle size={20} />
+                    {isAuthenticated && (
+                      <div className="absolute -top-2 -right-2 w-4 h-4 bg-red-500 rounded-full flex items-center justify-center">
+                        <span className="text-white text-xs">1</span>
+                      </div>
+                    )}
+                  </div>
+                  <span>メッセージ</span>
+                </li>
+                <li 
+                  className="flex items-center space-x-3 text-gray-700 hover:text-black cursor-pointer"
+                  onClick={() => {
+                    setActiveTab('events');
+                    setMenuOpen(false);
+                  }}
+                >
+                  <Gift size={20} />
+                  <span>イベント</span>
+                </li>
+                <li className="flex items-center space-x-3 text-gray-700 hover:text-black cursor-pointer">
+                  <Heart size={20} />
+                  <span>お気に入り</span>
+                </li>
+                <li className="border-t my-2 pt-2 flex items-center space-x-3 text-gray-700 hover:text-black cursor-pointer">
+                  <span>ヘルプ</span>
+                </li>
+                <li className="flex items-center space-x-3 text-gray-700 hover:text-black cursor-pointer">
+                  <span>設定</span>
+                </li>
+                {isAuthenticated && (
+                  <li
+                    className="border-t my-2 pt-2 flex items-center space-x-3 text-red-600 hover:text-red-700 cursor-pointer"
+                    onClick={() => {
+                      logout();
+                      setMenuOpen(false);
+                    }}
+                  >
+                    <LogOut size={20} />
+                    <span>ログアウト</span>
+                  </li>
+                )}
+              </ul>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* フッター */}
+      <footer className="fixed bottom-0 left-0 right-0 bg-white border-t flex justify-around items-center h-14 z-30">
+        <button
+          onClick={() => setActiveTab('home')}
+          className={`flex items-center justify-center flex-1 h-full ${activeTab === 'home' ? 'text-black' : 'text-gray-500'}`}
+        >
+          <Home size={24} />
+        </button>
+        <button
+          onClick={() => setActiveTab('explore')}
+          className={`flex items-center justify-center flex-1 h-full ${activeTab === 'explore' ? 'text-black' : 'text-gray-500'}`}
+        >
+          <Compass size={24} />
+        </button>
+        <button
+          onClick={() => setActiveTab('trips')}
+          className={`flex items-center justify-center flex-1 h-full ${activeTab === 'trips' ? 'text-black' : 'text-gray-500'}`}
+        >
+          <Calendar size={24} />
+        </button>
+        <button
+          onClick={() => setActiveTab('market')}
+          className={`flex items-center justify-center flex-1 h-full ${activeTab === 'market' ? 'text-black' : 'text-gray-500'}`}
+        >
+          <ShoppingBag size={24} />
+        </button>
+        <button
+          onClick={() => setActiveTab('community')}
+          className={`flex items-center justify-center flex-1 h-full ${activeTab === 'community' ? 'text-black' : 'text-gray-500'}`}
+        >
+          <Users size={24} />
+        </button>
+      </footer>
+    </div>
+  );
+};
+
+export default TripworksApp;

@@ -1,9 +1,13 @@
 // src/components/messages/ChatScreen.tsx
 import React, { useState, useEffect, useRef } from 'react';
-import { ArrowLeft, Send, Image, Map, Paperclip, ChevronDown, X, Calendar } from 'lucide-react';
-import { Message } from '../../types';
+import { ArrowLeft, Send, X, Search, Paperclip } from 'lucide-react';
+import { Message, MessageAttachment } from '../../types';
 import { getMessagesByConversationId, addMessage, markConversationAsRead } from '../../mockData';
 import { useAuth } from '../../AuthComponents';
+import { webSocketService } from '../../utils/websocketService';
+import MessageSearch from './MessageSearch';
+import ChatMessage from './ChatMessage';
+import AttachmentOptions from './AttachmentOptions';
 
 interface ChatScreenProps {
   conversationId: string;
@@ -18,8 +22,12 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ conversationId, onBack }) => {
   const [otherParticipantId, setOtherParticipantId] = useState('');
   const [otherParticipantName, setOtherParticipantName] = useState('');
   const [showAttachmentOptions, setShowAttachmentOptions] = useState(false);
+  const [currentAttachment, setCurrentAttachment] = useState<MessageAttachment | null>(null);
+  const [showSearch, setShowSearch] = useState(false);
+  const [connectionStatus, setConnectionStatus] = useState<'connected' | 'disconnected' | 'error'>('disconnected');
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messageInputRef = useRef<HTMLInputElement>(null);
   
   // モックデータからメッセージを取得
   useEffect(() => {
@@ -48,27 +56,104 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ conversationId, onBack }) => {
     }
   }, [user, conversationId]);
   
+  // WebSocketを使用してリアルタイム更新を設定
+  useEffect(() => {
+    if (user && conversationId && otherParticipantId) {
+      // WebSocket接続
+      webSocketService.connect(user.id, 'dummy-token');
+      
+      // 接続状態のリスナー
+      const removeConnectionListener = webSocketService.addConnectionListener((status) => {
+        setConnectionStatus(status);
+      });
+      
+      // メッセージリスナー
+      const removeMessageListener = webSocketService.addMessageListener((newMsg) => {
+        // 当該会話のメッセージかチェック
+        if (
+          (newMsg.senderId === user.id && newMsg.receiverId === otherParticipantId) ||
+          (newMsg.senderId === otherParticipantId && newMsg.receiverId === user.id)
+        ) {
+          setMessages((prev) => [...prev, newMsg]);
+          
+          // 自分宛てでないメッセージを既読にする
+          if (newMsg.senderId !== user.id) {
+            markConversationAsRead(conversationId, user.id);
+          }
+        }
+      });
+      
+      return () => {
+        removeConnectionListener();
+        removeMessageListener();
+        webSocketService.disconnect();
+      };
+    }
+  }, [user, conversationId, otherParticipantId]);
+
   // メッセージが更新されたら一番下にスクロール
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
   
+  // 検索結果からメッセージを選択したときの処理
+  const handleSearchResultSelect = (messageId: string) => {
+    // 指定されたメッセージにスクロール
+    const messageElement = document.getElementById(`message-${messageId}`);
+    if (messageElement) {
+      messageElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      messageElement.classList.add('highlight-message');
+      setTimeout(() => {
+        messageElement.classList.remove('highlight-message');
+      }, 2000);
+    }
+    
+    // 検索モードを閉じる
+    setShowSearch(false);
+  };
+  
+  // 添付ファイルが選択されたときの処理
+  const handleAttachmentSelect = (attachment: MessageAttachment) => {
+    setCurrentAttachment(attachment);
+    setShowAttachmentOptions(false);
+    // 入力にフォーカス
+    messageInputRef.current?.focus();
+  };
+  
+  // 添付ファイルを削除
+  const handleRemoveAttachment = () => {
+    setCurrentAttachment(null);
+  };
+  
   // メッセージ送信処理
   const handleSendMessage = () => {
-    if (newMessage.trim() === '' || !user || !otherParticipantId) return;
+    if ((!newMessage.trim() && !currentAttachment) || !user || !otherParticipantId) return;
     
     // 実際のアプリではAPIリクエストを送信
     const messageData = {
       senderId: user.id,
       receiverId: otherParticipantId,
-      content: newMessage
+      content: newMessage,
+      attachments: currentAttachment ? [currentAttachment] : undefined
     };
     
-    const sentMessage = addMessage(messageData);
+    // リアルタイム通信が可能な場合はWebSocketで送信
+    if (connectionStatus === 'connected') {
+      const sent = webSocketService.sendMessage(messageData);
+      if (!sent) {
+        // WebSocketで送信できなかった場合は通常の方法で送信
+        const sentMessage = addMessage(messageData);
+        setMessages(prev => [...prev, sentMessage]);
+      }
+    } else {
+      // 通常の方法で送信
+      const sentMessage = addMessage(messageData);
+      setMessages(prev => [...prev, sentMessage]);
+    }
     
-    // UIを更新
-    setMessages(prev => [...prev, sentMessage]);
+    // 入力をクリア
     setNewMessage('');
+    setCurrentAttachment(null);
     
     // 添付ファイルオプションを閉じる
     setShowAttachmentOptions(false);
@@ -103,7 +188,24 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ conversationId, onBack }) => {
         <div className="flex-1">
           <h2 className="font-bold">{otherParticipantName}</h2>
         </div>
+        
+        {/* 検索ボタン */}
+        <button 
+          onClick={() => setShowSearch(!showSearch)}
+          className="p-2 text-gray-600 hover:bg-gray-100 rounded-full"
+        >
+          <Search size={20} />
+        </button>
       </div>
+      
+      {/* 検索バー */}
+      {showSearch && (
+        <MessageSearch
+          conversationId={conversationId}
+          onResultSelect={handleSearchResultSelect}
+          onClose={() => setShowSearch(false)}
+        />
+      )}
       
       {/* メッセージエリア */}
       <div className="flex-1 overflow-y-auto p-4 bg-gray-50">
@@ -126,46 +228,11 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ conversationId, onBack }) => {
                 const isOwn = message.senderId === user?.id;
                 
                 return (
-                  <div
-                    key={message.id}
-                    className={`mb-4 flex ${isOwn ? 'justify-end' : 'justify-start'}`}
-                  >
-                    <div className={`max-w-[75%] ${isOwn ? 'order-2' : 'order-1'}`}>
-                      <div
-                        className={`p-3 rounded-2xl ${
-                          isOwn
-                            ? 'bg-black text-white rounded-tr-none'
-                            : 'bg-white border border-gray-200 rounded-tl-none'
-                        }`}
-                      >
-                        <p className="text-sm">{message.content}</p>
-                        
-                        {/* 添付ファイルがある場合 */}
-                        {message.attachmentUrl && message.attachmentType === 'image' && (
-                          <div className="mt-2 rounded-lg overflow-hidden">
-                            <div className="bg-gray-200 h-32 flex items-center justify-center">
-                              <Image size={24} className="text-gray-400" />
-                            </div>
-                          </div>
-                        )}
-                        
-                        {message.attachmentUrl && message.attachmentType === 'location' && (
-                          <div className="mt-2 rounded-lg overflow-hidden">
-                            <div className="bg-gray-200 h-32 flex items-center justify-center">
-                              <Map size={24} className="text-gray-400" />
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                      <div className={`mt-1 text-xs text-gray-500 ${isOwn ? 'text-right' : 'text-left'}`}>
-                        {formatMessageTime(message.timestamp)}
-                        {isOwn && (
-                          <span className="ml-1">
-                            {message.isRead ? '既読' : '送信済み'}
-                          </span>
-                        )}
-                      </div>
-                    </div>
+                  <div id={`message-${message.id}`} key={message.id}>
+                    <ChatMessage 
+                      message={message} 
+                      isOwn={isOwn}
+                    />
                   </div>
                 );
               })}
@@ -175,47 +242,56 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ conversationId, onBack }) => {
         <div ref={messagesEndRef} />
       </div>
       
+      {/* 接続状態インジケータ */}
+      {connectionStatus !== 'connected' && (
+        <div className={`text-xs text-center py-1 ${
+          connectionStatus === 'error' ? 'bg-red-100 text-red-600' : 'bg-yellow-100 text-yellow-600'
+        }`}>
+          {connectionStatus === 'error' 
+            ? 'サーバーに接続できません。メッセージはローカルに保存されます。' 
+            : 'サーバーに接続中...'}
+        </div>
+      )}
+      
+      {/* 現在の添付ファイルプレビュー */}
+      {currentAttachment && (
+        <div className="border-t p-2 bg-gray-50">
+          <div className="flex items-center justify-between bg-gray-100 p-2 rounded-lg">
+            <div className="flex items-center">
+              {currentAttachment.type === 'image' && (
+                <div className="text-blue-500 mr-2">画像</div>
+              )}
+              {currentAttachment.type === 'file' && (
+                <div className="text-green-500 mr-2">ファイル</div>
+              )}
+              {currentAttachment.type === 'location' && (
+                <div className="text-purple-500 mr-2">位置情報</div>
+              )}
+              {currentAttachment.type === 'date' && (
+                <div className="text-orange-500 mr-2">日程</div>
+              )}
+              <span className="text-sm truncate">
+                {currentAttachment.name || '添付ファイル'}
+              </span>
+            </div>
+            <button
+              onClick={handleRemoveAttachment}
+              className="text-gray-500 hover:text-gray-700"
+            >
+              <X size={16} />
+            </button>
+          </div>
+        </div>
+      )}
+      
       {/* メッセージ入力エリア */}
       <div className="p-3 border-t">
         {/* 添付ファイルオプション */}
         {showAttachmentOptions && (
-          <div className="bg-white rounded-lg shadow-lg p-3 mb-3 border">
-            <div className="flex justify-between mb-2">
-              <h3 className="font-medium text-sm">添付するファイル</h3>
-              <button 
-                onClick={() => setShowAttachmentOptions(false)}
-                className="text-gray-500"
-              >
-                <X size={16} />
-              </button>
-            </div>
-            <div className="grid grid-cols-4 gap-2">
-              <button className="flex flex-col items-center justify-center p-2 hover:bg-gray-100 rounded-lg">
-                <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center mb-1">
-                  <Image size={20} className="text-blue-600" />
-                </div>
-                <span className="text-xs">画像</span>
-              </button>
-              <button className="flex flex-col items-center justify-center p-2 hover:bg-gray-100 rounded-lg">
-                <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center mb-1">
-                  <Map size={20} className="text-green-600" />
-                </div>
-                <span className="text-xs">位置情報</span>
-              </button>
-              <button className="flex flex-col items-center justify-center p-2 hover:bg-gray-100 rounded-lg">
-                <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center mb-1">
-                  <Calendar size={20} className="text-purple-600" />
-                </div>
-                <span className="text-xs">日程</span>
-              </button>
-              <button className="flex flex-col items-center justify-center p-2 hover:bg-gray-100 rounded-lg">
-                <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center mb-1">
-                  <Paperclip size={20} className="text-gray-600" />
-                </div>
-                <span className="text-xs">ファイル</span>
-              </button>
-            </div>
-          </div>
+          <AttachmentOptions
+            onClose={() => setShowAttachmentOptions(false)}
+            onAttachmentSelect={handleAttachmentSelect}
+          />
         )}
         
         <div className="flex items-center space-x-2">
@@ -223,15 +299,12 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ conversationId, onBack }) => {
             onClick={() => setShowAttachmentOptions(!showAttachmentOptions)}
             className="p-2 text-gray-500 hover:text-gray-700"
           >
-            {showAttachmentOptions ? (
-              <ChevronDown size={20} />
-            ) : (
-              <Paperclip size={20} />
-            )}
+            <Paperclip size={20} />
           </button>
           <div className="flex-1 relative">
             <input
               type="text"
+              ref={messageInputRef}
               value={newMessage}
               onChange={(e) => setNewMessage(e.target.value)}
               placeholder="メッセージを入力..."
@@ -245,9 +318,9 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ conversationId, onBack }) => {
           </div>
           <button
             onClick={handleSendMessage}
-            disabled={newMessage.trim() === ''}
+            disabled={!newMessage.trim() && !currentAttachment}
             className={`p-2 rounded-full ${
-              newMessage.trim() === '' ? 'text-gray-400' : 'text-black'
+              !newMessage.trim() && !currentAttachment ? 'text-gray-400' : 'text-black'
             }`}
           >
             <Send size={20} />
