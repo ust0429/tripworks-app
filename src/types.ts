@@ -53,6 +53,26 @@ export interface Review {
   experienceTitle?: string;
 }
 
+// メッセージ関連の型定義
+export interface Message {
+  id: string;
+  senderId: string;
+  receiverId: string;
+  content: string;
+  timestamp: string;
+  isRead: boolean;
+  attachmentUrl?: string;
+  attachmentType?: 'image' | 'location' | 'file';
+}
+
+export interface Conversation {
+  id: string;
+  participantIds: string[];
+  lastMessage?: Message;
+  updatedAt: string;
+  unreadCount: number;
+}
+
 // AttenderDetailType を AttenderType から拡張して定義
 export interface AttenderDetailType extends Omit<AttenderType, 'rating'> {
   rating: string;

@@ -4,8 +4,9 @@ import { AuthProvider, useAuth } from './AuthComponents';
 import AttenderDetailScreen from './components/AttenderDetailScreen';
 import ExploreScreen from './components/ExploreScreen';
 import DirectRequestModal from './components/DirectRequestModal';
-import ReviewModal from './components/ReviewModal'; // 追加
-import { AttenderType, IconProps, PastExperience } from './types'; // PastExperience を追加
+import ReviewModal from './components/ReviewModal';
+import { MessagesScreen } from './components/messages';
+import { AttenderType, IconProps, PastExperience } from './types';
 import MapView from './components/MapView';
 import AttenderDetailMap from './components/AttenderDetailMap';
 import { getCurrentLocation, geocodeAddress } from './utils/mapUtils';
@@ -15,11 +16,6 @@ import AttenderCard from './components/AttenderCard';
 interface DirectRequestModalProps {
   attender: AttenderType;
   onClose: () => void;
-}
-
-interface AttenderCardProps {
-  attender: AttenderType;
-  compact?: boolean;
 }
 
 // サンプルデータ
@@ -159,105 +155,7 @@ const seasonalEvents = [
   },
 ];
 
-// アテンダーカードコンポーネント
-const AttenderCard = ({ attender, compact = false }: AttenderCardProps) => {
-  const [directRequestModalOpen, setDirectRequestModalOpen] = useState(false);
-  const { isAuthenticated, openLoginModal } = useAuth();
-
-  const handleRequestClick = () => {
-    if (isAuthenticated) {
-      setDirectRequestModalOpen(true);
-    } else {
-      openLoginModal();
-    }
-  };
-
-  if (compact) {
-    return (
-      <div className="bg-white rounded-lg shadow-sm p-3 flex items-center space-x-3">
-        <div className="flex-shrink-0 w-12 h-12 bg-gray-100 rounded-full overflow-hidden flex items-center justify-center">
-        {attender.icon ? React.cloneElement(attender.icon as React.ReactElement<any>, { size: 24, className: "text-gray-600" }) : null}
-        </div>
-        <div className="flex-1">
-          <div className="flex justify-between">
-            <div>
-              <p className="font-medium">{attender.name}</p>
-              <p className="text-sm text-gray-500">{attender.type}</p>
-            </div>
-            <div className="flex items-center">
-              <Star size={16} className="text-yellow-500" />
-              <span className="text-sm ml-1">{attender.rating}</span>
-            </div>
-          </div>
-          <div className="flex justify-between items-center mt-1">
-            <p className="text-sm text-gray-700">{attender.distance}</p>
-            <button 
-              onClick={handleRequestClick} 
-              className="px-3 py-1 bg-black text-white rounded-lg text-xs">
-              リクエスト
-            </button>
-          </div>
-        </div>
-        
-        {/* 直接リクエストモーダル */}
-        {directRequestModalOpen && (
-          <DirectRequestModal 
-            attender={attender}
-            onClose={() => setDirectRequestModalOpen(false)}
-          />
-        )}
-      </div>
-    );
-  }
-
-  return (
-    <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-      <div className="h-40 bg-gray-100 relative flex items-center justify-center">
-        {/* アテンダーのアイコン (大きく表示) */}
-        {attender.icon ? React.cloneElement(attender.icon as React.ReactElement<any>, { size: 64, className: "text-gray-400 opacity-30" }) : null}
-        <div className="absolute bottom-3 left-3 bg-white rounded-full p-1 px-3 text-sm font-medium">
-          {attender.type}
-        </div>
-        {isAuthenticated && (
-          <button className="absolute top-3 right-3 bg-white rounded-full p-2 shadow-sm">
-            <Heart size={16} className="text-gray-700" />
-          </button>
-        )}
-      </div>
-      <div className="p-3">
-        <div className="flex justify-between items-center">
-          <div className="flex items-center space-x-2">
-            <div className="w-10 h-10 bg-gray-200 rounded-full overflow-hidden flex items-center justify-center">
-            {attender.icon ? React.cloneElement(attender.icon as React.ReactElement<any>, { size: 20, className: "text-gray-600" }) : null}
-            </div>
-            <p className="font-medium">{attender.name}</p>
-          </div>
-          <div className="flex items-center">
-            <Star size={16} className="text-yellow-500" />
-            <span className="text-sm ml-1">{attender.rating}</span>
-          </div>
-        </div>
-        <p className="text-sm text-gray-700 mt-2">{attender.description}</p>
-        <div className="flex justify-between items-center mt-3">
-          <p className="text-sm text-gray-500">{attender.distance}</p>
-          <button 
-            onClick={handleRequestClick}
-            className="px-4 py-2 bg-black text-white rounded-lg text-sm">
-            リクエストする
-          </button>
-        </div>
-      </div>
-      
-      {/* 直接リクエストモーダル */}
-      {directRequestModalOpen && (
-        <DirectRequestModal 
-          attender={attender}
-          onClose={() => setDirectRequestModalOpen(false)}
-        />
-      )}
-    </div>
-  );
-};
+// AttenderCardコンポーネントは外部からインポートするため、ここでの定義は不要
 
 // 各画面コンポーネント
 // HomeScreen コンポーネントの修正
@@ -584,6 +482,7 @@ const TripsScreen = () => {
   const [showPastPlans, setShowPastPlans] = useState(false);
   const [reviewModalOpen, setReviewModalOpen] = useState(false);
   const [selectedExperience, setSelectedExperience] = useState<PastExperience | null>(null);
+  const { isAuthenticated, openLoginModal } = useAuth(); // 認証状態を取得
   
   // サンプルの過去の体験データ
   const initialPastExperiences: PastExperience[] = [
@@ -628,6 +527,27 @@ const TripsScreen = () => {
     // モーダルを閉じる
     setReviewModalOpen(false);
   };
+  
+  // ログイン状態を確認し、未ログインの場合はログイン画面を表示
+  if (!isAuthenticated) {
+    return (
+      <div className="p-4 flex flex-col items-center justify-center h-full space-y-4">
+        <div className="bg-gray-100 rounded-full p-6">
+          <Calendar size={48} className="text-gray-400" />
+        </div>
+        <h2 className="text-xl font-bold text-center">旅程を管理</h2>
+        <p className="text-gray-600 text-center">
+          予約や過去の体験を確認するには、ログインしてください。
+        </p>
+        <button 
+          onClick={openLoginModal}
+          className="mt-4 bg-black text-white py-2 px-6 rounded-lg font-medium"
+        >
+          ログイン / 新規登録
+        </button>
+      </div>
+    );
+  }
   
   return (
     <div className="p-4 space-y-6">
@@ -1318,6 +1238,7 @@ const AppContent = () => {
             {activeTab === 'community' && <CommunityScreen />}
             {activeTab === 'events' && <SeasonalEventsScreen />}
             {activeTab === 'profile' && <ProfileScreen />}
+            {activeTab === 'messages' && <MessagesScreen />}
           </>
         )}
       </main>
@@ -1373,10 +1294,16 @@ const AppContent = () => {
                     <span>プロフィール</span>
                   </li>
                 )}
-                <li className="flex items-center space-x-3 text-gray-700 hover:text-black cursor-pointer">
-                  <MessageCircle size={20} />
-                  <span>メッセージ</span>
-                </li>
+                <li 
+                className="flex items-center space-x-3 text-gray-700 hover:text-black cursor-pointer"
+                onClick={() => {
+                  setActiveTab('messages');
+                  setMenuOpen(false);
+                }}
+              >
+                <MessageCircle size={20} />
+                <span>メッセージ</span>
+              </li>
                 <li className="flex items-center space-x-3 text-gray-700 hover:text-black cursor-pointer">
                   <Heart size={20} />
                   <span>お気に入り</span>
@@ -1407,49 +1334,49 @@ const AppContent = () => {
 
       {/* フッター */}
       <footer className="fixed bottom-0 left-0 right-0 bg-white border-t flex justify-around items-center h-16 z-30">
-  <button
-    onClick={() => setActiveTab('home')}
-    className={`flex flex-col items-center justify-center flex-1 h-full ${activeTab === 'home' ? 'text-black' : 'text-gray-500'}`}
-  >
-    <Home size={20} />
-    <span className="text-xs mt-1">ホーム</span>
-  </button>
-  <button
-    onClick={() => setActiveTab('explore')}
-    className={`flex flex-col items-center justify-center flex-1 h-full ${activeTab === 'explore' ? 'text-black' : 'text-gray-500'}`}
-  >
-    <Compass size={20} />
-    <span className="text-xs mt-1">探索</span>
-  </button>
-  <button
-    onClick={() => setActiveTab('trips')}
-    className={`flex flex-col items-center justify-center flex-1 h-full ${activeTab === 'trips' ? 'text-black' : 'text-gray-500'}`}
-  >
-    <Calendar size={20} />
-    <span className="text-xs mt-1">旅程</span>
-  </button>
-  <button
-    onClick={() => setActiveTab('events')}
-    className={`flex flex-col items-center justify-center flex-1 h-full ${activeTab === 'events' ? 'text-black' : 'text-gray-500'}`}
-  >
-    <Gift size={20} /> {/* カレンダーから別のアイコンに変更 */}
-    <span className="text-xs mt-1">イベント</span>
-  </button>
-  <button
-    onClick={() => setActiveTab('market')}
-    className={`flex flex-col items-center justify-center flex-1 h-full ${activeTab === 'market' ? 'text-black' : 'text-gray-500'}`}
-  >
-    <ShoppingBag size={20} />
-    <span className="text-xs mt-1">マーケット</span>
-  </button>
-  <button
-    onClick={() => setActiveTab('community')}
-    className={`flex flex-col items-center justify-center flex-1 h-full ${activeTab === 'community' ? 'text-black' : 'text-gray-500'}`}
-  >
-    <Users size={20} />
-    <span className="text-xs mt-1">コミュニティ</span>
-  </button>
-</footer>
+        <button
+          onClick={() => setActiveTab('home')}
+          className={`flex flex-col items-center justify-center flex-1 h-full ${activeTab === 'home' ? 'text-black' : 'text-gray-500'}`}
+        >
+          <Home size={20} />
+          <span className="text-xs mt-1">ホーム</span>
+        </button>
+        <button
+          onClick={() => setActiveTab('explore')}
+          className={`flex flex-col items-center justify-center flex-1 h-full ${activeTab === 'explore' ? 'text-black' : 'text-gray-500'}`}
+        >
+          <Compass size={20} />
+          <span className="text-xs mt-1">探索</span>
+        </button>
+        <button
+          onClick={() => setActiveTab('messages')}
+          className={`flex flex-col items-center justify-center flex-1 h-full ${activeTab === 'messages' ? 'text-black' : 'text-gray-500'}`}
+        >
+          <div className="relative">
+            <MessageCircle size={20} />
+            {isAuthenticated && (
+              <div className="absolute -top-2 -right-2 w-4 h-4 bg-red-500 rounded-full flex items-center justify-center">
+                <span className="text-white text-xs">1</span>
+              </div>
+            )}
+          </div>
+          <span className="text-xs mt-1">メッセージ</span>
+        </button>
+        <button
+          onClick={() => setActiveTab('trips')}
+          className={`flex flex-col items-center justify-center flex-1 h-full ${activeTab === 'trips' ? 'text-black' : 'text-gray-500'}`}
+        >
+          <Calendar size={20} />
+          <span className="text-xs mt-1">旅程</span>
+        </button>
+        <button
+          onClick={() => setActiveTab('market')}
+          className={`flex flex-col items-center justify-center flex-1 h-full ${activeTab === 'market' ? 'text-black' : 'text-gray-500'}`}
+        >
+          <ShoppingBag size={20} />
+          <span className="text-xs mt-1">マーケット</span>
+        </button>
+      </footer>
     </div>
   );
 };
