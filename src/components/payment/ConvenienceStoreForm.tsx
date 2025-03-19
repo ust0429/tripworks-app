@@ -6,12 +6,16 @@ interface ConvenienceStoreFormProps {
   onDataChange: (data: ConvenienceStoreData) => void;
   errors: PaymentFormErrors;
   disabled?: boolean;
+  onBlur?: (fieldName: string, value: string, formContext: any) => void;
+  fieldStatus?: Record<string, 'valid' | 'invalid' | 'initial'>;
 }
 
 const ConvenienceStoreForm: React.FC<ConvenienceStoreFormProps> = ({
   onDataChange,
   errors,
-  disabled = false
+  disabled = false,
+  onBlur,
+  fieldStatus = {}
 }) => {
   const [formData, setFormData] = useState<ConvenienceStoreData>({
     storeType: '',
@@ -25,6 +29,48 @@ const ConvenienceStoreForm: React.FC<ConvenienceStoreFormProps> = ({
     const newFormData = { ...formData, [name]: value };
     setFormData(newFormData);
     onDataChange(newFormData);
+    
+    // リアルタイムバリデーション（簡易的な検証をフィールド変更時に行う）
+    if (value.trim() !== '') {
+      performLightValidation(name, value);
+    }
+  };
+  
+  // フィールドからフォーカスが外れた時の処理
+  const handleBlur = (e: React.FocusEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    
+    if (onBlur) {
+      onBlur(name, value, formData);
+    }
+  };
+  
+  // 簡易バリデーション
+  const performLightValidation = (fieldName: string, value: string) => {
+    // フィールド固有の基本検証
+    switch (fieldName) {
+      case 'storeType':
+        if (value && onBlur) {
+          onBlur(fieldName, value, formData);
+        }
+        break;
+      case 'customerName':
+        if (value.trim().length >= 2 && onBlur) {
+          onBlur(fieldName, value, formData);
+        }
+        break;
+      case 'customerEmail':
+        if (value.includes('@') && value.includes('.') && onBlur) {
+          onBlur(fieldName, value, formData);
+        }
+        break;
+      case 'customerPhone':
+        // 電話番号形式の簡易チェック
+        if (value.replace(/[^0-9]/g, '').length >= 10 && onBlur) {
+          onBlur(fieldName, value, formData);
+        }
+        break;
+    }
   };
 
   return (
@@ -47,10 +93,11 @@ const ConvenienceStoreForm: React.FC<ConvenienceStoreFormProps> = ({
             name="storeType"
             value={formData.storeType}
             onChange={handleChange}
+            onBlur={handleBlur}
             disabled={disabled}
             className={`mt-1 block w-full border ${
-              errors.storeType ? 'border-red-500' : 'border-gray-300'
-            } rounded-md shadow-sm px-3 py-2 focus:outline-none ${
+              errors.storeType ? 'border-red-500' : fieldStatus.storeType === 'valid' ? 'border-green-500' : 'border-gray-300'
+            } rounded-md shadow-sm px-3 py-2 focus:outline-none ${fieldStatus.storeType === 'valid' ? 'bg-green-50' : ''} ${
               disabled ? 'bg-gray-100' : 'focus:ring-blue-500 focus:border-blue-500'
             }`}
             aria-invalid={!!errors.storeType}
@@ -81,10 +128,11 @@ const ConvenienceStoreForm: React.FC<ConvenienceStoreFormProps> = ({
             name="customerName"
             value={formData.customerName}
             onChange={handleChange}
+            onBlur={handleBlur}
             disabled={disabled}
             className={`mt-1 block w-full border ${
-              errors.customerName ? 'border-red-500' : 'border-gray-300'
-            } rounded-md shadow-sm px-3 py-2 focus:outline-none ${
+              errors.customerName ? 'border-red-500' : fieldStatus.customerName === 'valid' ? 'border-green-500' : 'border-gray-300'
+            } rounded-md shadow-sm px-3 py-2 focus:outline-none ${fieldStatus.customerName === 'valid' ? 'bg-green-50' : ''} ${
               disabled ? 'bg-gray-100' : 'focus:ring-blue-500 focus:border-blue-500'
             }`}
             placeholder="例：山田 太郎"
@@ -109,10 +157,11 @@ const ConvenienceStoreForm: React.FC<ConvenienceStoreFormProps> = ({
             name="customerEmail"
             value={formData.customerEmail}
             onChange={handleChange}
+            onBlur={handleBlur}
             disabled={disabled}
             className={`mt-1 block w-full border ${
-              errors.customerEmail ? 'border-red-500' : 'border-gray-300'
-            } rounded-md shadow-sm px-3 py-2 focus:outline-none ${
+              errors.customerEmail ? 'border-red-500' : fieldStatus.customerEmail === 'valid' ? 'border-green-500' : 'border-gray-300'
+            } rounded-md shadow-sm px-3 py-2 focus:outline-none ${fieldStatus.customerEmail === 'valid' ? 'bg-green-50' : ''} ${
               disabled ? 'bg-gray-100' : 'focus:ring-blue-500 focus:border-blue-500'
             }`}
             placeholder="例：example@example.com"
@@ -138,10 +187,11 @@ const ConvenienceStoreForm: React.FC<ConvenienceStoreFormProps> = ({
             name="customerPhone"
             value={formData.customerPhone}
             onChange={handleChange}
+            onBlur={handleBlur}
             disabled={disabled}
             className={`mt-1 block w-full border ${
-              errors.customerPhone ? 'border-red-500' : 'border-gray-300'
-            } rounded-md shadow-sm px-3 py-2 focus:outline-none ${
+              errors.customerPhone ? 'border-red-500' : fieldStatus.customerPhone === 'valid' ? 'border-green-500' : 'border-gray-300'
+            } rounded-md shadow-sm px-3 py-2 focus:outline-none ${fieldStatus.customerPhone === 'valid' ? 'bg-green-50' : ''} ${
               disabled ? 'bg-gray-100' : 'focus:ring-blue-500 focus:border-blue-500'
             }`}
             placeholder="例：09012345678"

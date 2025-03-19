@@ -7,13 +7,17 @@ interface BankTransferFormProps {
   errors: PaymentFormErrors;
   amount: number;
   disabled?: boolean;
+  onBlur?: (fieldName: string, value: string, formContext: any) => void;
+  fieldStatus?: Record<string, 'valid' | 'invalid' | 'initial'>;
 }
 
 const BankTransferForm: React.FC<BankTransferFormProps> = ({
   onDataChange,
   errors,
   amount,
-  disabled = false
+  disabled = false,
+  onBlur,
+  fieldStatus = {}
 }) => {
   const [formData, setFormData] = useState<BankTransferData>({
     customerName: '',
@@ -27,6 +31,36 @@ const BankTransferForm: React.FC<BankTransferFormProps> = ({
     const newFormData = { ...formData, [name]: value };
     setFormData(newFormData);
     onDataChange(newFormData);
+    
+    // リアルタイムバリデーション（簡易的な検証をフィールド変更時に行う）
+    if (value.trim() !== '') {
+      performLightValidation(name, value);
+    }
+  };
+  
+  // フィールドからフォーカスが外れた時の処理
+  const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    
+    if (onBlur) {
+      onBlur(name, value, formData);
+    }
+  };
+  
+  // 簡易バリデーション
+  const performLightValidation = (fieldName: string, value: string) => {
+    switch (fieldName) {
+      case 'customerName':
+        if (value.trim().length >= 2 && onBlur) {
+          onBlur(fieldName, value, formData);
+        }
+        break;
+      case 'customerEmail':
+        if (value.includes('@') && value.includes('.') && onBlur) {
+          onBlur(fieldName, value, formData);
+        }
+        break;
+    }
   };
 
   // 口座情報
@@ -197,10 +231,11 @@ const BankTransferForm: React.FC<BankTransferFormProps> = ({
             name="customerName"
             value={formData.customerName}
             onChange={handleChange}
+            onBlur={handleBlur}
             disabled={disabled}
             className={`mt-1 block w-full border ${
-              errors.customerName ? 'border-red-500' : 'border-gray-300'
-            } rounded-md shadow-sm px-3 py-2 focus:outline-none ${
+              errors.customerName ? 'border-red-500' : fieldStatus.customerName === 'valid' ? 'border-green-500' : 'border-gray-300'
+            } rounded-md shadow-sm px-3 py-2 focus:outline-none ${fieldStatus.customerName === 'valid' ? 'bg-green-50' : ''} ${
               disabled ? 'bg-gray-100' : 'focus:ring-blue-500 focus:border-blue-500'
             }`}
             placeholder={`例：${transferNameFormat} 山田太郎`}
@@ -225,10 +260,11 @@ const BankTransferForm: React.FC<BankTransferFormProps> = ({
             name="customerEmail"
             value={formData.customerEmail}
             onChange={handleChange}
+            onBlur={handleBlur}
             disabled={disabled}
             className={`mt-1 block w-full border ${
-              errors.customerEmail ? 'border-red-500' : 'border-gray-300'
-            } rounded-md shadow-sm px-3 py-2 focus:outline-none ${
+              errors.customerEmail ? 'border-red-500' : fieldStatus.customerEmail === 'valid' ? 'border-green-500' : 'border-gray-300'
+            } rounded-md shadow-sm px-3 py-2 focus:outline-none ${fieldStatus.customerEmail === 'valid' ? 'bg-green-50' : ''} ${
               disabled ? 'bg-gray-100' : 'focus:ring-blue-500 focus:border-blue-500'
             }`}
             placeholder="例：example@example.com"

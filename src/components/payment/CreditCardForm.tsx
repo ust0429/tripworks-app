@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { CreditCardData, PaymentFormErrors } from '../../types/payment';
 import { validateCardNumber, validateExpiryDate, validateCVC, detectCardType, formatCardNumber } from '../../utils/paymentUtils';
 
@@ -6,12 +6,16 @@ interface CreditCardFormProps {
   onDataChange: (data: CreditCardData) => void;
   errors: PaymentFormErrors;
   disabled?: boolean;
+  onBlur?: (fieldName: string, value: string, formContext: any) => void;
+  fieldStatus?: Record<string, 'valid' | 'invalid' | 'initial'>;
 }
 
 const CreditCardForm: React.FC<CreditCardFormProps> = ({ 
   onDataChange, 
   errors, 
-  disabled = false 
+  disabled = false,
+  onBlur,
+  fieldStatus = {}
 }) => {
   const [formData, setFormData] = useState<CreditCardData>({
     cardNumber: '',
@@ -48,10 +52,66 @@ const CreditCardForm: React.FC<CreditCardFormProps> = ({
       setCardType(detectedType);
       
       onDataChange(newFormData);
+
+      // リアルタイムバリデーション（簡易的な検証をフィールド変更時に行う）
+      if (newFormData.cardNumber.length >= 13 && onBlur) {
+        onBlur(name, newFormData.cardNumber, { cardType: detectedType });
+      }
     } else {
       const newFormData = { ...formData, [name]: value };
       setFormData(newFormData);
       onDataChange(newFormData);
+
+      // 他のフィールドの簡易バリデーション
+      if (value.trim() !== '') {
+        performLightValidation(name, value);
+      }
+    }
+  };
+
+  // フィールドからフォーカスが外れた時の処理
+  const handleBlur = (e: React.FocusEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    
+    if (onBlur) {
+      if (name === 'cardNumber') {
+        onBlur(name, value.replace(/\s/g, ''), { cardType });
+      } else if (name === 'expiryMonth' || name === 'expiryYear') {
+        onBlur(name, value, { 
+          expiryMonth: name === 'expiryMonth' ? value : formData.expiryMonth,
+          expiryYear: name === 'expiryYear' ? value : formData.expiryYear
+        });
+      } else if (name === 'cvc') {
+        onBlur(name, value, { cardType, cardNumber: formData.cardNumber });
+      } else {
+        onBlur(name, value, formData);
+      }
+    }
+  };
+  
+  // 簡易バリデーション
+  const performLightValidation = (fieldName: string, value: string) => {
+    if (!onBlur) return;
+
+    switch (fieldName) {
+      case 'cardholderName':
+        if (value.trim().length >= 2) {
+          onBlur(fieldName, value, formData);
+        }
+        break;
+      case 'expiryMonth':
+      case 'expiryYear':
+        const month = fieldName === 'expiryMonth' ? value : formData.expiryMonth;
+        const year = fieldName === 'expiryYear' ? value : formData.expiryYear;
+        if (month && year) {
+          onBlur(fieldName, value, { expiryMonth: month, expiryYear: year });
+        }
+        break;
+      case 'cvc':
+        if (value.trim().length >= (cardType === 'amex' ? 4 : 3)) {
+          onBlur(fieldName, value, { cardType, cardNumber: formData.cardNumber });
+        }
+        break;
     }
   };
 
@@ -115,12 +175,13 @@ const CreditCardForm: React.FC<CreditCardFormProps> = ({
             name="cardNumber"
             value={formattedCardNumber}
             onChange={handleChange}
+            onBlur={handleBlur}
             maxLength={25} // カード会社によるフォーマットの違いを考慮
             disabled={disabled}
             autoComplete="cc-number"
             className={`mt-1 block w-full border ${
-              errors.cardNumber ? 'border-red-500' : 'border-gray-300'
-            } rounded-md shadow-sm px-3 py-2 focus:outline-none ${
+              errors.cardNumber ? 'border-red-500' : fieldStatus.cardNumber === 'valid' ? 'border-green-500' : 'border-gray-300'
+            } rounded-md shadow-sm px-3 py-2 focus:outline-none ${fieldStatus.cardNumber === 'valid' ? 'bg-green-50' : ''} ${
               disabled ? 'bg-gray-100' : 'focus:ring-blue-500 focus:border-blue-500'
             }`}
             placeholder="1234 5678 9012 3456"
@@ -145,11 +206,12 @@ const CreditCardForm: React.FC<CreditCardFormProps> = ({
             name="cardholderName"
             value={formData.cardholderName}
             onChange={handleChange}
+            onBlur={handleBlur}
             disabled={disabled}
             autoComplete="cc-name"
             className={`mt-1 block w-full border ${
-              errors.cardholderName ? 'border-red-500' : 'border-gray-300'
-            } rounded-md shadow-sm px-3 py-2 focus:outline-none ${
+              errors.cardholderName ? 'border-red-500' : fieldStatus.cardholderName === 'valid' ? 'border-green-500' : 'border-gray-300'
+            } rounded-md shadow-sm px-3 py-2 focus:outline-none ${fieldStatus.cardholderName === 'valid' ? 'bg-green-50' : ''} ${
               disabled ? 'bg-gray-100' : 'focus:ring-blue-500 focus:border-blue-500'
             }`}
             placeholder="TARO YAMADA"
@@ -175,12 +237,13 @@ const CreditCardForm: React.FC<CreditCardFormProps> = ({
                 name="expiryMonth"
                 value={formData.expiryMonth}
                 onChange={handleChange}
+                onBlur={handleBlur}
                 disabled={disabled}
                 aria-label="有効期限（月）"
                 autoComplete="cc-exp-month"
                 className={`mt-1 block w-full border ${
-                  errors.expiryMonth ? 'border-red-500' : 'border-gray-300'
-                } rounded-md shadow-sm px-3 py-2 focus:outline-none ${
+                  errors.expiryMonth ? 'border-red-500' : fieldStatus.expiryMonth === 'valid' ? 'border-green-500' : 'border-gray-300'
+                } rounded-md shadow-sm px-3 py-2 focus:outline-none ${fieldStatus.expiryMonth === 'valid' ? 'bg-green-50' : ''} ${
                   disabled ? 'bg-gray-100' : 'focus:ring-blue-500 focus:border-blue-500'
                 }`}
                 aria-invalid={!!errors.expiryMonth}
@@ -194,12 +257,13 @@ const CreditCardForm: React.FC<CreditCardFormProps> = ({
                 name="expiryYear"
                 value={formData.expiryYear}
                 onChange={handleChange}
+                onBlur={handleBlur}
                 disabled={disabled}
                 aria-label="有効期限（年）"
                 autoComplete="cc-exp-year"
                 className={`mt-1 block w-full border ${
-                  errors.expiryYear ? 'border-red-500' : 'border-gray-300'
-                } rounded-md shadow-sm px-3 py-2 focus:outline-none ${
+                  errors.expiryYear ? 'border-red-500' : fieldStatus.expiryYear === 'valid' ? 'border-green-500' : 'border-gray-300'
+                } rounded-md shadow-sm px-3 py-2 focus:outline-none ${fieldStatus.expiryYear === 'valid' ? 'bg-green-50' : ''} ${
                   disabled ? 'bg-gray-100' : 'focus:ring-blue-500 focus:border-blue-500'
                 }`}
                 aria-invalid={!!errors.expiryYear}
@@ -225,12 +289,13 @@ const CreditCardForm: React.FC<CreditCardFormProps> = ({
               name="cvc"
               value={formData.cvc}
               onChange={handleChange}
+              onBlur={handleBlur}
               maxLength={cardType === 'amex' ? 4 : 3}
               disabled={disabled}
               autoComplete="cc-csc"
               className={`mt-1 block w-full border ${
-                errors.cvc ? 'border-red-500' : 'border-gray-300'
-              } rounded-md shadow-sm px-3 py-2 focus:outline-none ${
+                errors.cvc ? 'border-red-500' : fieldStatus.cvc === 'valid' ? 'border-green-500' : 'border-gray-300'
+              } rounded-md shadow-sm px-3 py-2 focus:outline-none ${fieldStatus.cvc === 'valid' ? 'bg-green-50' : ''} ${
                 disabled ? 'bg-gray-100' : 'focus:ring-blue-500 focus:border-blue-500'
               }`}
               placeholder={cardType === 'amex' ? '4桁' : '3桁'}

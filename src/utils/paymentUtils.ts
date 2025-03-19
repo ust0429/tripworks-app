@@ -1,4 +1,6 @@
-import { PaymentMethodType } from '../types/payment';
+import { PaymentMethodType, PaymentData, PaymentResult } from '../types/payment';
+import { processPCICompliantPayment } from '../services/paymentSecurityService';
+import { initiate3DSecure, shouldRequire3DSecure, show3DSecureModal } from '../services/threeDSecureService';
 
 /**
  * カード番号のLuhnアルゴリズムによる検証
@@ -248,21 +250,82 @@ export const QR_PAYMENT_METHODS = [
  * @returns 決済結果のPromise
  */
 export const processPayment = async (
-  paymentData: any
-): Promise<{ success: boolean; transactionId?: string; error?: string }> => {
-  // テスト用の固定失敗パターン（実際のAPIでは使用しない）
-  if (paymentData.testMode && paymentData.testMode === 'fail') {
-    await new Promise(resolve => setTimeout(resolve, 2000)); // 遅延をシミュレート
+  paymentData: PaymentData
+): Promise<PaymentResult> => {
+  try {
+    // PCI DSS準拠の決済データ処理
+    const securePaymentData = await processPCICompliantPayment(paymentData);
+    
+    // テスト用の固定失敗パターン（実際のAPIでは使用しない）
+    if (paymentData.testMode && paymentData.testMode === 'fail') {
+      await new Promise(resolve => setTimeout(resolve, 2000)); // 遅延をシミュレート
+      return {
+        success: false,
+        error: 'テスト用エラー: 決済に失敗しました'
+      };
+    }
+    
+    // クレジットカード決済の場合3Dセキュア処理
+    if (paymentData.paymentMethod === 'credit_card') {
+      // 3Dセキュアが必要かチェック
+      const requires3ds = shouldRequire3DSecure(
+        paymentData.cardData, 
+        paymentData.amount
+      );
+      
+      if (requires3ds) {
+        // 3Dセキュア初期化
+        const threeDSecureData = await initiate3DSecure(
+          paymentData.cardData,
+          paymentData.amount,
+          paymentData.bookingId
+        );
+        
+        // 既に認証が成功している場合（フリクションレス認証）
+        if (threeDSecureData.status === 'success') {
+          console.log('3Dセキュア：フリクションレス認証に成功しました');
+          // 追加の遅延シミュレーション
+          await new Promise(resolve => setTimeout(resolve, 500));
+        } else if (threeDSecureData.authenticationUrl) {
+          // ユーザー認証が必要な場合
+          console.log('3Dセキュア：カード発行会社の認証が必要です');
+          
+          // 認証モーダルを表示
+          const authSuccess = await show3DSecureModal(threeDSecureData.authenticationUrl);
+          
+          if (!authSuccess) {
+            // ユーザーが認証をキャンセルまたは失敗
+            return {
+              success: false,
+              error: '3Dセキュア認証が完了しませんでした。もう一度お試しください。',
+              requires3DSecure: true,
+              threeDSecureId: threeDSecureData.id
+            };
+          }
+        } else {
+          // 認証URLが無い場合はエラー
+          return {
+            success: false,
+            error: '3Dセキュア認証の初期化に失敗しました。',
+            requires3DSecure: true
+          };
+        }
+      }
+    }
+    
+    // 実際のAPI処理（ここではモックとして遅延のみシミュレート）
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    
+    // 処理成功
+    return {
+      success: true,
+      transactionId: `ECHO-${Date.now()}-${Math.floor(Math.random() * 1000)}`
+    };
+  } catch (error) {
+    console.error('決済処理中にエラーが発生しました:', error);
     return {
       success: false,
-      error: 'テスト用エラー: 決済に失敗しました'
+      error: error instanceof Error ? error.message : '決済処理中に不明なエラーが発生しました'
     };
   }
-  
-  // 成功パターン
-  await new Promise(resolve => setTimeout(resolve, 1500)); // 遅延をシミュレート
-  return {
-    success: true,
-    transactionId: `ECHO-${Date.now()}-${Math.floor(Math.random() * 1000)}`
-  };
 };

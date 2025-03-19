@@ -6,12 +6,16 @@ interface QRCodeFormProps {
   onDataChange: (data: any) => void;
   errors: PaymentFormErrors;
   disabled?: boolean;
+  onBlur?: (fieldName: string, value: string, formContext: any) => void;
+  fieldStatus?: Record<string, 'valid' | 'invalid' | 'initial'>;
 }
 
 const QRCodeForm: React.FC<QRCodeFormProps> = ({
   onDataChange,
   errors,
-  disabled = false
+  disabled = false,
+  onBlur,
+  fieldStatus = {}
 }) => {
   const [formData, setFormData] = useState<QRCodeData>({
     providerType: '',
@@ -24,6 +28,45 @@ const QRCodeForm: React.FC<QRCodeFormProps> = ({
     const newFormData = { ...formData, [name]: value };
     setFormData(newFormData);
     onDataChange(newFormData);
+    
+    // リアルタイムバリデーション（簡易的な検証をフィールド変更時に行う）
+    if (value.trim() !== '') {
+      performLightValidation(name, value);
+    }
+  };
+  
+  // フィールドからフォーカスが外れた時の処理
+  const handleBlur = (e: React.FocusEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    
+    if (onBlur) {
+      onBlur(name, value, formData);
+    }
+  };
+  
+  // 簡易バリデーション
+  const performLightValidation = (fieldName: string, value: string) => {
+    switch (fieldName) {
+      case 'providerType':
+        if (value && onBlur) {
+          onBlur(fieldName, value, formData);
+        }
+        break;
+      case 'customerEmail':
+        if (value.includes('@') && value.includes('.') && onBlur) {
+          onBlur(fieldName, value, formData);
+        }
+        break;
+      case 'customerPhone':
+        // 電話番号は任意なので、入力された場合のみバリデーション
+        if (value && value.replace(/[^0-9]/g, '').length >= 10 && onBlur) {
+          onBlur(fieldName, value, formData);
+        } else if (!value && onBlur) {
+          // 空の場合もvalidとして扱う（任意項目）
+          onBlur(fieldName, value, formData);
+        }
+        break;
+    }
   };
 
   // QRコードのプレースホルダー画像URL
@@ -49,10 +92,11 @@ const QRCodeForm: React.FC<QRCodeFormProps> = ({
             name="providerType"
             value={formData.providerType}
             onChange={handleChange}
+            onBlur={handleBlur}
             disabled={disabled}
             className={`mt-1 block w-full border ${
-              errors.providerType ? 'border-red-500' : 'border-gray-300'
-            } rounded-md shadow-sm px-3 py-2 focus:outline-none ${
+              errors.providerType ? 'border-red-500' : fieldStatus.providerType === 'valid' ? 'border-green-500' : 'border-gray-300'
+            } rounded-md shadow-sm px-3 py-2 focus:outline-none ${fieldStatus.providerType === 'valid' ? 'bg-green-50' : ''} ${
               disabled ? 'bg-gray-100' : 'focus:ring-blue-500 focus:border-blue-500'
             }`}
             aria-invalid={!!errors.providerType}
@@ -83,10 +127,11 @@ const QRCodeForm: React.FC<QRCodeFormProps> = ({
             name="customerEmail"
             value={formData.customerEmail}
             onChange={handleChange}
+            onBlur={handleBlur}
             disabled={disabled}
             className={`mt-1 block w-full border ${
-              errors.customerEmail ? 'border-red-500' : 'border-gray-300'
-            } rounded-md shadow-sm px-3 py-2 focus:outline-none ${
+              errors.customerEmail ? 'border-red-500' : fieldStatus.customerEmail === 'valid' ? 'border-green-500' : 'border-gray-300'
+            } rounded-md shadow-sm px-3 py-2 focus:outline-none ${fieldStatus.customerEmail === 'valid' ? 'bg-green-50' : ''} ${
               disabled ? 'bg-gray-100' : 'focus:ring-blue-500 focus:border-blue-500'
             }`}
             placeholder="例：example@example.com"
@@ -112,10 +157,11 @@ const QRCodeForm: React.FC<QRCodeFormProps> = ({
             name="customerPhone"
             value={formData.customerPhone || ''}
             onChange={handleChange}
+            onBlur={handleBlur}
             disabled={disabled}
             className={`mt-1 block w-full border ${
-              errors.customerPhone ? 'border-red-500' : 'border-gray-300'
-            } rounded-md shadow-sm px-3 py-2 focus:outline-none ${
+              errors.customerPhone ? 'border-red-500' : fieldStatus.customerPhone === 'valid' ? 'border-green-500' : 'border-gray-300'
+            } rounded-md shadow-sm px-3 py-2 focus:outline-none ${fieldStatus.customerPhone === 'valid' ? 'bg-green-50' : ''} ${
               disabled ? 'bg-gray-100' : 'focus:ring-blue-500 focus:border-blue-500'
             }`}
             placeholder="例：09012345678"

@@ -40,6 +40,7 @@ export type PaymentData = {
   amount: number;
   bookingId: string;
   paymentMethod: PaymentMethodType;
+  testMode?: 'success' | 'fail'; // テスト用のモード
 } & (
   | { paymentMethod: 'credit_card'; cardData: CreditCardData }
   | { paymentMethod: 'convenience'; convenienceData: ConvenienceStoreData }
@@ -68,4 +69,39 @@ export interface PaymentResult {
   transactionId?: string;
   error?: string;
   receiptUrl?: string;
+  // 3Dセキュア関連の追加フィールド
+  requires3DSecure?: boolean;
+  threeDSecureUrl?: string;
+  threeDSecureId?: string;
+}
+
+// 3Dセキュアの状態
+export type ThreeDSecureStatus = 'pending' | 'success' | 'failed' | 'canceled';
+
+// 3Dセキュア情報
+export interface ThreeDSecureData {
+  id: string;
+  status: ThreeDSecureStatus;
+  authenticationUrl?: string;
+  fingerprint?: string;
+  clientMetadata?: ThreeDSecureClientMetadata;
+}
+
+// 3Dセキュアクライアントメタデータ
+export interface ThreeDSecureClientMetadata {
+  browserInfo: {
+    acceptHeader: string;
+    browserLanguage: string;
+    screenHeight: number;
+    screenWidth: number;
+    timeZone: number;
+    userAgent: string;
+    javaEnabled: boolean;
+    colorDepth: number;
+  };
+  deviceInfo?: {
+    deviceChannel: string; // ブラウザ、モバイルアプリなど
+    ipAddress?: string;
+    deviceId?: string;
+  };
 }

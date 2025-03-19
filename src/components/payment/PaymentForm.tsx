@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
-import { ArrowRight, CheckCircle, AlertTriangle } from 'lucide-react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { ArrowRight, CheckCircle, AlertTriangle, Info, CreditCard, Store, Building, QrCode } from 'lucide-react';
 import { usePayment } from '../../contexts/PaymentContext';
 import { PaymentMethodType, PaymentFormErrors, PaymentData } from '../../types/payment';
-import { validateCardNumber, validateExpiryDate, validateCVC } from '../../utils/paymentUtils';
+import { validateCardNumber, validateExpiryDate, validateCVC, detectCardType } from '../../utils/paymentUtils';
 
 // 各決済方法のコンポーネント
 import PaymentMethodSelector from './PaymentMethodSelector';
@@ -58,7 +58,94 @@ const PaymentForm: React.FC<PaymentFormProps> = ({ totalAmount, onPaymentSubmit,
 
   // バリデーションエラー
   const [errors, setErrors] = useState<PaymentFormErrors>({});
+  
+  // フィールドごとのバリデーション状態
+  const [fieldStatus, setFieldStatus] = useState<Record<string, 'valid' | 'invalid' | 'initial'>>({});
+  
+  // 触れたフィールドを追跡
+  const [touchedFields, setTouchedFields] = useState<Record<string, boolean>>({});
 
+  // 特定のフィールドをバリデーション
+  const validateField = useCallback((fieldName: string, value: string, formContext: any = {}): string | null => {
+    // 現在選択されている決済方法を参照
+    const currentPaymentMethod = formContext.paymentMethod || paymentMethod;
+    
+    // フィールドが決済方法に関連していない場合はスキップ
+    if (currentPaymentMethod === 'credit_card' && !['cardNumber', 'cardholderName', 'expiryMonth', 'expiryYear', 'cvc'].includes(fieldName)) {
+      return null;
+    }
+    if (currentPaymentMethod === 'convenience' && !['storeType', 'customerName', 'customerEmail', 'customerPhone'].includes(fieldName)) {
+      return null;
+    }
+    if (currentPaymentMethod === 'bank_transfer' && !['customerName', 'customerEmail'].includes(fieldName)) {
+      return null;
+    }
+    if (currentPaymentMethod === 'qr_code' && !['providerType', 'customerEmail', 'customerPhone'].includes(fieldName)) {
+      return null;
+    }
+    
+    // 共通のバリデーション
+    if (!value && fieldName !== 'customerPhone') {
+      return `この項目は必須です`;
+    }
+
+    // フィールド固有のバリデーション
+    switch (fieldName) {
+      case 'cardNumber':
+        if (!validateCardNumber(value)) {
+          return '有効なカード番号を入力してください';
+        }
+        break;
+      case 'expiryMonth':
+      case 'expiryYear':
+        const month = fieldName === 'expiryMonth' ? value : formContext.expiryMonth || cardData.expiryMonth;
+        const year = fieldName === 'expiryYear' ? value : formContext.expiryYear || cardData.expiryYear;
+        if (month && year && !validateExpiryDate(month, year)) {
+          return '有効期限が無効です';
+        }
+        break;
+      case 'cvc':
+        const cardTypeContext = formContext.cardType || detectCardType(formContext.cardNumber || cardData.cardNumber);
+        if (!validateCVC(value, cardTypeContext)) {
+          return '有効なセキュリティコードを入力してください';
+        }
+        break;
+      case 'customerEmail':
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+          return '有効なメールアドレスを入力してください';
+        }
+        break;
+      case 'customerPhone':
+        // 電話番号は空でもよい場合もある（QR決済など）
+        if (value && !/^[0-9]{10,11}$/.test(value.replace(/[^0-9]/g, ''))) {
+          return '有効な電話番号を入力してください';
+        }
+        break;
+    }
+    
+    return null;
+  }, [paymentMethod, cardData]);
+
+  // 触れたフィールドをマーク
+  const handleFieldBlur = useCallback((fieldName: string, value: string, formContext: any = {}) => {
+    setTouchedFields(prev => ({ ...prev, [fieldName]: true }));
+    
+    // フィールドのバリデーション実行
+    const error = validateField(fieldName, value, formContext);
+    
+    // エラー状態を更新
+    setErrors(prev => ({
+      ...prev,
+      [fieldName]: error || undefined
+    }));
+    
+    // フィールドのステータスを更新
+    setFieldStatus(prev => ({
+      ...prev,
+      [fieldName]: error ? 'invalid' : 'valid'
+    }));
+  }, [validateField]);
+  
   // 選択された決済方法に応じたバリデーション
   const validateForm = (): boolean => {
     const newErrors: PaymentFormErrors = {};
@@ -230,10 +317,46 @@ const PaymentForm: React.FC<PaymentFormProps> = ({ totalAmount, onPaymentSubmit,
     }
   };
 
-  // 決済方法が変更されたらエラーをリセット
+  // 決済方法が変更されたらエラーと状態をリセット
   useEffect(() => {
     setErrors({});
+    setFieldStatus({});
+    setTouchedFields({});
   }, [paymentMethod]);
+  
+  // フォームの完了度を計算（プログレスバー用）
+  const formCompleteness = useMemo(() => {
+    if (!paymentMethod) return 0;
+    
+    let requiredFields: string[] = [];
+    let validFieldCount = 0;
+    
+    // 決済方法に基づいて必要なフィールドを設定
+    switch (paymentMethod) {
+      case 'credit_card':
+        requiredFields = ['cardNumber', 'cardholderName', 'expiryMonth', 'expiryYear', 'cvc'];
+        break;
+      case 'convenience':
+        requiredFields = ['storeType', 'customerName', 'customerEmail', 'customerPhone'];
+        break;
+      case 'bank_transfer':
+        requiredFields = ['customerName', 'customerEmail'];
+        break;
+      case 'qr_code':
+        requiredFields = ['providerType', 'customerEmail'];
+        break;
+    }
+    
+    // 有効なフィールドをカウント
+    requiredFields.forEach(field => {
+      if (fieldStatus[field] === 'valid') {
+        validFieldCount++;
+      }
+    });
+    
+    // 決済方法の選択自体も1ステップとしてカウント
+    return requiredFields.length > 0 ? (validFieldCount / requiredFields.length) * 100 : 0;
+  }, [paymentMethod, fieldStatus]);
 
   // 予約データがない場合でも、totalAmountが渡されていれば処理を継続
 
@@ -276,20 +399,55 @@ const PaymentForm: React.FC<PaymentFormProps> = ({ totalAmount, onPaymentSubmit,
       )}
 
       {/* 決済方法選択 */}
-      <PaymentMethodSelector
-        selectedMethod={paymentMethod}
-        onSelectMethod={setPaymentMethod}
-        disabled={isProcessing}
-      />
+      <div className="mb-2">
+        <p className="text-sm font-medium text-gray-700 mb-3">お支払い方法を選択してください</p>
+        <PaymentMethodSelector
+          selectedMethod={paymentMethod}
+          onSelectMethod={setPaymentMethod}
+          disabled={isProcessing}
+        />
+      </div>
+      
+      {/* プログレスバー */}
+      {paymentMethod && (
+        <div className="mt-4 mb-2 animate-fade-in-up">
+          <div className="w-full bg-gray-200 rounded-full h-2.5">
+            <div
+              className="bg-blue-600 h-2.5 rounded-full transition-all duration-500 ease-out"
+              style={{ width: `${formCompleteness}%` }}
+            ></div>
+          </div>
+          <p className="text-xs text-gray-500 mt-1 text-right">
+            {formCompleteness < 100 
+              ? 'フォームの入力を完了してください' 
+              : '入力完了！確定ボタンを押してください'}
+          </p>
+        </div>
+      )}
 
       {/* 選択された決済方法のフォーム */}
       {paymentMethod && (
-        <div className="mt-6">
+        <div className="mt-6 relative animate-fade-in-up">
+          {/* 決済方法のアイコンとタイトル */}
+          <div className="mb-4 flex items-center">
+            {paymentMethod === 'credit_card' && <CreditCard className="w-5 h-5 text-blue-600 mr-2" />}
+            {paymentMethod === 'convenience' && <Store className="w-5 h-5 text-blue-600 mr-2" />}
+            {paymentMethod === 'bank_transfer' && <Building className="w-5 h-5 text-blue-600 mr-2" />}
+            {paymentMethod === 'qr_code' && <QrCode className="w-5 h-5 text-blue-600 mr-2" />}
+            <h3 className="text-lg font-medium text-gray-800">
+              {paymentMethod === 'credit_card' && 'クレジットカード情報'}
+              {paymentMethod === 'convenience' && 'コンビニ支払い情報'}
+              {paymentMethod === 'bank_transfer' && '銀行振込情報'}
+              {paymentMethod === 'qr_code' && 'QRコード決済情報'}
+            </h3>
+          </div>
           {paymentMethod === 'credit_card' && (
             <CreditCardForm
               onDataChange={setCardData}
               errors={errors}
               disabled={isProcessing}
+              onBlur={handleFieldBlur}
+              fieldStatus={fieldStatus}
             />
           )}
 
@@ -298,6 +456,8 @@ const PaymentForm: React.FC<PaymentFormProps> = ({ totalAmount, onPaymentSubmit,
               onDataChange={setConvenienceData}
               errors={errors}
               disabled={isProcessing}
+              onBlur={handleFieldBlur}
+              fieldStatus={fieldStatus}
             />
           )}
 
@@ -307,6 +467,8 @@ const PaymentForm: React.FC<PaymentFormProps> = ({ totalAmount, onPaymentSubmit,
               errors={errors}
               amount={totalAmount}
               disabled={isProcessing}
+              onBlur={handleFieldBlur}
+              fieldStatus={fieldStatus}
             />
           )}
 
@@ -315,20 +477,43 @@ const PaymentForm: React.FC<PaymentFormProps> = ({ totalAmount, onPaymentSubmit,
               onDataChange={setQrData}
               errors={errors}
               disabled={isProcessing}
+              onBlur={handleFieldBlur}
+              fieldStatus={fieldStatus}
             />
           )}
         </div>
       )}
 
+      {/* ヘルプテキスト */}
+      {paymentMethod && (
+        <div className="mt-4 p-3 bg-blue-50 rounded-md flex items-start space-x-3 animate-fade-in-up">
+          <Info className="w-5 h-5 text-blue-600 mt-0.5 shrink-0" />
+          <div className="text-sm text-blue-800">
+            {paymentMethod === 'credit_card' && (
+              <p>カード情報は安全に処理され、暗号化されて送信されます。当サイトではカード情報を保存しません。</p>
+            )}
+            {paymentMethod === 'convenience' && (
+              <p>お支払い情報が登録されると、お支払い番号と詳細手順がメールで送信されます。コンビニでのお支払いは5日以内にお願いします。</p>
+            )}
+            {paymentMethod === 'bank_transfer' && (
+              <p>振込先の口座情報はメールでお送りします。お振込の際は、必ず振込名義人を入力いただいた名前と同じにしてください。</p>
+            )}
+            {paymentMethod === 'qr_code' && (
+              <p>決済確定後、QRコードが表示されます。スマートフォンでスキャンして決済を完了してください。有効期限は30分です。</p>
+            )}
+          </div>
+        </div>
+      )}
+      
       {/* 送信ボタン */}
       <div className="mt-8">
         <button
           type="submit"
           disabled={isProcessing || paymentSuccess}
-          className={`w-full flex items-center justify-center space-x-2 px-6 py-3 rounded-md text-white font-medium ${
+          className={`w-full flex items-center justify-center space-x-2 px-6 py-3 rounded-md text-white font-medium transition-all ${
             isProcessing || paymentSuccess
               ? 'bg-gray-400 cursor-not-allowed'
-              : 'bg-blue-600 hover:bg-blue-700'
+              : formCompleteness >= 100 ? 'bg-green-600 hover:bg-green-700' : 'bg-blue-600 hover:bg-blue-700'
           }`}
         >
           <span>
@@ -348,10 +533,11 @@ const PaymentForm: React.FC<PaymentFormProps> = ({ totalAmount, onPaymentSubmit,
       </div>
 
       {/* 注意事項 */}
-      <div className="mt-6 text-sm text-gray-600 space-y-2">
+      <div className="mt-6 text-sm text-gray-600 space-y-2 border-t pt-4">
         <p>※ 決済処理完了後、予約確認メールをお送りします。</p>
         <p>※ 決済に関するお問い合わせは、予約番号をお伝えください。</p>
         <p>※ 決済情報は安全に処理され、サーバーには保存されません。</p>
+        <p className="mt-2 text-xs text-gray-500">当サイトはSSL暗号化通信で決済情報を保護しています。お支払い情報は決済代行会社によって安全に処理されます。</p>
       </div>
     </form>
   );
