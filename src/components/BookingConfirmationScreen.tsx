@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import { ArrowLeft, Calendar, Clock, MapPin, Info, AlertCircle } from 'lucide-react';
 import { AttenderType } from '../types';
-import PaymentForm, { PaymentData } from './PaymentForm';
-import PaymentComplete from './PaymentComplete';
+import PaymentForm from './payment/PaymentForm';
+import { PaymentData } from '../types/payment';
+import PaymentComplete from './payment/PaymentComplete';
 import { usePayment } from '../contexts/PaymentContext';
+import { PaymentMethodType } from '../types/payment';
 
 interface BookingConfirmationScreenProps {
   attenderId: number;
@@ -45,6 +47,7 @@ const BookingConfirmationScreen: React.FC<BookingConfirmationScreenProps> = ({
   // 決済コンテキストを使用
   const { paymentState, processPayment, clearPaymentState } = usePayment();
   
+  
   // アテンダー情報を取得
   const attender = attendersData.find(a => a.id === attenderId);
   
@@ -80,8 +83,14 @@ const BookingConfirmationScreen: React.FC<BookingConfirmationScreenProps> = ({
   // 決済処理
   const handlePaymentSubmit = async (paymentData: PaymentData) => {
     try {
-      const result = await processPayment(paymentData, totalPrice);
-      if (result.success) {
+      // PaymentData にtotalAmount を設定
+      const paymentDataWithAmount = {
+        ...paymentData,
+        amount: totalPrice
+      };
+      
+      const success = await processPayment(paymentDataWithAmount);
+      if (success) {
         setBookingStage(BookingStage.COMPLETE);
       }
     } catch (error) {

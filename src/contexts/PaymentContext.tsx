@@ -1,151 +1,230 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
-import { PaymentMethodType, PaymentData, PaymentError } from '../components/PaymentForm';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { processPayment } from '../utils/paymentUtils';
+import { BookingData } from '../types/booking';
+import { PaymentMethodType } from '../types/payment';
 
-// 決済サービスに必要な型定義
-interface PaymentState {
+// ナビゲーション用の関数型定義
+type NavigateFunction = (path: string) => void;
+
+interface PaymentContextProps {
+  // 状態
   isProcessing: boolean;
-  isComplete: boolean;
-  isSuccess: boolean;
-  bookingId: string | null;
+  paymentError: string | null;
+  paymentSuccess: boolean;
   paymentMethod: PaymentMethodType | null;
-  error: string | null;
-  errors: PaymentError[];
+  transactionId: string | null;
+  retryCount: number;
+  // データ
+  bookingData: BookingData | null;
+  // アクション
+  setBookingData: (data: BookingData) => void;
+  setPaymentMethod: (method: PaymentMethodType) => void;
+  processPaymentAction: (paymentData: any) => Promise<boolean>;
+  retryPayment: () => Promise<boolean>;
+  resetPaymentState: () => void;
+  // ナビゲーション
+  navigateToComplete: () => void;
+  navigateToFailure: () => void;
 }
 
-interface PaymentResponse {
-  success: boolean;
-  bookingId?: string;
-  error?: string;
-}
+const PaymentContext = createContext<PaymentContextProps | undefined>(undefined);
 
-interface PaymentContextType {
-  paymentState: PaymentState;
-  clearPaymentState: () => void;
-  processPayment: (paymentData: PaymentData, amount: number) => Promise<PaymentResponse>;
-}
-
-// コンテキストの作成
-const PaymentContext = createContext<PaymentContextType | undefined>(undefined);
-
-// 決済ステータスの初期値
-const initialPaymentState: PaymentState = {
-  isProcessing: false,
-  isComplete: false,
-  isSuccess: false,
-  bookingId: null,
-  paymentMethod: null,
-  error: null,
-  errors: []
+// セッションストレージのキー
+const STORAGE_KEYS = {
+  BOOKING_DATA: 'echo_booking_data',
+  PAYMENT_METHOD: 'echo_payment_method',
+  TRANSACTION_ID: 'echo_transaction_id',
+  PAYMENT_SUCCESS: 'echo_payment_success',
 };
 
-// プロバイダーコンポーネント
-export const PaymentProvider: React.FC<{children: ReactNode}> = ({ children }) => {
-  const [paymentState, setPaymentState] = useState<PaymentState>(initialPaymentState);
+export const PaymentProvider: React.FC<{ children: React.ReactNode; navigate?: NavigateFunction }> = ({ children, navigate }) => {
+  // カスタムのナビゲーション関数（デフォルトは何もしない）
+  const navigateImpl = navigate || ((path: string) => {
+    console.warn(`Navigation to ${path} was attempted, but no navigate function was provided to PaymentProvider.`);
+  });
 
-  // 決済状態をリセット
-  const clearPaymentState = () => {
-    setPaymentState(initialPaymentState);
-  };
+  // 状態管理
+  const [isProcessing, setIsProcessing] = useState<boolean>(false);
+  const [paymentError, setPaymentError] = useState<string | null>(null);
+  const [paymentSuccess, setPaymentSuccess] = useState<boolean>(false);
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethodType | null>(null);
+  const [transactionId, setTransactionId] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState<number>(0);
+  const [bookingData, setBookingData] = useState<BookingData | null>(null);
 
-  // モック決済処理（実際の実装ではAPIと連携）
-  const processPayment = async (paymentData: PaymentData, amount: number): Promise<PaymentResponse> => {
-    setPaymentState({
-      ...initialPaymentState,
-      isProcessing: true,
-      paymentMethod: paymentData.method
-    });
-
-    // 決済処理をシミュレート
+  // セッションからの状態復元
+  useEffect(() => {
     try {
-      // 実際の実装では、ここでAPIリクエストを行う
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      // テスト用のランダム成功/失敗（本番では削除）
-      // const isSuccess = Math.random() > 0.3; // 70%の確率で成功
-      const isSuccess = true; // 開発中は常に成功させる
+      // ブラウザ環境でのみ実行
+      if (typeof window !== 'undefined') {
+        const storedBookingData = sessionStorage.getItem(STORAGE_KEYS.BOOKING_DATA);
+        const storedPaymentMethod = sessionStorage.getItem(STORAGE_KEYS.PAYMENT_METHOD);
+        const storedTransactionId = sessionStorage.getItem(STORAGE_KEYS.TRANSACTION_ID);
+        const storedPaymentSuccess = sessionStorage.getItem(STORAGE_KEYS.PAYMENT_SUCCESS);
 
-      if (isSuccess) {
-        // 成功時の処理
-        const bookingId = `ECH${Date.now().toString().slice(-8)}`;
+        if (storedBookingData) {
+          setBookingData(JSON.parse(storedBookingData));
+        }
         
-        setPaymentState({
-          isProcessing: false,
-          isComplete: true,
-          isSuccess: true,
-          bookingId,
-          paymentMethod: paymentData.method,
-          error: null,
-          errors: []
-        });
+        if (storedPaymentMethod) {
+          setPaymentMethod(storedPaymentMethod as PaymentMethodType);
+        }
         
-        return {
-          success: true,
-          bookingId
-        };
-      } else {
-        // 失敗時の処理
-        const errorMessage = "決済処理に失敗しました。カード情報をご確認いただくか、別の決済方法をお試しください。";
+        if (storedTransactionId) {
+          setTransactionId(storedTransactionId);
+        }
         
-        setPaymentState({
-          isProcessing: false,
-          isComplete: true,
-          isSuccess: false,
-          bookingId: null,
-          paymentMethod: paymentData.method,
-          error: errorMessage,
-          errors: [{
-            message: errorMessage,
-            type: 'error'
-          }]
-        });
-        
-        return {
-          success: false,
-          error: errorMessage
-        };
+        if (storedPaymentSuccess) {
+          setPaymentSuccess(storedPaymentSuccess === 'true');
+        }
       }
     } catch (error) {
-      // エラー処理
-      const errorMessage = "ネットワークエラーが発生しました。通信状況をご確認の上、再度お試しください。";
-      
-      setPaymentState({
-        isProcessing: false,
-        isComplete: true,
-        isSuccess: false,
-        bookingId: null,
-        paymentMethod: paymentData.method,
-        error: errorMessage,
-        errors: [{
-          message: errorMessage,
-          type: 'error'
-        }]
-      });
-      
-      return {
-        success: false,
-        error: errorMessage
-      };
+      console.error('セッションからの状態復元に失敗しました:', error);
     }
+  }, []);
+
+  // 状態変更時のセッション保存
+  useEffect(() => {
+    try {
+      if (typeof window !== 'undefined') {
+        if (bookingData) {
+          sessionStorage.setItem(STORAGE_KEYS.BOOKING_DATA, JSON.stringify(bookingData));
+        }
+        
+        if (paymentMethod) {
+          sessionStorage.setItem(STORAGE_KEYS.PAYMENT_METHOD, paymentMethod);
+        }
+        
+        if (transactionId) {
+          sessionStorage.setItem(STORAGE_KEYS.TRANSACTION_ID, transactionId);
+        }
+        
+        sessionStorage.setItem(STORAGE_KEYS.PAYMENT_SUCCESS, String(paymentSuccess));
+      }
+    } catch (error) {
+      console.error('セッションへの状態保存に失敗しました:', error);
+    }
+  }, [bookingData, paymentMethod, transactionId, paymentSuccess]);
+
+  // 決済処理アクション
+  const processPaymentAction = useCallback(async (paymentData: any): Promise<boolean> => {
+    // 既に処理中の場合は重複実行を防ぐ
+    if (isProcessing) {
+      return false;
+    }
+
+    setIsProcessing(true);
+    setPaymentError(null);
+
+    try {
+      const result = await processPayment(paymentData);
+      
+      if (result.success) {
+        setPaymentSuccess(true);
+        if (result.transactionId) {
+          setTransactionId(result.transactionId);
+        }
+        setIsProcessing(false);
+        return true;
+      } else {
+        setPaymentError(result.error || '決済処理中にエラーが発生しました');
+        setPaymentSuccess(false);
+        setIsProcessing(false);
+        return false;
+      }
+    } catch (error) {
+      setPaymentError('予期せぬエラーが発生しました。時間をおいて再試行してください。');
+      setPaymentSuccess(false);
+      setIsProcessing(false);
+      return false;
+    }
+  }, [isProcessing]);
+
+  // 再試行処理
+  const retryPayment = useCallback(async (): Promise<boolean> => {
+    setRetryCount(prev => prev + 1);
+    
+    // 最後に試行したPaymentDataがないため、再試行できない
+    if (!bookingData || !paymentMethod) {
+      setPaymentError('再試行に必要な情報がありません。最初からやり直してください。');
+      return false;
+    }
+    
+    // 基本的な支払いデータを再構築
+    const retryPaymentData = {
+      amount: bookingData.totalAmount,
+      bookingId: bookingData.id,
+      paymentMethod: paymentMethod,
+      // 他の必要なデータはUIから再入力してもらう必要がある
+    };
+    
+    return await processPaymentAction(retryPaymentData);
+  }, [bookingData, paymentMethod, processPaymentAction]);
+
+  // 状態リセット
+  const resetPaymentState = useCallback(() => {
+    setIsProcessing(false);
+    setPaymentError(null);
+    setPaymentSuccess(false);
+    setTransactionId(null);
+    setRetryCount(0);
+    // bookingDataとpaymentMethodは保持（ユーザーの再入力の手間を省く）
+  }, []);
+
+  // 決済完了画面へのナビゲーション
+  // waitForPromiseをtrueにすることで、実際にナビゲーションする前に決済処理の完了を待つ
+  const navigateToComplete = useCallback(() => {
+    if (isProcessing) {
+      // 処理中の場合は何もしない
+      return;
+    }
+    navigateImpl('/payment/complete');
+  }, [navigateImpl, isProcessing]);
+
+  // 決済失敗画面へのナビゲーション
+  const navigateToFailure = useCallback(() => {
+    if (isProcessing) {
+      // 処理中の場合は何もしない
+      return;
+    }
+    navigateImpl('/payment/failure');
+  }, [navigateImpl, isProcessing]);
+
+  const value = {
+    isProcessing,
+    paymentError,
+    paymentSuccess,
+    paymentMethod,
+    transactionId,
+    retryCount,
+    bookingData,
+    setBookingData,
+    setPaymentMethod,
+    processPaymentAction,
+    retryPayment,
+    resetPaymentState,
+    navigateToComplete,
+    navigateToFailure,
   };
 
-  return (
-    <PaymentContext.Provider
-      value={{
-        paymentState,
-        clearPaymentState,
-        processPayment
-      }}
-    >
-      {children}
-    </PaymentContext.Provider>
-  );
+  return <PaymentContext.Provider value={value}>{children}</PaymentContext.Provider>;
 };
 
-// カスタムフック
-export const usePayment = (): PaymentContextType => {
+export const usePayment = () => {
   const context = useContext(PaymentContext);
   if (context === undefined) {
     throw new Error('usePayment must be used within a PaymentProvider');
   }
-  return context;
+  // BookingConfirmationScreen.tsx との互換性のために、古い状態と関数名を維持
+  return {
+    ...context,
+    paymentState: {
+      isSuccess: context.paymentSuccess,
+      error: context.paymentError,
+      bookingId: context.bookingData?.id,
+      paymentMethod: context.paymentMethod
+    },
+    processPayment: context.processPaymentAction,
+    clearPaymentState: context.resetPaymentState
+  };
 };

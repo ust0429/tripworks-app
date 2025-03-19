@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route, useNavigate } from 'react-router-dom';
 import { MessageCircle, Menu, X, User, Home, Compass, Heart, Users, ShoppingBag, Gift, Calendar, LogOut } from 'lucide-react';
 import { AuthProvider, useAuth } from './AuthComponents';
 import { PaymentProvider } from './contexts/PaymentContext';
@@ -152,6 +153,12 @@ const ProfileScreen = () => {
       </div>
     </div>
   );
+};
+
+// PaymentProviderのラッパーコンポーネント
+const PaymentProviderWithNavigate = ({ children }: { children: React.ReactNode }) => {
+  const navigate = useNavigate();
+  return <PaymentProvider navigate={navigate}>{children}</PaymentProvider>;
 };
 
 // アプリのコンテンツ部分
@@ -452,11 +459,17 @@ const AppContent = () => {
 // メインアプリコンポーネント
 const TripworksApp = () => {
   return (
-    <AuthProvider>
-      <PaymentProvider>
-        <AppContent />
-      </PaymentProvider>
-    </AuthProvider>
+    <Router>
+      <AuthProvider>
+        <Routes>
+          <Route path="*" element={
+            <PaymentProviderWithNavigate>
+              <AppContent />
+            </PaymentProviderWithNavigate>
+          } />
+        </Routes>
+      </AuthProvider>
+    </Router>
   );
 };
 

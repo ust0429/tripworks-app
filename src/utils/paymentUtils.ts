@@ -1,33 +1,37 @@
-import { PaymentMethodType } from '../components/PaymentForm';
+import { PaymentMethodType } from '../types/payment';
 
 /**
- * カード番号のバリデーション (Luhnアルゴリズム)
- * @param cardNumber カード番号（スペースなし）
- * @returns 有効なカード番号かどうか
+ * カード番号のLuhnアルゴリズムによる検証
+ * @param cardNumber カード番号（空白なし）
+ * @returns 有効な場合はtrue、無効な場合はfalse
  */
 export const validateCardNumber = (cardNumber: string): boolean => {
-  if (!cardNumber) return false;
+  // 数字以外の文字を削除
+  const digitsOnly = cardNumber.replace(/\D/g, '');
   
-  // 空白を削除
-  const trimmedNumber = cardNumber.replace(/\s+/g, '');
+  if (digitsOnly.length < 13 || digitsOnly.length > 19) {
+    return false;
+  }
   
-  // 数字のみかチェック
-  if (!/^\d+$/.test(trimmedNumber)) return false;
-  
-  // 長さチェック (13-19桁)
-  if (trimmedNumber.length < 13 || trimmedNumber.length > 19) return false;
+  // カード会社ごとのプレフィックスと桁数の検証
+  const cardType = detectCardType(digitsOnly);
+  if (!validateCardByType(digitsOnly, cardType)) {
+    return false;
+  }
   
   // Luhnアルゴリズムによる検証
   let sum = 0;
   let shouldDouble = false;
   
   // 右から左へ処理
-  for (let i = trimmedNumber.length - 1; i >= 0; i--) {
-    let digit = parseInt(trimmedNumber.charAt(i));
+  for (let i = digitsOnly.length - 1; i >= 0; i--) {
+    let digit = parseInt(digitsOnly.charAt(i));
     
     if (shouldDouble) {
       digit *= 2;
-      if (digit > 9) digit -= 9;
+      if (digit > 9) {
+        digit -= 9;
+      }
     }
     
     sum += digit;
@@ -38,78 +42,118 @@ export const validateCardNumber = (cardNumber: string): boolean => {
 };
 
 /**
- * カード発行会社の判定
- * @param cardNumber カード番号（スペースあり/なし）
- * @returns カード発行会社名または "Unknown"
+ * カード種類の検出
+ * @param cardNumber カード番号
+ * @returns カード種類の文字列
  */
 export const detectCardType = (cardNumber: string): string => {
-  const trimmedNumber = cardNumber.replace(/\s+/g, '');
+  const digitsOnly = cardNumber.replace(/\D/g, '');
   
   // Visa
-  if (/^4/.test(trimmedNumber)) {
-    return 'Visa';
+  if (/^4/.test(digitsOnly)) {
+    return 'visa';
   }
   
   // Mastercard
-  if (/^5[1-5]/.test(trimmedNumber) || /^2[2-7]/.test(trimmedNumber)) {
-    return 'Mastercard';
+  if (/^5[1-5]/.test(digitsOnly) || /^2[2-7]/.test(digitsOnly)) {
+    return 'mastercard';
   }
   
   // American Express
-  if (/^3[47]/.test(trimmedNumber)) {
-    return 'American Express';
+  if (/^3[47]/.test(digitsOnly)) {
+    return 'amex';
   }
   
   // JCB
-  if (/^35/.test(trimmedNumber)) {
-    return 'JCB';
-  }
-  
-  // Diners Club
-  if (/^3(?:0[0-5]|[68])/.test(trimmedNumber)) {
-    return 'Diners Club';
+  if (/^35/.test(digitsOnly)) {
+    return 'jcb';
   }
   
   // Discover
-  if (/^6(?:011|5)/.test(trimmedNumber)) {
-    return 'Discover';
+  if (/^6(?:011|5)/.test(digitsOnly)) {
+    return 'discover';
   }
   
-  return 'Unknown';
+  // Diners Club
+  if (/^3(?:0[0-5]|[68])/.test(digitsOnly)) {
+    return 'diners';
+  }
+  
+  return 'unknown';
 };
 
 /**
- * 有効期限のバリデーション
- * @param expiryMonth 有効期限の月 (1-12)
- * @param expiryYear 有効期限の年（下2桁または4桁）
- * @returns 有効期限が有効かどうか
+ * カード会社ごとの詳細バリデーション
+ * @param cardNumber カード番号
+ * @param cardType カード種類
+ * @returns 有効な場合はtrue、無効な場合はfalse
  */
-export const validateExpiry = (expiryMonth: string, expiryYear: string): boolean => {
+export const validateCardByType = (cardNumber: string, cardType: string): boolean => {
+  const number = cardNumber.replace(/\D/g, '');
+  
+  switch (cardType) {
+    case 'visa':
+      // Visaは13桁または16桁
+      return /^4/.test(number) && (number.length === 13 || number.length === 16);
+      
+    case 'mastercard':
+      // Mastercardは16桁で、51-55または2221-2720で始まる
+      return (/^5[1-5]/.test(number) || /^2[2-7]/.test(number)) && number.length === 16;
+      
+    case 'amex':
+      // American Expressは15桁で、34または37で始まる
+      return /^3[47]/.test(number) && number.length === 15;
+      
+    case 'jcb':
+      // JCBは16桁で、35で始まる
+      return /^35/.test(number) && number.length === 16;
+      
+    case 'discover':
+      // Discoverは16桁で、6011または65で始まる
+      return /^6(?:011|5)/.test(number) && number.length === 16;
+      
+    case 'diners':
+      // Diners Clubは14桁で、300-305、36、または38で始まる
+      return /^3(?:0[0-5]|[68])/.test(number) && number.length === 14;
+      
+    default:
+      // 不明なカード種類の場合、一般的な検証のみ
+      return number.length >= 13 && number.length <= 19;
+  }
+};
+
+/**
+ * カード有効期限の検証
+ * @param month 月（1-12）
+ * @param year 年（下2桁または4桁）
+ * @returns 有効な場合はtrue、無効な場合はfalse
+ */
+export const validateExpiryDate = (month: string, year: string): boolean => {
   const currentDate = new Date();
-  const currentMonth = currentDate.getMonth() + 1; // 0-11 -> 1-12
+  const currentMonth = currentDate.getMonth() + 1; // JavaScriptの月は0始まり
   const currentYear = currentDate.getFullYear();
   
-  // 文字列を数値に変換
-  let month = parseInt(expiryMonth, 10);
-  let year = parseInt(expiryYear, 10);
-  
-  // 年が2桁の場合は21世紀として解釈
-  if (year < 100) {
-    year += 2000;
+  // 年を4桁に正規化
+  let fullYear = parseInt(year);
+  if (fullYear < 100) {
+    fullYear += 2000;
   }
   
-  // 月のバリデーション
-  if (isNaN(month) || month < 1 || month > 12) {
+  // 月を数値に変換
+  const numMonth = parseInt(month);
+  
+  // 基本的な値の範囲チェック
+  if (numMonth < 1 || numMonth > 12) {
     return false;
   }
   
-  // 年のバリデーション
-  if (isNaN(year)) {
+  // 期限切れのチェック
+  if (fullYear < currentYear || (fullYear === currentYear && numMonth < currentMonth)) {
     return false;
   }
   
-  // 有効期限が現在の日付より前かチェック
-  if (year < currentYear || (year === currentYear && month < currentMonth)) {
+  // 遠すぎる未来の日付は無効と見なす（10年以上先）
+  if (fullYear > currentYear + 10) {
     return false;
   }
   
@@ -117,81 +161,108 @@ export const validateExpiry = (expiryMonth: string, expiryYear: string): boolean
 };
 
 /**
- * カード番号のフォーマット（4桁ごとに空白を挿入）
- * @param cardNumber フォーマットする前のカード番号
+ * CVCコードの検証
+ * @param cvc CVCコード
+ * @param cardType カード種類
+ * @returns 有効な場合はtrue、無効な場合はfalse
+ */
+export const validateCVC = (cvc: string, cardType: string): boolean => {
+  const cvcValue = cvc.trim();
+  
+  // 数字のみであることを確認
+  if (!/^\d+$/.test(cvcValue)) {
+    return false;
+  }
+  
+  // American Expressは4桁、その他は3桁
+  if (cardType === 'amex') {
+    return cvcValue.length === 4;
+  } else {
+    return cvcValue.length === 3;
+  }
+};
+
+/**
+ * カード番号のフォーマット（表示用）
+ * @param cardNumber カード番号
  * @returns フォーマットされたカード番号
  */
 export const formatCardNumber = (cardNumber: string): string => {
-  if (!cardNumber) return '';
+  const digitsOnly = cardNumber.replace(/\D/g, '');
+  const cardType = detectCardType(digitsOnly);
   
-  const trimmedNumber = cardNumber.replace(/\s+/g, '');
-  const cardType = detectCardType(trimmedNumber);
-  
-  // AMEXは4-6-5形式でグループ化
-  if (cardType === 'American Express') {
-    const groups = trimmedNumber.match(/(\d{1,4})(\d{1,6})?(\d{1,5})?/);
-    if (!groups) return trimmedNumber;
-    
-    return [groups[1], groups[2], groups[3]].filter(Boolean).join(' ');
-  }
-  
-  // その他のカードは4桁ごと
-  const groups = trimmedNumber.match(/(\d{1,4})(\d{1,4})?(\d{1,4})?(\d{1,4})?(\d{1,3})?/);
-  if (!groups) return trimmedNumber;
-  
-  return [groups[1], groups[2], groups[3], groups[4], groups[5]].filter(Boolean).join(' ');
-};
-
-/**
- * 決済方法名の取得
- * @param method 決済方法のコード
- * @returns 日本語の決済方法名
- */
-export const getPaymentMethodName = (method?: PaymentMethodType): string => {
-  switch (method) {
-    case 'credit_card': return 'クレジットカード';
-    case 'convenience': return 'コンビニ決済';
-    case 'bank_transfer': return '銀行振込';
-    case 'qr_code': return 'QRコード決済';
-    default: return '不明';
+  if (cardType === 'amex') {
+    // American Express: XXXX XXXXXX XXXXX
+    return digitsOnly.replace(/^(\d{4})(\d{6})(\d{5})$/, '$1 $2 $3');
+  } else {
+    // その他のカード: XXXX XXXX XXXX XXXX
+    return digitsOnly.replace(/(\d{4})(?=\d)/g, '$1 ');
   }
 };
 
 /**
- * 決済期限の計算
- * @param method 決済方法
- * @returns 決済期限の日時（Date）
+ * 決済方法に基づく表示名を取得
+ * @param method 決済方法タイプ
+ * @returns 表示用の名前
  */
-export const calculatePaymentDeadline = (method: PaymentMethodType): Date => {
-  const now = new Date();
-  
+export const getPaymentMethodName = (method: PaymentMethodType): string => {
   switch (method) {
-    case 'credit_card': 
-      // クレジットカードは即時決済なので期限なし（念のため30分後を返す）
-      return new Date(now.getTime() + 30 * 60 * 1000);
+    case 'credit_card':
+      return 'クレジットカード';
     case 'convenience':
+      return 'コンビニ支払い';
     case 'bank_transfer':
-      // コンビニ・銀行振込は3日後
-      return new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000);
+      return '銀行振込';
     case 'qr_code':
-      // QRコード決済は1時間
-      return new Date(now.getTime() + 60 * 60 * 1000);
+      return 'QRコード決済';
     default:
-      // デフォルトは1日
-      return new Date(now.getTime() + 24 * 60 * 60 * 1000);
+      return '未選択';
   }
 };
 
 /**
- * 支払いステータスの表示テキスト取得
- * @param status 支払いステータス
- * @returns 日本語のステータステキスト
+ * コンビニ支払いのリスト
  */
-export const getPaymentStatusText = (status: 'paid' | 'pending' | 'failed' | undefined): string => {
-  switch (status) {
-    case 'paid': return '支払い完了';
-    case 'pending': return '支払い待ち';
-    case 'failed': return '支払い失敗';
-    default: return '未決済';
+export const CONVENIENCE_STORES = [
+  { id: 'seven', name: 'セブンイレブン' },
+  { id: 'lawson', name: 'ローソン' },
+  { id: 'familymart', name: 'ファミリーマート' },
+  { id: 'ministop', name: 'ミニストップ' },
+  { id: 'dailyyamazaki', name: 'デイリーヤマザキ' }
+];
+
+/**
+ * QRコード決済のリスト
+ */
+export const QR_PAYMENT_METHODS = [
+  { id: 'paypay', name: 'PayPay' },
+  { id: 'linepay', name: 'LINE Pay' },
+  { id: 'rakutenpay', name: '楽天ペイ' },
+  { id: 'aupay', name: 'au PAY' },
+  { id: 'dpay', name: 'd払い' }
+];
+
+/**
+ * 非同期決済処理をシミュレート（モック）
+ * @param paymentData 決済データ
+ * @returns 決済結果のPromise
+ */
+export const processPayment = async (
+  paymentData: any
+): Promise<{ success: boolean; transactionId?: string; error?: string }> => {
+  // テスト用の固定失敗パターン（実際のAPIでは使用しない）
+  if (paymentData.testMode && paymentData.testMode === 'fail') {
+    await new Promise(resolve => setTimeout(resolve, 2000)); // 遅延をシミュレート
+    return {
+      success: false,
+      error: 'テスト用エラー: 決済に失敗しました'
+    };
   }
+  
+  // 成功パターン
+  await new Promise(resolve => setTimeout(resolve, 1500)); // 遅延をシミュレート
+  return {
+    success: true,
+    transactionId: `ECHO-${Date.now()}-${Math.floor(Math.random() * 1000)}`
+  };
 };
