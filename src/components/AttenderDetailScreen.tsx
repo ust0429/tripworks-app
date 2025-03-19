@@ -32,9 +32,18 @@ interface ReviewType {
 interface AttenderDetailScreenProps {
   attenderId: number;
   onBack: () => void;
+  onBookingRequest?: (data: {
+    attenderId: number;
+    experienceId?: number;
+    date: string;
+    time: string;
+    duration: string;
+    location: string;
+    price: number;
+  }) => void;
 }
 
-const AttenderDetailScreen: React.FC<AttenderDetailScreenProps> = ({ attenderId, onBack }) => {
+const AttenderDetailScreen: React.FC<AttenderDetailScreenProps> = ({ attenderId, onBack, onBookingRequest }) => {
   const [showFullAbout, setShowFullAbout] = useState(false);
   const [selectedTab, setSelectedTab] = useState('about'); // 'about', 'experiences', 'reviews'
   const [requestModalOpen, setRequestModalOpen] = useState(false);
@@ -103,7 +112,7 @@ const AttenderDetailScreen: React.FC<AttenderDetailScreenProps> = ({ attenderId,
     
     // 写真付きのみフィルターを適用
     if (reviewPhotosOnly) {
-      filtered = filtered.filter(review => review.photoUrls && review.photoUrls.length > 0);
+      filtered = filtered.filter((review: Review) => review.photoUrls && review.photoUrls.length > 0);
     }
     
     setFilteredReviews(filtered);
@@ -190,7 +199,7 @@ const AttenderDetailScreen: React.FC<AttenderDetailScreenProps> = ({ attenderId,
         rating: reviewData.rating,
         comment: reviewData.comment,
         experienceTitle
-      }, reviewData.photos);
+      }, reviewData.photos || []);
       
       console.log('返却されたレビューデータ:', {
         id: newReview.id,
@@ -251,11 +260,33 @@ const AttenderDetailScreen: React.FC<AttenderDetailScreenProps> = ({ attenderId,
   };
 
   // ログイン状態に応じたリクエスト処理
-  const handleRequestClick = () => {
-    if (isAuthenticated) {
-      setRequestModalOpen(true);
-    } else {
+  const handleRequestClick = (experienceId?: number, experienceTitle?: string, price?: number) => {
+    if (!isAuthenticated) {
       openLoginModal();
+      return;
+    }
+    
+    // 予約リクエスト機能が提供されている場合は使用
+    if (onBookingRequest && experienceId !== undefined && price !== undefined) {
+      // サンプルの予約データを作成
+      const today = new Date();
+      const tomorrow = new Date(today);
+      tomorrow.setDate(today.getDate() + 1);
+      
+      const bookingData = {
+        attenderId: attenderId,
+        experienceId: experienceId,
+        date: tomorrow.toISOString().split('T')[0],
+        time: '13:00',
+        duration: '3時間',
+        location: attender.location,
+        price: price
+      };
+      
+      onBookingRequest(bookingData);
+    } else {
+      // 従来のモーダル表示
+      setRequestModalOpen(true);
     }
   };
 
@@ -325,7 +356,7 @@ const AttenderDetailScreen: React.FC<AttenderDetailScreenProps> = ({ attenderId,
             </div>
           </div>
           <button 
-            onClick={handleRequestClick}
+            onClick={() => handleRequestClick()}
             className="bg-black text-white px-4 py-2 rounded-lg text-sm font-medium"
           >
             リクエスト
@@ -477,7 +508,7 @@ const AttenderDetailScreen: React.FC<AttenderDetailScreenProps> = ({ attenderId,
                       <p className="font-bold text-black">¥{experience.price.toLocaleString()}</p>
                     </div>
                     <button 
-                      onClick={handleRequestClick}
+                      onClick={() => handleRequestClick(experience.id, experience.title, experience.price)}
                       className="w-full mt-4 py-2 bg-black text-white rounded-lg text-sm font-medium"
                     >
                       予約する

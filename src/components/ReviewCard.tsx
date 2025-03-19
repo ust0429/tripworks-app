@@ -1,9 +1,12 @@
 // src/components/ReviewCard.tsx
 import React, { useState } from 'react';
-import { Star, User, ThumbsUp, MoreVertical, Flag, Calendar, Award, Clock, Image } from 'lucide-react';
-import { Review } from '../types';
+import { Star, User, ThumbsUp, MoreVertical, Flag, Calendar, Award, Clock, Image, MessageCircle } from 'lucide-react';
+import { Review, ReviewReply } from '../types';
 import { useAuth } from '../AuthComponents';
 import ReviewPhotoViewer from './ReviewPhotoViewer';
+import ReviewReplyComponent from './ReviewReply';
+import ReviewReplyForm from './ReviewReplyForm';
+import { getReviewReplies, addReviewReply, updateReviewReply, deleteReviewReply } from '../mockData';
 
 interface ReviewCardProps {
   review: Review;
@@ -11,7 +14,7 @@ interface ReviewCardProps {
 }
 
 const ReviewCard: React.FC<ReviewCardProps> = ({ review, onHelpfulToggle }) => {
-  const { isAuthenticated, openLoginModal } = useAuth();
+  const { isAuthenticated, openLoginModal, currentUser } = useAuth();
   // 「役に立った」ボタンの状態
   const [helpful, setHelpful] = useState(false);
   const [helpfulCount, setHelpfulCount] = useState(review.helpfulCount || 0);
@@ -22,12 +25,26 @@ const ReviewCard: React.FC<ReviewCardProps> = ({ review, onHelpfulToggle }) => {
   const [showPhotoViewer, setShowPhotoViewer] = useState(false);
   const [selectedPhotoIndex, setSelectedPhotoIndex] = useState(0);
   
+  // 返信関連の状態
+  const [replies, setReplies] = useState<ReviewReply[]>([]);
+  const [showReplies, setShowReplies] = useState(false);
+  const [showReplyForm, setShowReplyForm] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  
   // コメントが長いかどうかをチェック
   const isLongComment = review.comment.length > 200;
   // 表示用のコメント
   const displayComment = isLongComment && !showFullReview 
     ? `${review.comment.substring(0, 200)}...` 
     : review.comment;
+  
+  // 初期読み込み時に返信を取得
+  React.useEffect(() => {
+    if (showReplies) {
+      const fetchedReplies = getReviewReplies(review.id);
+      setReplies(fetchedReplies as ReviewReply[]);
+    }
+  }, [showReplies, review.id]);
   
   const toggleHelpful = () => {
     if (!isAuthenticated) {
@@ -67,6 +84,86 @@ const ReviewCard: React.FC<ReviewCardProps> = ({ review, onHelpfulToggle }) => {
     setReportReason('');
     // 報告完了通知
     alert('レビューの報告を受け付けました。ご協力ありがとうございます。');
+  };
+  
+  // 返信表示切り替え
+  const toggleReplies = () => {
+    setShowReplies(!showReplies);
+    if (!showReplies && !replies.length) {
+      const fetchedReplies = getReviewReplies(review.id);
+      setReplies(fetchedReplies as ReviewReply[]);
+    }
+  };
+  
+  // 返信フォーム表示切り替え
+  const toggleReplyForm = () => {
+    if (!isAuthenticated) {
+      openLoginModal();
+      return;
+    }
+    setShowReplyForm(!showReplyForm);
+  };
+  
+  // 返信の送信
+  const handleSubmitReply = (reviewId: string, content: string) => {
+    if (!isAuthenticated || !currentUser) {
+      openLoginModal();
+      return;
+    }
+    
+    setIsSubmitting(true);
+    
+    try {
+      // 返信を追加
+      const newReply = addReviewReply({
+        reviewId,
+        userId: currentUser.id,
+        userName: currentUser.name,
+        userType: currentUser.type || 'user',
+        userImage: currentUser.photoUrl,
+        content
+      });
+      
+      // 返信リストを更新
+      setReplies([...replies, newReply as ReviewReply]);
+      
+      // フォームを閉じる
+      setShowReplyForm(false);
+      setShowReplies(true);
+      
+      // レビュー返信カウントを更新（実際のアプリではAPI応答から更新）
+      review.replyCount = (review.replyCount || 0) + 1;
+    } catch (error) {
+      console.error('返信送信エラー:', error);
+      alert('返信の送信中にエラーが発生しました');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+  
+  // 返信の編集
+  const handleEditReply = (replyId: string, newContent: string) => {
+    if (updateReviewReply(replyId, newContent)) {
+      // 返信リストを更新
+      setReplies(replies.map(reply => 
+        reply.id === replyId 
+          ? { ...reply, content: newContent } 
+          : reply
+      ));
+    }
+  };
+  
+  // 返信の削除
+  const handleDeleteReply = (replyId: string) => {
+    if (deleteReviewReply(replyId)) {
+      // 返信リストから削除
+      setReplies(replies.filter(reply => reply.id !== replyId));
+      
+      // レビュー返信カウントを更新（実際のアプリではAPI応答から更新）
+      if (review.replyCount && review.replyCount > 0) {
+        review.replyCount -= 1;
+      }
+    }
   };
 
   return (
@@ -187,7 +284,7 @@ const ReviewCard: React.FC<ReviewCardProps> = ({ review, onHelpfulToggle }) => {
             <span className="mr-3">体験日: {formatDate(review.date.split('T')[0])}</span>
           </div>
           
-          {/* 役に立ったボタン */}
+          {/* 役に立ったボタンと返信ボタン */}
           <div className="mt-3 flex items-center justify-between">
             <button 
               onClick={toggleHelpful}
@@ -202,13 +299,52 @@ const ReviewCard: React.FC<ReviewCardProps> = ({ review, onHelpfulToggle }) => {
               {helpfulCount > 0 && <span className="ml-1">({helpfulCount})</span>}
             </button>
             
-            {/* 返信オプション（未実装） */}
-            {isAuthenticated && (
-              <button className="text-xs text-gray-500">
-                返信
-              </button>
-            )}
+            {/* 返信ボタン */}
+            <div className="flex space-x-2">
+              {review.replyCount && review.replyCount > 0 && (
+                <button 
+                  onClick={toggleReplies}
+                  className="text-xs text-gray-500 flex items-center"
+                >
+                  <MessageCircle size={12} className="mr-1" />
+                  {showReplies ? '返信を非表示' : `返信を表示 (${review.replyCount})`}
+                </button>
+              )}
+              {isAuthenticated && (
+                <button 
+                  onClick={toggleReplyForm}
+                  className="text-xs text-gray-500 hover:text-black"
+                >
+                  返信
+                </button>
+              )}
+            </div>
           </div>
+          
+          {/* レビュー返信の表示 */}
+          {showReplies && replies.length > 0 && (
+            <div className="mt-3">
+              {replies.map(reply => (
+                <ReviewReplyComponent
+                  key={reply.id}
+                  reply={reply}
+                  isOwner={currentUser ? currentUser.id === reply.userId : false}
+                  onEdit={handleEditReply}
+                  onDelete={handleDeleteReply}
+                />
+              ))}
+            </div>
+          )}
+          
+          {/* 返信フォーム */}
+          {showReplyForm && (
+            <ReviewReplyForm
+              reviewId={review.id}
+              onSubmit={handleSubmitReply}
+              onCancel={() => setShowReplyForm(false)}
+              isSubmitting={isSubmitting}
+            />
+          )}
           
           {/* レビューオプションメニュー */}
           {showOptions && (

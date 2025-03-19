@@ -230,7 +230,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ conversationId, onBack }) => {
         
         // 仮表示を実際のメッセージに置き換え
         setMessages(prev => prev.map(m => 
-          m.id === tempId ? { ...sentMessage, status: MessageStatus.SENT } : m
+          m.id === tempId ? { ...(sentMessage as Message), status: MessageStatus.SENT } : m
         ));
       } else {
         // 送信完了ステータスに更新
@@ -247,7 +247,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ conversationId, onBack }) => {
         
         // 仮表示を実際のメッセージに置き換え
         setMessages(prev => prev.map(m => 
-          m.id === tempId ? { ...sentMessage, status: MessageStatus.SENT } : m
+          m.id === tempId ? { ...(sentMessage as Message), status: MessageStatus.SENT } : m
         ));
       }, 500); // オフライン送信をシミュレート
     }

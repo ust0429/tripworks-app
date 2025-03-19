@@ -136,7 +136,7 @@ const TripsScreen: React.FC = () => {
         comment: comment,
         experienceTitle: selectedExperience.title,
         helpfulCount: 0 // 初期値
-      }, photos); // 写真を追加
+      }, photos || []); // 写真を追加
       
       console.log('投稿されたレビュー:', newReview);
       

@@ -1,5 +1,5 @@
 // src/mockData.ts
-import { Review, Message, Conversation, ReviewHelpful, ReviewPhoto } from './types';
+import { Review, Message, Conversation, ReviewHelpful, ReviewPhoto, ReviewReply, MessageStatus, ConversationType } from './types';
 
 // Base64サンプル画像 (モック用)
 // 実際の小さなBase64文字列
@@ -47,7 +47,8 @@ export const mockReviews: Review[] = [
     photoUrls: [
       sampleBase64Images[0],
       sampleBase64Images[1]
-    ]
+    ],
+    replyCount: 1
   },
   {
     id: '1002',
@@ -58,7 +59,8 @@ export const mockReviews: Review[] = [
     comment: '音楽に詳しくなくても楽しめました。アキラさんの知識が豊富で、東京の音楽シーンの歴史から現在のトレンドまで詳しく教えてもらえて勉強になりました。',
     date: '2023-05-20T00:00:00.000Z',
     experienceTitle: 'ミュージシャン体験ワークショップ',
-    helpfulCount: 5
+    helpfulCount: 5,
+    replyCount: 1
   },
   {
     id: '1003',
@@ -105,7 +107,8 @@ export const mockReviews: Review[] = [
     comment: '期待していたほど楽しめませんでした。スケジュールがタイトで、各場所での滞在時間が短かったです。もう少しゆっくり見たかったです。',
     date: '2023-02-15T00:00:00.000Z',
     experienceTitle: '下北沢インディーシーン探訪ツアー',
-    helpfulCount: 4
+    helpfulCount: 4,
+    replyCount: 2
   },
   {
     id: '1007',
@@ -195,519 +198,298 @@ export const mockReviewHelpful: ReviewHelpful[] = [
   }
 ];
 
-
+// モックレビュー返信データ
+export const mockReviewReplies: ReviewReply[] = [
+  {
+    id: 'reply-1001',
+    reviewId: '1001',
+    userId: 'attender1',
+    userName: '鈴木 アキラ',
+    userType: 'attender',
+    content: 'ご参加いただきありがとうございました！次回東京に来られる際もぜひ別のツアーにもご参加ください。新しいルートも開拓中です。',
+    date: '2023-06-16T10:00:00.000Z'
+  },
+  {
+    id: 'reply-1002',
+    reviewId: '1002',
+    userId: 'attender1',
+    userName: '鈴木 アキラ',
+    userType: 'attender',
+    content: '音楽に詳しくなくても楽しんでいただけて嬉しいです。またのご参加をお待ちしています！',
+    date: '2023-05-21T14:30:00.000Z'
+  },
+  {
+    id: 'reply-1006',
+    reviewId: '1006',
+    userId: 'attender1',
+    userName: '鈴木 アキラ',
+    userType: 'attender',
+    content: 'ご期待に沿えず申し訳ありませんでした。フィードバックを参考に、より余裕のあるスケジュールでのツアーも検討させていただきます。',
+    date: '2023-02-16T09:15:00.000Z'
+  },
+  {
+    id: 'reply-1006-admin',
+    reviewId: '1006',
+    userId: 'admin1',
+    userName: 'echo運営スタッフ',
+    userType: 'admin',
+    content: 'ご不便をおかけして申し訳ありません。アテンダーへのフィードバックとして共有させていただきます。また機会がございましたら、ぜひ別のツアーもお試しください。',
+    date: '2023-02-16T11:30:00.000Z'
+  }
+];
 
 // レビュー関連のユーティリティ関数
-export const getReviewsByAttenderId = (attenderId: number): Review[] => {
+export const getReviewsByAttenderId = (attenderId: number | string) => {
   return mockReviews.filter(review => review.attenderId === attenderId);
 };
 
-export const getAverageRating = (attenderId: number): number => {
-  const reviews = getReviewsByAttenderId(attenderId);
-  if (reviews.length === 0) return 0;
+export const getAverageRating = (input: Review[] | number): number => {
+  // 引数が数値（attenderId）の場合は、そのアテンダーのレビューを取得して処理
+  if (typeof input === 'number') {
+    const reviews = getReviewsByAttenderId(input);
+    return getAverageRating(reviews);
+  }
   
-  const sum = reviews.reduce((total, review) => total + review.rating, 0);
+  // 引数がReview[]の場合の処理
+  const reviews = input as Review[];
+  if (!reviews || reviews.length === 0) return 0;
+  const sum = reviews.reduce((acc: number, review: Review) => acc + review.rating, 0);
   return sum / reviews.length;
 };
 
-
-
-export const addReview = (review: Omit<Review, 'id' | 'date'>, photos?: File[]) => {
-  // 新しいレビューIDを生成
-  const newReviewId = `review-${Date.now()}`;
-  
-  const newReview: Review = {
-    ...review,
-    id: newReviewId,
-    date: new Date().toISOString(),
-    helpfulCount: 0
-  };
-  
-  console.log('レビュー投稿 - 写真データの確認:', { 
-    reviewId: newReviewId,
-    hasPhotos: Boolean(photos),
-    photoCount: photos ? photos.length : 0,
-    photoDetails: photos ? photos.map(p => ({ name: p.name, type: p.type, size: p.size })) : []
+export const sortReviews = (reviews: Review[], sortBy: string = 'date') => {
+  return [...reviews].sort((a, b) => {
+    if (sortBy === 'date') {
+      return new Date(b.date).getTime() - new Date(a.date).getTime();
+    } else if (sortBy === 'rating_high') {
+      return b.rating - a.rating;
+    } else if (sortBy === 'rating_low') {
+      return a.rating - b.rating;
+    } else if (sortBy === 'helpful') {
+      return (b.helpfulCount || 0) - (a.helpfulCount || 0);
+    }
+    return 0;
   });
-  
-  // 写真がある場合の処理（Base64サンプル画像を使用）
-  if (photos && photos.length > 0) {
-    // 実際のアプリではここでFile objectsをアップロードサーバーに送信
-    // モックではランダムにサンプル画像を割り当て
-    const photoUrls = photos.map(photo => {
-      // 各写真に対してランダムなサンプル画像を割り当て
-      const randomIndex = Math.floor(Math.random() * sampleBase64Images.length);
-      console.log(`写真 ${photo.name} に対して ${randomIndex} のサンプル画像を使用`);
-      return sampleBase64Images[randomIndex];
-    });
-    
-    // 写真URLを追加
-    newReview.photoUrls = photoUrls;
-    console.log('レビューに追加された写真URL:', photoUrls.length, '枚');
-    
-    // モックの写真データをmockReviewPhotosに追加
-    photos.forEach((photo, index) => {
-      const photoId = `photo-${Date.now()}-${index}`;
-      mockReviewPhotos.push({
-        id: photoId,
-        reviewId: newReviewId,
-        url: photoUrls[index],
-        thumbnail: photoUrls[index],
-        width: 24,
-        height: 24,
-        createdAt: new Date().toISOString()
-      });
-      console.log(`写真データ追加: ${photoId} (${photo.name})`);
-    });
-  }
-  
-  // 実際のアプリではここでAPIリクエストを送信
-  mockReviews.push(newReview);
-  
-  // レビュー送信成功率のシミュレーション (95%成功)
-  const isSuccess = Math.random() < 0.95;
-  
-  if (!isSuccess) {
-    throw new Error('レビューの投稿に失敗しました。ネットワーク接続を確認してください。');
-  }
-  
-  return newReview;
 };
 
-// ソート関数
-export const sortReviews = (reviews: Review[], sortType: 'newest' | 'highest' | 'lowest' | 'most_helpful'): Review[] => {
-  switch (sortType) {
-    case 'newest':
-      return [...reviews].sort((a, b) => 
-        new Date(b.date).getTime() - new Date(a.date).getTime()
-      );
-    case 'highest':
-      return [...reviews].sort((a, b) => b.rating - a.rating);
-    case 'lowest':
-      return [...reviews].sort((a, b) => a.rating - b.rating);
-    case 'most_helpful':
-      return [...reviews].sort((a, b) => (b.helpfulCount || 0) - (a.helpfulCount || 0));
-    default:
-      return reviews;
-  }
+export const filterReviewsByRating = (reviews: Review[], rating: number | null) => {
+  if (!rating) return reviews;
+  return reviews.filter((review: Review) => review.rating === rating);
 };
 
-// フィルター関数
-export const filterReviewsByRating = (reviews: Review[], rating: number | null): Review[] => {
-  if (rating === null) return reviews;
-  return reviews.filter(review => review.rating === rating);
-};
-
-// テキスト検索関数
-export const searchReviews = (reviews: Review[], searchTerm: string): Review[] => {
-  if (!searchTerm) return reviews;
-  
-  const lowerSearchTerm = searchTerm.toLowerCase();
-  return reviews.filter(review => 
-    review.comment.toLowerCase().includes(lowerSearchTerm) ||
-    review.userName.toLowerCase().includes(lowerSearchTerm) ||
-    (review.experienceTitle && review.experienceTitle.toLowerCase().includes(lowerSearchTerm))
-  );
-};
-
-// 特定のアテンダーの特定の体験に関するレビューを取得
-export const getReviewsByExperience = (attenderId: number, experienceTitle: string): Review[] => {
-  return mockReviews.filter(review => 
-    review.attenderId === attenderId && 
-    review.experienceTitle === experienceTitle
-  );
-};
-
-// レビューの「役に立った」状態を切り替える
-export const toggleReviewHelpful = (reviewId: string, userId: string, helpful: boolean): boolean => {
-  // 既存の「役に立った」記録を確認
+export const toggleReviewHelpful = (reviewId: string, userId: string, isHelpful: boolean) => {
+  // 実際のアプリではAPIリクエストを送信する
+  // ここではモックデータを更新
   const existingIndex = mockReviewHelpful.findIndex(
-    item => item.reviewId === reviewId && item.userId === userId
+    h => h.reviewId === reviewId && h.userId === userId
   );
-  
-  // 既存の記録がある場合は更新
+
   if (existingIndex >= 0) {
-    mockReviewHelpful[existingIndex].helpful = helpful;
-  } else {
-    // 新しい記録を追加
+    if (isHelpful) {
+      // 既に「役に立った」が押されている場合は何もしない
+      return false;
+    } else {
+      // 「役に立った」を取り消す
+      mockReviewHelpful.splice(existingIndex, 1);
+      return true;
+    }
+  } else if (isHelpful) {
+    // 新しく「役に立った」を追加
     mockReviewHelpful.push({
       reviewId,
       userId,
-      helpful,
+      helpful: true,
       createdAt: new Date().toISOString()
     });
+    return true;
+  }
+
+  return false;
+};
+
+export const addReview = (review: Partial<Review>, photos?: File[] | string[]) => {
+  // File[]型の写真をstring[]型に変換する処理
+  let photoUrls: string[] | undefined;
+  
+  if (photos && photos.length > 0 && photos[0] instanceof File) {
+    // ここでFile型をstring型（データURL）に変換
+    // 実際の実装では、APIでアップロードした後にURLを取得する
+    // モックでは、ファイル名をURLとして扱う
+    photoUrls = (photos as File[]).map(
+      file => `data:image/jpeg;base64,imagemock_${file.name.replace(/\s+/g, '_')}`
+    );
+  } else if (photos && photos.length > 0) {
+    // 既にstring[]の場合はそのまま使用
+    photoUrls = photos as string[];
   }
   
-  // レビューの「役に立った」カウントを更新
-  updateReviewHelpfulCount(reviewId);
+  const newReview = {
+    ...review,
+    id: `review-${Date.now()}`,
+    date: new Date().toISOString(),
+    helpfulCount: review.helpfulCount || 0,
+    photoUrls: photoUrls,
+    attenderId: review.attenderId || 1 // デフォルト値を設定
+  } as Review;
+
+  mockReviews.unshift(newReview);
+  return newReview;
+};
+
+// レビュー関連の関数
+// 特定のレビューに対する返信を取得
+export const getReviewReplies = (reviewId: string) => {
+  return mockReviewReplies.filter(reply => reply.reviewId === reviewId);
+};
+
+// レビュー返信を追加
+export const addReviewReply = (reply: Partial<ReviewReply>): ReviewReply => {
+  const newReply: ReviewReply = {
+    id: `reply-${Date.now()}`,
+    reviewId: reply.reviewId || '',
+    userId: reply.userId || '',
+    userName: reply.userName || '',
+    userType: reply.userType || 'user',
+    content: reply.content || '',
+    date: new Date().toISOString(),
+    userImage: reply.userImage
+  };
+  
+  mockReviewReplies.push(newReply);
+  
+  return newReply;
+};
+
+// レビュー返信を編集
+export const updateReviewReply = (replyId: string, content: string) => {
+  const replyIndex = mockReviewReplies.findIndex(reply => reply.id === replyId);
+  if (replyIndex === -1) return false;
+  
+  mockReviewReplies[replyIndex].content = content;
+  return true;
+};
+
+// レビュー返信を削除
+export const deleteReviewReply = (replyId: string) => {
+  const replyIndex = mockReviewReplies.findIndex(reply => reply.id === replyId);
+  if (replyIndex === -1) return false;
+  
+  const reviewId = mockReviewReplies[replyIndex].reviewId;
+  
+  // 返信を削除
+  mockReviewReplies.splice(replyIndex, 1);
   
   return true;
 };
 
-// レビューの「役に立った」カウントを更新
-const updateReviewHelpfulCount = (reviewId: string): void => {
-  const helpfulCount = mockReviewHelpful.filter(
-    item => item.reviewId === reviewId && item.helpful
-  ).length;
-  
-  const reviewIndex = mockReviews.findIndex(review => review.id === reviewId);
-  if (reviewIndex >= 0) {
-    mockReviews[reviewIndex].helpfulCount = helpfulCount;
-  }
-};
+// メッセージ関連のモックデータ
+const mockMessages: Message[] = [];
+const mockConversations: Conversation[] = [];
 
-// レビューを報告する
-export const reportReview = (reviewId: string, userId: string, reason: string): boolean => {
-  // 実際のアプリではここでAPIリクエストを送信
-  console.log(`レビュー報告: reviewId=${reviewId}, userId=${userId}, reason=${reason}`);
-  
-  // 成功を返す
-  return true;
-};
-
-// レビュー写真を取得
-export const getReviewPhotos = (reviewId: string): ReviewPhoto[] => {
-  return mockReviewPhotos.filter(photo => photo.reviewId === reviewId);
-};
-
-// モックメッセージデータ
-export const mockMessages: Message[] = [
-  {
-    id: 'msg1',
-    senderId: 'user1',
-    receiverId: 'attender1',
-    content: 'こんにちは、東京の音楽シーンについて訪ねたいです。',
-    timestamp: '2023-07-01T09:00:00.000Z',
-    isRead: true
-  },
-  {
-    id: 'msg2',
-    senderId: 'attender1',
-    receiverId: 'user1',
-    content: 'こんにちは！東京の音楽シーンについて訪ねるのは素晴らしいですね。何か特に知りたいジャンルはありますか？',
-    timestamp: '2023-07-01T09:05:00.000Z',
-    isRead: true
-  },
-  {
-    id: 'msg3',
-    senderId: 'user1',
-    receiverId: 'attender1',
-    content: 'インディーズシーンに興味があります。どのようなライブハウスがおすすめですか？',
-    timestamp: '2023-07-01T09:10:00.000Z',
-    isRead: true
-  },
-  {
-    id: 'msg4',
-    senderId: 'attender1',
-    receiverId: 'user1',
-    content: '下北沢には「SHIMOKITA ECHO」と「LIVE HAUS」がありますよ！両方とも小さめでインディーズバンドのライブが頻繁にあります。あなたが来る時期に合わせておすすめライブを紹介します。',
-    timestamp: '2023-07-01T09:15:00.000Z',
-    isRead: true
-  },
-  {
-    id: 'msg5',
-    senderId: 'user1',
-    receiverId: 'attender1',
-    content: 'ありがとうございます！私は7月15日から20日まで東京にいます。この期間のおすすめがあれば教えてください。',
-    timestamp: '2023-07-01T09:20:00.000Z',
-    isRead: true
-  },
-  {
-    id: 'msg6',
-    senderId: 'attender1',
-    receiverId: 'user1',
-    content: '7月17日に「The Tokyo Locals」というバンドのLIVE HAUSでのライブがあります。彼らは英語の歌詞も多いので外国人にも人気です。それに、下北沢のレコードショップもチェックしてみますか？',
-    timestamp: '2023-07-01T09:30:00.000Z',
-    isRead: true,
-    attachmentUrl: 'https://example.com/images/the-tokyo-locals-flyer.jpg',
-    attachmentType: 'image'
-  },
-  {
-    id: 'msg7',
-    senderId: 'user1',
-    receiverId: 'attender1',
-    content: 'それは素晴らしいです！ライブとレコードショップ巡りの両方に興味があります。あなたがガイドしてくれることは可能ですか？',
-    timestamp: '2023-07-01T10:00:00.000Z',
-    isRead: true
-  },
-  {
-    id: 'msg8',
-    senderId: 'attender1',
-    receiverId: 'user1',
-    content: 'もちろんです！私の「下北沢インディーシーン探訪ツアー」がおすすめです。レコードショップ巡りとライブハウスをご案内します。ただ、このツアーは予約が必要です。いかがでしょうか？',
-    timestamp: '2023-07-01T10:05:00.000Z',
-    isRead: true
-  },
-  {
-    id: 'msg9',
-    senderId: 'user2',
-    receiverId: 'attender2',
-    content: 'こんにちは、東京のアートギャラリーについて教えていただけませんか？',
-    timestamp: '2023-07-02T15:00:00.000Z',
-    isRead: true
-  },
-  {
-    id: 'msg10',
-    senderId: 'attender2',
-    receiverId: 'user2',
-    content: 'こんにちは！東京のアートシーンについてお訪ねいただきありがとうございます。何か特定のジャンルや時代に興味がありますか？',
-    timestamp: '2023-07-02T15:10:00.000Z',
-    isRead: false
-  }
-];
-
-// モック会話データ
-export const mockConversations: Conversation[] = [
-  {
-    id: 'conv1',
-    participantIds: ['user1', 'attender1'],
-    lastMessage: mockMessages.find(m => m.id === 'msg8'),
-    updatedAt: '2023-07-01T10:05:00.000Z',
-    unreadCount: 0,
-    isArchived: false,
-    isMuted: false
-  },
-  {
-    id: 'conv2',
-    participantIds: ['user2', 'attender2'],
-    lastMessage: mockMessages.find(m => m.id === 'msg10'),
-    updatedAt: '2023-07-02T15:10:00.000Z',
-    unreadCount: 1,
-    isArchived: false,
-    isMuted: false
-  },
-  {
-    id: 'conv3',
-    participantIds: ['user1', 'attender3'],
-    lastMessage: {
-      id: 'msg-archive',
-      senderId: 'attender3',
-      receiverId: 'user1',
-      content: 'お問い合わせありがとうございます。また機会があればよろしくお願いします。',
-      timestamp: '2023-06-15T12:30:00.000Z',
-      isRead: true
-    },
-    updatedAt: '2023-06-15T12:30:00.000Z',
-    unreadCount: 0,
-    isArchived: true,
-    isMuted: false
-  }
-];
-
-// マーケットアイテムのサンプルデータ
-export const marketItems = [
-  {
-    id: 1,
-    name: '地元職人の手作り陶器セット',
-    price: 8500,
-    description: '伝統技術で作られた日常使いの器。シンプルかつ上品なデザイン。',
-    attender: '山本 工房主',
-    region: '京都',
-    iconType: 'hammer'
-  },
-  {
-    id: 2,
-    name: '限定醸造クラフトビール6本セット',
-    price: 3600,
-    description: '地元の食材を使った季節限定の特別醸造ビール。贈り物にも最適。',
-    attender: '佐藤 ケンジ',
-    region: '横浜',
-    iconType: 'coffee'
-  },
-  {
-    id: 3,
-    name: '朝市直送の海産物セット',
-    price: 5800,
-    description: '漁港から直送の新鮮な海産物。アテンダーがセレクトした特選品。',
-    attender: '鈴木 漁師',
-    region: '福岡',
-    iconType: 'utensils'
-  },
-];
-
-// コミュニティプロジェクトのサンプルデータ
-export const communityProjects = [
-  {
-    id: 1,
-    title: '伝統工芸の継承プロジェクト',
-    location: '京都市',
-    status: '進行中',
-    description: '地域の若手職人を支援し、伝統技術を次世代に継承するためのワークショップや展示会を開催します。',
-    progress: 65,
-    iconType: 'hammer'
-  },
-  {
-    id: 2,
-    title: '商店街活性化プロジェクト',
-    location: '神戸市',
-    status: '計画中',
-    description: 'シャッター街となりつつある商店街に若手クリエイターを誘致し、新しい魅力を創出するプロジェクト。',
-    progress: 30,
-    iconType: 'shopping-bag'
-  },
-];
-
-// 季節限定イベントのサンプルデータ
-export const seasonalEvents = [
-  {
-    id: 1,
-    day: '15',
-    title: '早朝の漁港見学と海鮮朝食',
-    time: '5:00〜8:00',
-    attender: '鈴木 漁師',
-    period: '7月限定',
-    note: '温かい服装でお越しください',
-  },
-  {
-    id: 2,
-    day: '20',
-    title: '夏祭り特別ガイドツアー',
-    time: '18:00〜21:00',
-    attender: '田中 歴史家',
-    period: '年に一度',
-    note: '浴衣でご参加の方は割引あり',
-  },
-  {
-    id: 3,
-    day: '25',
-    title: '満月の夜の路地裏散策',
-    time: '20:00〜22:00',
-    attender: '佐藤 写真家',
-    period: '満月限定',
-    note: 'カメラ持参推奨',
-  },
-];
+// 会話に追加のプロパティを持つインターフェース
+interface ConversationWithLastReadTimestamp extends Conversation {
+  lastReadTimestamp?: string;
+  createdBy?: string;
+}
 
 // メッセージ関連の関数
-export const getMessagesByConversationId = (conversationId: string): Message[] => {
-  const conversation = mockConversations.find(c => c.id === conversationId);
-  if (!conversation) return [];
-  
-  const [user1, user2] = conversation.participantIds;
-  return mockMessages.filter(
-    message => (
-      (message.senderId === user1 && message.receiverId === user2) ||
-      (message.senderId === user2 && message.receiverId === user1)
-    )
-  ).sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+export const getMessagesByConversationId = (conversationId: string) => {
+  return mockMessages.filter(message => message.conversationId === conversationId);
 };
 
-// アクティブな会話を取得
-export const getActiveConversations = (): Conversation[] => {
-  return mockConversations.filter(c => !c.isArchived);
-};
-
-// アーカイブされた会話を取得
-export const getArchivedConversations = (): Conversation[] => {
-  return mockConversations.filter(c => c.isArchived);
-};
-
-// 会話をアーカイブ
-export const archiveConversation = (conversationId: string): boolean => {
-  const index = mockConversations.findIndex(c => c.id === conversationId);
-  if (index === -1) return false;
-  
-  mockConversations[index].isArchived = true;
-  return true;
-};
-
-// 会話のアーカイブを解除
-export const unarchiveConversation = (conversationId: string): boolean => {
-  const index = mockConversations.findIndex(c => c.id === conversationId);
-  if (index === -1) return false;
-  
-  mockConversations[index].isArchived = false;
-  return true;
-};
-
-// 会話をミュート
-export const muteConversation = (conversationId: string): boolean => {
-  const index = mockConversations.findIndex(c => c.id === conversationId);
-  if (index === -1) return false;
-  
-  mockConversations[index].isMuted = true;
-  return true;
-};
-
-// 会話のミュートを解除
-export const unmuteConversation = (conversationId: string): boolean => {
-  const index = mockConversations.findIndex(c => c.id === conversationId);
-  if (index === -1) return false;
-  
-  mockConversations[index].isMuted = false;
-  return true;
-};
-
-// 会話を削除
-export const deleteConversation = (conversationId: string): boolean => {
-  const index = mockConversations.findIndex(c => c.id === conversationId);
-  if (index === -1) return false;
-  
-  mockConversations.splice(index, 1);
-  return true;
-};
-
-export const addMessage = (message: Omit<Message, 'id' | 'timestamp' | 'isRead'>) => {
+export const addMessage = (message: Partial<Message>): Message => {
   const newMessage: Message = {
-    ...message,
-    id: `msg-${Date.now()}`,
+    id: `message-${Date.now()}`,
+    senderId: message.senderId || '',
+    receiverId: message.receiverId || '',
+    content: message.content || '',
     timestamp: new Date().toISOString(),
-    isRead: false
+    isRead: false,
+    status: MessageStatus.SENT,
+    attachments: message.attachments,
+    attachmentUrl: message.attachmentUrl,
+    attachmentType: message.attachmentType,
+    conversationId: message.conversationId,
+    mentions: message.mentions
   };
   
   mockMessages.push(newMessage);
-  
-  // 会話の更新
-  const conversationId = mockConversations.find(
-    c => c.participantIds.includes(message.senderId) && c.participantIds.includes(message.receiverId)
-  )?.id;
-  
-  if (conversationId) {
-    const conversation = mockConversations.find(c => c.id === conversationId);
-    if (conversation) {
-      conversation.lastMessage = newMessage;
-      conversation.updatedAt = newMessage.timestamp;
-      if (message.receiverId === conversation.participantIds[0] || 
-          message.receiverId === conversation.participantIds[1]) {
-        conversation.unreadCount += 1;
-      }
-    }
-  } else {
-    // 新しい会話を作成
-    const newConversation: Conversation = {
-      id: `conv-${Date.now()}`,
-      participantIds: [message.senderId, message.receiverId],
-      lastMessage: newMessage,
-      updatedAt: newMessage.timestamp,
-      unreadCount: 1,
-      isArchived: false,
-      isMuted: false
-    };
-    
-    mockConversations.push(newConversation);
-  }
-  
   return newMessage;
 };
 
 export const markConversationAsRead = (conversationId: string, userId: string) => {
-  const conversation = mockConversations.find(c => c.id === conversationId);
-  if (conversation && conversation.participantIds.includes(userId)) {
-    conversation.unreadCount = 0;
-    
-    // この会話の未読メッセージを既読にする
-    const messages = getMessagesByConversationId(conversationId);
-    messages.forEach(message => {
-      if (message.receiverId === userId && !message.isRead) {
-        const index = mockMessages.findIndex(m => m.id === message.id);
-        if (index !== -1) {
-          mockMessages[index].isRead = true;
-        }
-      }
-    });
-    
-    return true;
-  }
+  const conversation = mockConversations.find(c => c.id === conversationId) as ConversationWithLastReadTimestamp;
+  if (!conversation) return false;
   
-  return false;
+  // 会話を既読としてマーク
+  conversation.lastReadTimestamp = new Date().toISOString();
+  conversation.unreadCount = 0;
+  
+  return true;
+};
+
+export const getActiveConversations = (userId: string = '') => {
+  return mockConversations.filter(c => {
+    const conv = c as ConversationWithLastReadTimestamp;
+    return !conv.isArchived && 
+      (conv.participantIds.includes(userId) || conv.createdBy === userId);
+  });
+};
+
+export const getArchivedConversations = (userId: string = '') => {
+  return mockConversations.filter(c => {
+    const conv = c as ConversationWithLastReadTimestamp;
+    return conv.isArchived && 
+      (conv.participantIds.includes(userId) || conv.createdBy === userId);
+  });
+};
+
+export const archiveConversation = (conversationId: string) => {
+  const conversation = mockConversations.find(c => c.id === conversationId);
+  if (!conversation) return false;
+  
+  conversation.isArchived = true;
+  return true;
+};
+
+export const unarchiveConversation = (conversationId: string) => {
+  const conversation = mockConversations.find(c => c.id === conversationId);
+  if (!conversation) return false;
+  
+  conversation.isArchived = false;
+  return true;
+};
+
+export const muteConversation = (conversationId: string) => {
+  const conversation = mockConversations.find(c => c.id === conversationId);
+  if (!conversation) return false;
+  
+  conversation.isMuted = true;
+  return true;
+};
+
+export const unmuteConversation = (conversationId: string) => {
+  const conversation = mockConversations.find(c => c.id === conversationId);
+  if (!conversation) return false;
+  
+  conversation.isMuted = false;
+  return true;
+};
+
+export const deleteConversation = (conversationId: string) => {
+  const index = mockConversations.findIndex(c => c.id === conversationId);
+  if (index === -1) return false;
+  
+  mockConversations.splice(index, 1);
+  
+  // 関連するメッセージも削除
+  const messagesToDelete = mockMessages.filter(m => m.conversationId === conversationId);
+  messagesToDelete.forEach(message => {
+    const messageIndex = mockMessages.findIndex(m => m.id === message.id);
+    if (messageIndex !== -1) {
+      mockMessages.splice(messageIndex, 1);
+    }
+  });
+  
+  return true;
 };

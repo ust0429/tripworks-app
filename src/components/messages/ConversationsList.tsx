@@ -35,8 +35,8 @@ const ConversationsList: React.FC<ConversationsListProps> = ({ onSelectConversat
   
   // 会話一覧を読み込む
   const loadConversations = () => {
-    setActiveConversations(getActiveConversations());
-    setArchivedConversations(getArchivedConversations());
+    setActiveConversations(getActiveConversations(user?.id || ''));
+    setArchivedConversations(getArchivedConversations(user?.id || ''));
   };
   
   // 検索機能

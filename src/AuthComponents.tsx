@@ -5,6 +5,7 @@ import { X, Mail, Lock, User, Eye, EyeOff } from 'lucide-react';
 interface AuthContextType {
   isAuthenticated: boolean;
   user: UserType | null;
+  currentUser: CurrentUserType | null;
   login: (email: string, password: string) => Promise<boolean>;
   signup: (name: string, email: string, password: string) => Promise<boolean>;
   logout: () => void;
@@ -20,6 +21,15 @@ interface UserType {
   profileImage?: string;
 }
 
+// 現在のユーザー情報の拡張型定義
+interface CurrentUserType {
+  id: string;
+  name: string;
+  email: string;
+  photoUrl?: string;
+  type?: 'user' | 'attender' | 'admin';
+}
+
 // 認証コンテキストを作成
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -27,6 +37,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [user, setUser] = useState<UserType | null>(null);
+  const [currentUser, setCurrentUser] = useState<CurrentUserType | null>(null);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showSignupModal, setShowSignupModal] = useState(false);
 
@@ -40,12 +51,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       
       // テスト用アカウント
       if (email === 'test@example.com' && password === 'password') {
-        setUser({
+        const userData = {
           id: '1',
           name: 'テストユーザー',
           email: email,
           profileImage: undefined
-        });
+        };
+        
+        const currentUserData = {
+          id: '1',
+          name: 'テストユーザー',
+          email: email,
+          photoUrl: undefined,
+          type: 'user' as const
+        };
+        
+        setUser(userData);
+        setCurrentUser(currentUserData);
         setIsAuthenticated(true);
         setShowLoginModal(false);
         return true;
@@ -63,13 +85,26 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       // モック用に少し遅延を入れる
       await new Promise(resolve => setTimeout(resolve, 1000));
       
+      const userId = Date.now().toString(); // 仮のID生成
+      
       // 実際にはここでAPIにリクエストを送信
-      setUser({
-        id: Date.now().toString(), // 仮のID生成
+      const userData = {
+        id: userId,
         name: name,
         email: email,
         profileImage: undefined
-      });
+      };
+      
+      const currentUserData = {
+        id: userId,
+        name: name,
+        email: email,
+        photoUrl: undefined,
+        type: 'user' as const
+      };
+      
+      setUser(userData);
+      setCurrentUser(currentUserData);
       setIsAuthenticated(true);
       setShowSignupModal(false);
       return true;
@@ -82,6 +117,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   // ログアウト処理
   const logout = () => {
     setUser(null);
+    setCurrentUser(null);
     setIsAuthenticated(false);
   };
 
@@ -101,6 +137,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       value={{
         isAuthenticated,
         user,
+        currentUser,
         login,
         signup,
         logout,
