@@ -12,14 +12,33 @@ interface BookingType {
   date: string;
   time: string;
   location: string;
-  status: 'upcoming' | 'completed' | 'cancelled';
+  status: 'upcoming' | 'completed' | 'cancelled' | 'payment_pending';
+  paymentMethod?: 'credit_card' | 'convenience' | 'bank_transfer' | 'qr_code';
+  paymentStatus?: 'paid' | 'pending' | 'failed';
   price: number;
   isReviewed: boolean;
   imageUrl?: string;
+  bookingId?: string;
 }
 
 // モックデータ
 const mockBookings: BookingType[] = [
+  {
+    id: 6,
+    title: '江戸切子体験ワークショップ',
+    attenderId: 3,
+    attenderName: '佐藤 ケンジ',
+    attenderType: 'クラフトビール職人',
+    date: '2025-04-10',
+    time: '10:00',
+    location: '東京都墨田区押上1-1-2',
+    status: 'payment_pending',
+    paymentMethod: 'convenience',
+    paymentStatus: 'pending',
+    price: 6800,
+    isReviewed: false,
+    bookingId: 'ECH20250301'
+  },
   {
     id: 1,
     title: '浅草の裏路地を知り尽くしたガイドツアー',
@@ -199,6 +218,11 @@ const BookingHistoryScreen: React.FC = () => {
                       キャンセル済
                     </div>
                   )}
+                  {booking.status === 'payment_pending' && (
+                    <div className="absolute top-2 right-2 bg-yellow-500 text-white text-xs px-2 py-1 rounded">
+                      支払い待ち
+                    </div>
+                  )}
                 </div>
               )}
               
@@ -235,18 +259,34 @@ const BookingHistoryScreen: React.FC = () => {
                 
                 {/* アクションボタン */}
                 <div className="mt-4 flex flex-wrap justify-between items-center">
-                  <p className="font-medium">¥{booking.price.toLocaleString()}</p>
+                  <div>
+                    <p className="font-medium">¥{booking.price.toLocaleString()}</p>
+                    {booking.paymentStatus && (
+                      <p className={`text-xs mt-1 ${booking.paymentStatus === 'paid' ? 'text-green-600' : booking.paymentStatus === 'pending' ? 'text-yellow-600' : 'text-red-600'}`}>
+                        {booking.paymentStatus === 'paid' ? '支払い完了' : booking.paymentStatus === 'pending' ? '支払い手続き中' : '支払い失敗'}
+                      </p>
+                    )}
+                  </div>
                   
                   <div className="flex space-x-2">
                     {activeTab === 'upcoming' ? (
                       <>
-                        <button 
-                          onClick={() => handleViewBookingDetail(booking)}
-                          className="flex items-center text-sm font-medium"
-                        >
-                          詳細を見る
-                          <ChevronRight size={16} />
-                        </button>
+                        {booking.status === 'payment_pending' ? (
+                          <button 
+                            className="text-sm bg-black text-white px-3 py-1 rounded"
+                            onClick={() => handleViewBookingDetail(booking)}
+                          >
+                            支払いを完了する
+                          </button>
+                        ) : (
+                          <button 
+                            onClick={() => handleViewBookingDetail(booking)}
+                            className="flex items-center text-sm font-medium"
+                          >
+                            詳細を見る
+                            <ChevronRight size={16} />
+                          </button>
+                        )}
                       </>
                     ) : (
                       <>

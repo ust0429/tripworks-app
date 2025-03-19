@@ -1,170 +1,250 @@
 // src/components/ReviewsList.tsx
 import React, { useState, useEffect } from 'react';
-import { Star } from 'lucide-react';
-import ReviewStats from './ReviewStats';
-import ReviewFilters, { FilterState } from './ReviewFilters';
-import ReviewCard from './ReviewCard';
+import { MessageSquare, ThumbsUp, AlertCircle } from 'lucide-react';
 import { Review } from '../types';
+import ReviewCard from './ReviewCard';
+import ReviewFilters, { FilterState } from './ReviewFilters';
 
 interface ReviewsListProps {
   reviews: Review[];
-  averageRating: number;
-  reviewCount: number;
-  onSortChange?: (sortType: 'newest' | 'highest' | 'lowest' | 'most_helpful') => void;
+  showFilters?: boolean;
+  isLoading?: boolean;
+  error?: string;
+  attenderId?: number;
+  averageRating?: number;
+  reviewCount?: number;
+  onSortChange?: (type: "newest" | "highest" | "lowest" | "most_helpful") => void;
   onFilterChange?: (rating: number | null) => void;
   onHelpfulToggle?: (reviewId: string, isHelpful: boolean) => void;
 }
 
-const ReviewsList: React.FC<ReviewsListProps> = ({ 
-  reviews, 
-  averageRating, 
-  reviewCount,
-  onSortChange,
-  onFilterChange,
+const ReviewsList: React.FC<ReviewsListProps> = ({
+  reviews,
+  showFilters = true,
+  isLoading = false,
+  error,
+  attenderId,
   onHelpfulToggle
 }) => {
-  // フィルター状態
-  const [filterRating, setFilterRating] = useState<number | null>(null);
-  const [searchTerm, setSearchTerm] = useState<string>('');
-  const [sortBy, setSortBy] = useState<'newest' | 'highest' | 'lowest' | 'most_helpful'>('newest');
-  
-  // 表示するレビュー
-  const [displayedReviews, setDisplayedReviews] = useState<Review[]>(reviews);
-  
-  // 評価ごとのレビュー数
-  const reviewCountsByRating = [
-    reviews.filter(r => r.rating === 5).length,
-    reviews.filter(r => r.rating === 4).length,
-    reviews.filter(r => r.rating === 3).length,
-    reviews.filter(r => r.rating === 2).length,
-    reviews.filter(r => r.rating === 1).length
-  ];
-  
-  // レビューをフィルタリングして並べ替える
+  const [filteredReviews, setFilteredReviews] = useState<Review[]>(reviews);
+  const [filters, setFilters] = useState<FilterState>({
+    ratingFilter: null,
+    photoFilter: null,
+    dateRange: {
+      from: null,
+      to: null
+    },
+    searchTerm: '',
+    sortBy: 'newest'
+  });
+
+  // レビューが変更されたときに再フィルター
   useEffect(() => {
-    // フィルターを適用
-    let filtered = reviews.filter(review => {
-      // 評価フィルター
-      if (filterRating !== null && review.rating !== filterRating) {
-        return false;
-      }
-      
-      // 検索フィルター
-      if (searchTerm) {
-        const lowercaseSearch = searchTerm.toLowerCase();
-        const matchesName = review.userName.toLowerCase().includes(lowercaseSearch);
-        const matchesComment = review.comment.toLowerCase().includes(lowercaseSearch);
-        const matchesExperience = review.experienceTitle 
-          ? review.experienceTitle.toLowerCase().includes(lowercaseSearch) 
-          : false;
-          
-        if (!matchesName && !matchesComment && !matchesExperience) {
-          return false;
-        }
-      }
-      
-      return true;
-    });
+    handleFilterChange(filters);
+  }, [reviews]);
+
+  // レビューカウントの計算
+  const reviewCounts = [0, 0, 0, 0, 0]; // 5, 4, 3, 2, 1 の順
+  reviews.forEach(review => {
+    if (review.rating >= 1 && review.rating <= 5) {
+      reviewCounts[5 - review.rating]++;
+    }
+  });
+
+  // 写真付きレビューの数
+  const photoReviewsCount = reviews.filter(review => 
+    review.photoUrls && review.photoUrls.length > 0
+  ).length;
+
+  // 最近のレビュー数（過去30日）
+  const thirtyDaysAgo = new Date();
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+  const recentReviewsCount = reviews.filter(review => {
+    const reviewDate = new Date(review.date);
+    return reviewDate >= thirtyDaysAgo;
+  }).length;
+
+  // フィルターの適用
+  const handleFilterChange = (newFilters: FilterState) => {
+    setFilters(newFilters);
     
-    // 並べ替えを適用
-    const sorted = [...filtered];
+    let results = [...reviews];
     
-    switch (sortBy) {
-      case 'newest':
-        sorted.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-        break;
-      case 'highest':
-        sorted.sort((a, b) => b.rating - a.rating);
-        break;
-      case 'lowest':
-        sorted.sort((a, b) => a.rating - b.rating);
-        break;
-      case 'most_helpful':
-        sorted.sort((a, b) => (b.helpfulCount || 0) - (a.helpfulCount || 0));
-        break;
+    // 評価でフィルター
+    if (newFilters.ratingFilter !== null) {
+      results = results.filter(review => review.rating >= newFilters.ratingFilter!);
     }
     
-    setDisplayedReviews(sorted);
-  }, [reviews, filterRating, searchTerm, sortBy]);
-  
-  // フィルターを全てクリア
-  const clearFilters = () => {
-    setFilterRating(null);
-    setSearchTerm('');
-    if (onFilterChange) onFilterChange(null);
-  };
-  
-  // フィルター状態の変更を処理
-  const handleFilterChange = (filters: FilterState) => {
-    // 検索キーワード
-    setSearchTerm(filters.searchTerm);
+    // 写真の有無でフィルター
+    if (newFilters.photoFilter) {
+      results = results.filter(review => 
+        review.photoUrls && review.photoUrls.length > 0
+      );
+    }
     
-    // 評価フィルター
-    setFilterRating(filters.ratingFilter);
-    if (onFilterChange) {
-      onFilterChange(filters.ratingFilter);
+    // 日付範囲でフィルター
+    if (newFilters.dateRange.from !== null || newFilters.dateRange.to !== null) {
+      results = results.filter(review => {
+        const reviewDate = new Date(review.date);
+        let isInRange = true;
+        
+        if (newFilters.dateRange.from !== null) {
+          const fromDate = new Date(newFilters.dateRange.from);
+          isInRange = isInRange && reviewDate >= fromDate;
+        }
+        
+        if (newFilters.dateRange.to !== null) {
+          const toDate = new Date(newFilters.dateRange.to);
+          toDate.setHours(23, 59, 59, 999); // その日の終わりまで
+          isInRange = isInRange && reviewDate <= toDate;
+        }
+        
+        return isInRange;
+      });
+    }
+    
+    // 検索語でフィルター
+    if (newFilters.searchTerm) {
+      const searchLower = newFilters.searchTerm.toLowerCase();
+      results = results.filter(review => 
+        review.comment.toLowerCase().includes(searchLower) ||
+        review.userName.toLowerCase().includes(searchLower) ||
+        (review.experienceTitle && review.experienceTitle.toLowerCase().includes(searchLower))
+      );
     }
     
     // 並べ替え
-    const newSortBy = filters.sortBy as 'newest' | 'highest' | 'lowest' | 'most_helpful';
-    setSortBy(newSortBy);
-    if (onSortChange) {
-      onSortChange(newSortBy);
+    switch (newFilters.sortBy) {
+      case 'newest':
+        results.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        break;
+      case 'highest':
+        results.sort((a, b) => b.rating - a.rating);
+        break;
+      case 'lowest':
+        results.sort((a, b) => a.rating - b.rating);
+        break;
+      case 'most_helpful':
+        results.sort((a, b) => (b.helpfulCount || 0) - (a.helpfulCount || 0));
+        break;
+      case 'most_photos':
+        results.sort((a, b) => 
+          ((b.photoUrls?.length || 0) - (a.photoUrls?.length || 0))
+        );
+        break;
+      default:
+        break;
     }
+    
+    setFilteredReviews(results);
   };
-  
+
+  // ローディング状態
+  if (isLoading) {
+    return (
+      <div className="py-10 flex justify-center items-center">
+        <div className="animate-pulse flex flex-col items-center">
+          <div className="h-8 w-8 bg-gray-200 rounded-full mb-2"></div>
+          <div className="h-4 w-32 bg-gray-200 rounded"></div>
+        </div>
+      </div>
+    );
+  }
+
+  // エラー状態
+  if (error) {
+    return (
+      <div className="py-6 text-center">
+        <AlertCircle className="h-8 w-8 text-red-500 mx-auto mb-2" />
+        <p className="text-gray-700">{error}</p>
+        <button 
+          className="mt-4 px-4 py-2 bg-gray-100 rounded-lg text-sm font-medium hover:bg-gray-200"
+          onClick={() => handleFilterChange(filters)}
+        >
+          再試行
+        </button>
+      </div>
+    );
+  }
+
+  // レビューがない場合
+  if (reviews.length === 0) {
+    return (
+      <div className="py-10 text-center">
+        <MessageSquare className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+        <p className="text-gray-500">レビューはまだありません</p>
+        {attenderId && (
+          <p className="text-sm text-gray-400 mt-1">
+            このアテンダーとの体験後にレビューを投稿できます
+          </p>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div>
-      <h2 className="text-lg font-bold mb-4">レビュー</h2>
+      {/* フィルター */}
+      {showFilters && reviews.length > 0 && (
+        <ReviewFilters
+          onFilterChange={handleFilterChange}
+          totalReviews={reviews.length}
+          reviewCounts={reviewCounts}
+          photoReviewsCount={photoReviewsCount}
+          recentReviewsCount={recentReviewsCount}
+        />
+      )}
       
-      {/* 統計情報 */}
-      <ReviewStats
-        reviews={reviews}
-        averageRating={averageRating}
-        reviewCount={reviewCount}
-      />
+      {/* レビュー数表示 */}
+      <div className="mb-4 text-sm text-gray-600">
+        {filteredReviews.length} 件のレビュー
+        {filters.searchTerm || filters.ratingFilter !== null || filters.photoFilter || filters.dateRange.from !== null || filters.dateRange.to !== null
+          ? ` (全${reviews.length}件中)`
+          : ''
+        }
+      </div>
       
-      {/* フィルターコンポーネント */}
-      <ReviewFilters
-        onFilterChange={handleFilterChange}
-        totalReviews={reviews.length}
-        reviewCounts={reviewCountsByRating}
-      />
-      
-      {/* レビュー一覧 */}
-      {displayedReviews.length > 0 ? (
-        <div className="space-y-6">
-          {/* レビューカード */}
-          {displayedReviews.map((review) => (
-            <ReviewCard 
-              key={review.id} 
-              review={review} 
-              onHelpfulToggle={onHelpfulToggle}
-            />
-          ))}
-          
-          {/* 全てのレビューをロードするボタン */}
-          {reviews.length > 0 && reviews.length < reviewCount && (
-            <button className="w-full mt-4 py-2 border border-gray-300 rounded-lg text-black font-medium text-sm">
-              すべてのレビューを見る
-            </button>
-          )}
+      {/* フィルター結果がない場合 */}
+      {filteredReviews.length === 0 && (
+        <div className="py-6 text-center border-t border-gray-200">
+          <p className="text-gray-500">条件に一致するレビューはありません</p>
+          <button
+            onClick={() => handleFilterChange({
+              ratingFilter: null,
+              photoFilter: null,
+              dateRange: { from: null, to: null },
+              searchTerm: '',
+              sortBy: 'newest'
+            })}
+            className="mt-2 text-sm text-black hover:underline"
+          >
+            フィルターをクリア
+          </button>
         </div>
-      ) : (
-        <div className="bg-gray-50 p-8 rounded-lg text-center">
-          {reviews.length > 0 ? (
-            <>
-              <p className="text-gray-600 font-medium mb-2">フィルターに一致するレビューがありません</p>
-              <button
-                onClick={clearFilters}
-                className="text-black underline text-sm"
-              >
-                すべてのレビューを表示
-              </button>
-            </>
-          ) : (
-            <p className="text-gray-500">まだレビューがありません</p>
-          )}
+      )}
+      
+      {/* レビューリスト */}
+      <div className="space-y-6">
+        {filteredReviews.map(review => (
+          <ReviewCard
+            key={review.id}
+            review={review}
+            onHelpfulToggle={onHelpfulToggle}
+          />
+        ))}
+      </div>
+      
+      {/* ページネーション (将来的な機能として) */}
+      {filteredReviews.length > 10 && (
+        <div className="mt-8 flex justify-center">
+          <div className="inline-flex items-center justify-center space-x-1">
+            <button className="px-3 py-1 rounded-md border border-gray-300 text-sm hover:bg-gray-50">前へ</button>
+            <button className="px-3 py-1 rounded-md bg-black text-white text-sm">1</button>
+            <button className="px-3 py-1 rounded-md border border-gray-300 text-sm hover:bg-gray-50">2</button>
+            <button className="px-3 py-1 rounded-md border border-gray-300 text-sm hover:bg-gray-50">3</button>
+            <span className="text-gray-500">...</span>
+            <button className="px-3 py-1 rounded-md border border-gray-300 text-sm hover:bg-gray-50">次へ</button>
+          </div>
         </div>
       )}
     </div>

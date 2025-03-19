@@ -1,6 +1,7 @@
 // src/components/ReviewForm.tsx
-import React, { useState, useRef } from 'react';
-import { Star, Image, X, Camera, Upload } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { Star, Image, X, Camera, Upload, AlertCircle, Loader } from 'lucide-react';
+import { processImage, isSupportedImageType, convertHeicToJpeg } from '../utils/imageUtils';
 
 interface ReviewFormProps {
   attenderId: number;
@@ -20,10 +21,27 @@ const ReviewForm: React.FC<ReviewFormProps> = ({
   const [hoverRating, setHoverRating] = useState(0);
   const [photos, setPhotos] = useState<File[]>([]);
   const [previewUrls, setPreviewUrls] = useState<string[]>([]);
+  const [uploadErrors, setUploadErrors] = useState<string[]>([]);
+  const [isProcessing, setIsProcessing] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [screenWidth, setScreenWidth] = useState(window.innerWidth);
+
+  // 画面サイズの変更を監視
+  useEffect(() => {
+    const handleResize = () => {
+      setScreenWidth(window.innerWidth);
+    };
+    
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+  
+  // モバイルかどうかを判定
+  const isMobile = screenWidth < 768;
 
   // 写真を追加
-  const handleAddPhoto = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAddPhoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    setUploadErrors([]);
     const files = e.target.files;
     console.log('写真選択イベント:', { 
       filesExist: Boolean(files), 
@@ -31,17 +49,20 @@ const ReviewForm: React.FC<ReviewFormProps> = ({
       currentPhotosCount: photos.length
     });
     
-    if (!files) return;
+    if (!files || files.length === 0) return;
 
     // 5枚までの制限を確認
     if (photos.length + files.length > 5) {
-      alert('写真は最大5枚までアップロードできます');
+      setUploadErrors([...uploadErrors, '写真は最大5枚までアップロードできます']);
       return;
     }
 
+    setIsProcessing(true);
+    
     // 新しい写真を追加
     const newPhotos = [...photos];
     const newPreviewUrls = [...previewUrls];
+    const newErrors: string[] = [];
     
     console.log('写真データ処理開始:', {  
       filesCount: files.length,
@@ -52,37 +73,76 @@ const ReviewForm: React.FC<ReviewFormProps> = ({
       }))
     });
 
-    Array.from(files).forEach(file => {
-      // ファイルサイズ上限チェック (10MB)
-      if (file.size > 10 * 1024 * 1024) {
-        alert(`ファイル「${file.name}」のサイズが大きすぎます（上限10MB）`);
-        return;
-      }
-
-      // アップロード可能な形式かチェック
-      const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-      if (!validTypes.includes(file.type)) {
-        alert(`ファイル「${file.name}」は対応していない形式です`);
-        return;
-      }
-
-      newPhotos.push(file);
-      console.log(`写真追加: ${file.name} (${file.type}, ${file.size} bytes)`);
-      
-      // プレビュー画像の生成
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        if (e.target && typeof e.target.result === 'string') {
-          newPreviewUrls.push(e.target.result);
-          console.log(`プレビュー URL 生成済み: ${newPreviewUrls.length}個目`);
-          setPreviewUrls([...newPreviewUrls]);
+    // ファイル処理を並列で行う
+    const filePromises = Array.from(files).map(async (file) => {
+      try {
+        // ファイルサイズ上限チェック (10MB)
+        if (file.size > 10 * 1024 * 1024) {
+          newErrors.push(`ファイル「${file.name}」のサイズが大きすぎます（上限10MB）`);
+          return null;
         }
-      };
-      reader.readAsDataURL(file);
+
+        // HEIC/HEIF形式の場合はJPEGに変換
+        let processFile = file;
+        if (/^image\/(heic|heif)$/i.test(file.type)) {
+          processFile = await convertHeicToJpeg(file);
+        }
+
+        // アップロード可能な形式かチェック
+        if (!isSupportedImageType(processFile.type)) {
+          newErrors.push(`ファイル「${processFile.name}」は対応していない形式です`);
+          return null;
+        }
+
+        // 画像処理（圧縮とEXIF除去）
+        const optimizedFile = await processImage(processFile, {
+          quality: 0.85,
+          maxWidth: 1920,
+          maxHeight: 1080,
+          removeExif: true
+        });
+
+        console.log(`写真処理完了: ${file.name} (${file.size} bytes) → ${optimizedFile.name} (${optimizedFile.size} bytes)`);
+        
+        // プレビュー画像の生成
+        return new Promise<{ file: File, dataUrl: string }>((resolve) => {
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            if (e.target && typeof e.target.result === 'string') {
+              resolve({
+                file: optimizedFile,
+                dataUrl: e.target.result
+              });
+            }
+          };
+          reader.readAsDataURL(optimizedFile);
+        });
+      } catch (error) {
+        console.error('画像処理エラー:', error);
+        newErrors.push(`ファイル「${file.name}」の処理中にエラーが発生しました`);
+        return null;
+      }
+    });
+
+    // すべてのファイル処理が完了するのを待つ
+    const results = await Promise.all(filePromises);
+    
+    // 有効な結果だけを抽出
+    results.forEach(result => {
+      if (result) {
+        newPhotos.push(result.file);
+        newPreviewUrls.push(result.dataUrl);
+      }
     });
 
     setPhotos(newPhotos);
-    console.log('写真データ登録完了:', { newCount: newPhotos.length });
+    setPreviewUrls(newPreviewUrls);
+    setUploadErrors(newErrors);
+    setIsProcessing(false);
+    console.log('写真データ登録完了:', { 
+      newCount: newPhotos.length,
+      errors: newErrors.length > 0 ? newErrors : 'なし'
+    });
 
     // ファイル選択をクリア（同じファイルを連続で選択可能にする）
     if (fileInputRef.current) {
@@ -107,14 +167,18 @@ const ReviewForm: React.FC<ReviewFormProps> = ({
     if (fileInputRef.current) {
       // 写真撮影用設定
       fileInputRef.current.accept = 'image/*';
+      
       // モバイルデバイスではカメラを起動する
-      fileInputRef.current.setAttribute('capture', 'environment');
+      if (isMobile) {
+        fileInputRef.current.setAttribute('capture', 'environment');
+      }
       fileInputRef.current.click();
       
       // 確認メッセージ
       console.log('カメラ起動リクエスト:', { 
         accept: fileInputRef.current.accept,
-        captureAttr: fileInputRef.current.getAttribute('capture')
+        captureAttr: fileInputRef.current.getAttribute('capture'),
+        isMobile
       });
       
       // クリック後にキャプチャ属性を削除して、次回のファイル選択に影響しないようにする
@@ -126,37 +190,47 @@ const ReviewForm: React.FC<ReviewFormProps> = ({
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     // バリデーション
     if (rating === 0) {
-      alert('評価を選択してください');
+      setUploadErrors([...uploadErrors, '評価を選択してください']);
       return;
     }
     
     if (!comment.trim()) {
-      alert('コメントを入力してください');
+      setUploadErrors([...uploadErrors, 'コメントを入力してください']);
       return;
     }
     
-    console.log('レビューフォーム送信:', { 
-      rating, 
-      commentLength: comment.length,
-      photoCount: photos.length,
-      photoDetails: photos.length > 0 ? photos.map(p => ({ name: p.name, type: p.type, size: p.size })) : []
-    });
+    setIsProcessing(true);
     
-    // 取得した写真データをログ出力して確認
-    const photoData = photos.length > 0 ? photos : undefined;
-    if (photoData) {
-      console.log(`レビュー送信: ${photoData.length}枚の写真を送信します:`, 
-        photoData.map(p => `${p.name} (${p.type}, ${p.size} bytes)`));
-    } else {
-      console.log('レビュー送信: 写真なし');
-    }
+    try {
+      console.log('レビューフォーム送信:', { 
+        rating, 
+        commentLength: comment.length,
+        photoCount: photos.length,
+        photoDetails: photos.length > 0 ? photos.map(p => ({ name: p.name, type: p.type, size: p.size })) : []
+      });
+      
+      // 取得した写真データをログ出力して確認
+      const photoData = photos.length > 0 ? photos : undefined;
+      if (photoData) {
+        console.log(`レビュー送信: ${photoData.length}枚の写真を送信します:`, 
+          photoData.map(p => `${p.name} (${p.type}, ${p.size} bytes)`));
+      } else {
+        console.log('レビュー送信: 写真なし');
+      }
 
-    onSubmit({ rating, comment, photos: photoData });
+      // フォーム送信処理
+      onSubmit({ rating, comment, photos: photoData });
+    } catch (error) {
+      console.error('レビュー送信エラー:', error);
+      setUploadErrors([...uploadErrors, 'レビューの送信中にエラーが発生しました']);
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   return (
@@ -164,6 +238,21 @@ const ReviewForm: React.FC<ReviewFormProps> = ({
       <h3 className="text-lg font-bold mb-4">
         「{experienceTitle}」のレビューを投稿
       </h3>
+      
+      {/* エラーメッセージ表示 */}
+      {uploadErrors.length > 0 && (
+        <div className="mb-4 bg-red-50 border border-red-200 rounded-lg p-3">
+          <div className="flex items-center text-red-800 mb-1">
+            <AlertCircle size={16} className="mr-1" />
+            <span className="font-medium">以下のエラーが発生しました:</span>
+          </div>
+          <ul className="list-disc pl-5 text-sm text-red-700">
+            {uploadErrors.map((error, index) => (
+              <li key={index}>{error}</li>
+            ))}
+          </ul>
+        </div>
+      )}
       
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* 星評価 */}
@@ -178,6 +267,7 @@ const ReviewForm: React.FC<ReviewFormProps> = ({
                 onMouseEnter={() => setHoverRating(star)}
                 onMouseLeave={() => setHoverRating(0)}
                 className="text-2xl focus:outline-none"
+                aria-label={`${star}点`}
               >
                 <Star
                   size={24}
@@ -190,6 +280,9 @@ const ReviewForm: React.FC<ReviewFormProps> = ({
                 />
               </button>
             ))}
+            <span className="ml-2 text-sm text-gray-500" aria-live="polite">
+              {rating > 0 ? `${rating}点` : ''}
+            </span>
           </div>
         </div>
         
@@ -206,7 +299,11 @@ const ReviewForm: React.FC<ReviewFormProps> = ({
             placeholder="体験の感想を詳しく書いてください..."
             className="w-full p-3 border border-gray-300 rounded-lg focus:ring-gray-500 focus:border-gray-500"
             required
+            aria-required="true"
           />
+          <p className="text-xs text-gray-500 mt-1">
+            {comment.length}/1000文字
+          </p>
         </div>
 
         {/* 写真アップロード */}
@@ -214,7 +311,7 @@ const ReviewForm: React.FC<ReviewFormProps> = ({
           <p className="text-sm font-medium text-gray-700 mb-2">写真を追加 (最大5枚)</p>
           
           {/* プレビュー表示 */}
-          <div className="grid grid-cols-5 gap-2 mb-2">
+          <div className={`grid ${isMobile ? 'grid-cols-3' : 'grid-cols-5'} gap-2 mb-2`}>
             {previewUrls.map((url, index) => (
               <div key={index} className="relative aspect-square bg-gray-100 rounded-lg overflow-hidden">
                 <img src={url} alt={`プレビュー ${index + 1}`} className="w-full h-full object-cover" />
@@ -222,6 +319,7 @@ const ReviewForm: React.FC<ReviewFormProps> = ({
                   type="button"
                   onClick={() => handleRemovePhoto(index)}
                   className="absolute top-1 right-1 bg-black bg-opacity-50 rounded-full p-1 text-white hover:bg-opacity-70"
+                  aria-label={`写真${index + 1}を削除`}
                 >
                   <X size={14} />
                 </button>
@@ -229,11 +327,14 @@ const ReviewForm: React.FC<ReviewFormProps> = ({
             ))}
             
             {/* 空のプレビュースロット */}
-            {Array.from({ length: 5 - previewUrls.length }).map((_, index) => (
+            {Array.from({ length: Math.min(isMobile ? 3 : 5, 5 - previewUrls.length) }).map((_, index) => (
               <div 
                 key={`empty-${index}`} 
                 className="aspect-square bg-gray-100 rounded-lg flex items-center justify-center flex-col cursor-pointer hover:bg-gray-200"
                 onClick={() => fileInputRef.current?.click()}
+                role="button"
+                aria-label="写真を追加"
+                tabIndex={0}
               >
                 <Upload size={20} className="text-gray-500 mb-1" />
                 <span className="text-xs text-gray-500">写真を追加</span>
@@ -250,30 +351,39 @@ const ReviewForm: React.FC<ReviewFormProps> = ({
               onChange={handleAddPhoto}
               ref={fileInputRef}
               className="hidden"
+              aria-hidden="true"
             />
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
               className="flex items-center justify-center px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium flex-1"
-              disabled={photos.length >= 5}
+              disabled={photos.length >= 5 || isProcessing}
+              aria-disabled={photos.length >= 5 || isProcessing}
             >
-              <Upload size={16} className="mr-2" />
+              {isProcessing ? (
+                <Loader size={16} className="mr-2 animate-spin" />
+              ) : (
+                <Upload size={16} className="mr-2" />
+              )}
               写真を選択
             </button>
-            <button
-              type="button"
-              onClick={handleOpenCamera}
-              className="flex items-center justify-center px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium flex-1"
-              disabled={photos.length >= 5}
-            >
-              <Camera size={16} className="mr-2" />
-              カメラ
-            </button>
+            {isMobile && (
+              <button
+                type="button"
+                onClick={handleOpenCamera}
+                className="flex items-center justify-center px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium flex-1"
+                disabled={photos.length >= 5 || isProcessing}
+                aria-disabled={photos.length >= 5 || isProcessing}
+              >
+                <Camera size={16} className="mr-2" />
+                カメラ
+              </button>
+            )}
           </div>
           
           {/* 注意書き */}
           <p className="text-xs text-gray-500 mt-1">
-            写真は日付と場所の情報（EXIF）を除去して投稿されます。
+            写真は日付と場所の情報（EXIF）を除去して自動的に圧縮されます。
           </p>
         </div>
         
@@ -283,15 +393,23 @@ const ReviewForm: React.FC<ReviewFormProps> = ({
             type="button"
             onClick={onCancel}
             className="flex-1 py-2 border border-gray-300 rounded-lg font-medium hover:bg-gray-50"
+            disabled={isProcessing}
           >
             キャンセル
           </button>
           <button
             type="submit"
-            className="flex-1 py-2 bg-black text-white rounded-lg font-medium hover:bg-gray-800 transition-colors"
-            disabled={rating === 0 || !comment.trim()}
+            className="flex-1 py-2 bg-black text-white rounded-lg font-medium hover:bg-gray-800 transition-colors disabled:bg-gray-400"
+            disabled={rating === 0 || !comment.trim() || isProcessing}
           >
-            投稿する
+            {isProcessing ? (
+              <>
+                <Loader size={16} className="inline mr-2 animate-spin" />
+                処理中...
+              </>
+            ) : (
+              '投稿する'
+            )}
           </button>
         </div>
       </form>

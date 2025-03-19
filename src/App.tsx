@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { MessageCircle, Menu, X, User, Home, Compass, Heart, Users, ShoppingBag, Gift, Calendar, LogOut } from 'lucide-react';
 import { AuthProvider, useAuth } from './AuthComponents';
+import { PaymentProvider } from './contexts/PaymentContext';
 import AttenderDetailScreen from './components/AttenderDetailScreen';
 import ExploreScreen from './components/ExploreScreen';
 import { MessagesScreen } from './components/messages';
@@ -215,10 +216,7 @@ const AppContent = () => {
 
   // 予約確定処理
   const handleConfirmBooking = () => {
-    // 実際のアプリではAPIリクエストを送信
-    console.log('予約を確定:', bookingData);
-    
-    // 予約確認画面を閉じて旅程画面に遷移
+    // 旅程画面に遷移
     setBookingData(null);
     setActiveTab('trips');
   };
@@ -455,7 +453,9 @@ const AppContent = () => {
 const TripworksApp = () => {
   return (
     <AuthProvider>
-      <AppContent />
+      <PaymentProvider>
+        <AppContent />
+      </PaymentProvider>
     </AuthProvider>
   );
 };
