@@ -2,6 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, useNavigate } from 'react-router-dom';
 import { MessageCircle, Menu, X, User, Home, Compass, Heart, Users, ShoppingBag, Gift, Calendar, LogOut } from 'lucide-react';
 import { AuthProvider, useAuth } from './AuthComponents';
+import { LocaleProvider } from './contexts/LocaleContext';
+import { FraudDetectionProvider } from './components/security';
+import SettingsScreen from './components/settings/SettingsScreen';
 import { PaymentProvider } from './contexts/PaymentContext';
 import AttenderDetailScreen from './components/AttenderDetailScreen';
 import ExploreScreen from './components/ExploreScreen';
@@ -304,6 +307,7 @@ const AppContent = () => {
             {activeTab === 'events' && <SeasonalEventsScreen />}
             {activeTab === 'profile' && <ProfileScreen />}
             {activeTab === 'messages' && <MessagesScreen />}
+            {activeTab === 'settings' && <SettingsScreen />}
           </>
         )}
       </main>
@@ -392,7 +396,13 @@ const AppContent = () => {
                 <li className="border-t my-2 pt-2 flex items-center space-x-3 text-gray-700 hover:text-black cursor-pointer">
                   <span>ヘルプ</span>
                 </li>
-                <li className="flex items-center space-x-3 text-gray-700 hover:text-black cursor-pointer">
+                <li 
+                  className="flex items-center space-x-3 text-gray-700 hover:text-black cursor-pointer"
+                  onClick={() => {
+                    setActiveTab('settings');
+                    setMenuOpen(false);
+                  }}
+                >
                   <span>設定</span>
                 </li>
                 {isAuthenticated && (
@@ -461,13 +471,17 @@ const TripworksApp = () => {
   return (
     <Router>
       <AuthProvider>
-        <Routes>
-          <Route path="*" element={
-            <PaymentProviderWithNavigate>
-              <AppContent />
-            </PaymentProviderWithNavigate>
-          } />
-        </Routes>
+        <LocaleProvider>
+          <FraudDetectionProvider>
+            <Routes>
+              <Route path="*" element={
+                <PaymentProviderWithNavigate>
+                  <AppContent />
+                </PaymentProviderWithNavigate>
+              } />
+            </Routes>
+          </FraudDetectionProvider>
+        </LocaleProvider>
       </AuthProvider>
     </Router>
   );

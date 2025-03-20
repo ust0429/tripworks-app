@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { ArrowRight, CheckCircle, AlertTriangle, Info, CreditCard, Store, Building, QrCode } from 'lucide-react';
+import { ArrowRight, CheckCircle, AlertTriangle, Info, CreditCard, Store, Building, QrCode, Smartphone } from 'lucide-react';
 import { usePayment } from '../../contexts/PaymentContext';
+import { useLocale } from '../../contexts/LocaleContext';
 import { PaymentMethodType, PaymentFormErrors, PaymentData } from '../../types/payment';
 import { validateCardNumber, validateExpiryDate, validateCVC, detectCardType } from '../../utils/paymentUtils';
 
@@ -10,6 +11,8 @@ import CreditCardForm from './CreditCardForm';
 import ConvenienceStoreForm from './ConvenienceStoreForm';
 import BankTransferForm from './BankTransferForm';
 import QRCodeForm from './QRCodeForm';
+import ApplePayButton from './ApplePayButton';
+import GooglePayButton from './GooglePayButton';
 
 // PaymentFormのprops型定義
 interface PaymentFormProps {
@@ -19,6 +22,7 @@ interface PaymentFormProps {
 }
 
 const PaymentForm: React.FC<PaymentFormProps> = ({ totalAmount, onPaymentSubmit, onCancel }) => {
+  const { t, formatCurrency } = useLocale();
   const {
     isProcessing,
     paymentError,
@@ -154,6 +158,11 @@ const PaymentForm: React.FC<PaymentFormProps> = ({ totalAmount, onPaymentSubmit,
       newErrors.general = '決済方法を選択してください';
       setErrors(newErrors);
       return false;
+    }
+    
+    // Apple PayとGoogle Payは別のフローなのでスキップ
+    if (paymentMethod === 'apple_pay' || paymentMethod === 'google_pay') {
+      return true;
     }
 
     switch (paymentMethod) {
@@ -296,6 +305,10 @@ const PaymentForm: React.FC<PaymentFormProps> = ({ totalAmount, onPaymentSubmit,
           qrData
         };
         break;
+      case 'apple_pay':
+      case 'google_pay':
+        // こちらは別のフローで処理されるため、ここでは何もしない
+        return;
       default:
         setErrors({ general: '決済方法を選択してください' });
         return;
@@ -324,9 +337,49 @@ const PaymentForm: React.FC<PaymentFormProps> = ({ totalAmount, onPaymentSubmit,
     setTouchedFields({});
   }, [paymentMethod]);
   
+  // Apple PayまたはGoogle Payの処理完了時のハンドラー
+  const handleMobilePaymentComplete = useCallback(async (transactionId: string) => {
+    // bookingIdの取得（コンテキストもしくは仮 ID）
+    const bookingId = bookingData ? bookingData.id : `temp-${Date.now()}`;
+    
+    try {
+      if (paymentMethod === 'apple_pay' || paymentMethod === 'google_pay') {
+        const paymentData = {
+          amount: totalAmount,
+          bookingId: bookingId,
+          paymentMethod: paymentMethod
+        };
+        
+        // 外部から渡されたsubmitハンドラーがあれば使用、なければ内部のハンドラーを使用
+        if (onPaymentSubmit) {
+          await onPaymentSubmit(paymentData);
+        } else if (processPaymentAction) {
+          const success = await processPaymentAction(paymentData);
+          if (success) {
+            // 決済成功の場合は完了画面へ自動遷移
+            // navigateToCompleteはPaymentContext内で処理
+          }
+        }
+      }
+    } catch (error) {
+      setErrors({ general: '決済処理中にエラーが発生しました' });
+    }
+  }, [paymentMethod, totalAmount, bookingData, onPaymentSubmit, processPaymentAction]);
+  
+  // Apple PayまたはGoogle Payのエラー時のハンドラー
+  const handleMobilePaymentError = useCallback((error: Error) => {
+    setErrors({ general: `決済処理中にエラーが発生しました: ${error.message}` });
+  }, []);
+  
+  
   // フォームの完了度を計算（プログレスバー用）
   const formCompleteness = useMemo(() => {
     if (!paymentMethod) return 0;
+    
+    // モバイル決済は完了度100%とする
+    if (paymentMethod === 'apple_pay' || paymentMethod === 'google_pay') {
+      return 100;
+    }
     
     let requiredFields: string[] = [];
     let validFieldCount = 0;
@@ -367,7 +420,7 @@ const PaymentForm: React.FC<PaymentFormProps> = ({ totalAmount, onPaymentSubmit,
         <div className="flex justify-between items-center">
           <p className="text-gray-700">お支払い総額（税込）</p>
           <p className="text-xl font-bold text-blue-800">
-            {totalAmount.toLocaleString()}円
+            {formatCurrency(totalAmount)}
           </p>
         </div>
       </div>
@@ -409,7 +462,7 @@ const PaymentForm: React.FC<PaymentFormProps> = ({ totalAmount, onPaymentSubmit,
       </div>
       
       {/* プログレスバー */}
-      {paymentMethod && (
+      {paymentMethod && paymentMethod !== 'apple_pay' && paymentMethod !== 'google_pay' && (
         <div className="mt-4 mb-2 animate-fade-in-up">
           <div className="w-full bg-gray-200 rounded-full h-2.5">
             <div
@@ -428,58 +481,97 @@ const PaymentForm: React.FC<PaymentFormProps> = ({ totalAmount, onPaymentSubmit,
       {/* 選択された決済方法のフォーム */}
       {paymentMethod && (
         <div className="mt-6 relative animate-fade-in-up">
-          {/* 決済方法のアイコンとタイトル */}
-          <div className="mb-4 flex items-center">
-            {paymentMethod === 'credit_card' && <CreditCard className="w-5 h-5 text-blue-600 mr-2" />}
-            {paymentMethod === 'convenience' && <Store className="w-5 h-5 text-blue-600 mr-2" />}
-            {paymentMethod === 'bank_transfer' && <Building className="w-5 h-5 text-blue-600 mr-2" />}
-            {paymentMethod === 'qr_code' && <QrCode className="w-5 h-5 text-blue-600 mr-2" />}
-            <h3 className="text-lg font-medium text-gray-800">
-              {paymentMethod === 'credit_card' && 'クレジットカード情報'}
-              {paymentMethod === 'convenience' && 'コンビニ支払い情報'}
-              {paymentMethod === 'bank_transfer' && '銀行振込情報'}
-              {paymentMethod === 'qr_code' && 'QRコード決済情報'}
-            </h3>
-          </div>
-          {paymentMethod === 'credit_card' && (
-            <CreditCardForm
-              onDataChange={setCardData}
-              errors={errors}
-              disabled={isProcessing}
-              onBlur={handleFieldBlur}
-              fieldStatus={fieldStatus}
-            />
+          {/* Apple PayとGoogle Payのボタン */}
+          {paymentMethod === 'apple_pay' && (
+            <div className="mb-6">
+              <h3 className="text-lg font-medium text-gray-800 mb-4">
+                Apple Payで支払う
+              </h3>
+              <ApplePayButton
+                amount={totalAmount}
+                onPaymentComplete={handleMobilePaymentComplete}
+                onPaymentError={handleMobilePaymentError}
+              />
+              <p className="text-sm text-gray-600 mt-2">
+                Apple Payボタンをタップすると、支払いフローが開始されます。
+              </p>
+            </div>
           )}
-
-          {paymentMethod === 'convenience' && (
-            <ConvenienceStoreForm
-              onDataChange={setConvenienceData}
-              errors={errors}
-              disabled={isProcessing}
-              onBlur={handleFieldBlur}
-              fieldStatus={fieldStatus}
-            />
+          
+          {paymentMethod === 'google_pay' && (
+            <div className="mb-6">
+              <h3 className="text-lg font-medium text-gray-800 mb-4">
+                Google Payで支払う
+              </h3>
+              <GooglePayButton
+                amount={totalAmount}
+                onPaymentComplete={handleMobilePaymentComplete}
+                onPaymentError={handleMobilePaymentError}
+              />
+              <p className="text-sm text-gray-600 mt-2">
+                Google Payボタンをタップすると、支払いフローが開始されます。
+              </p>
+            </div>
           )}
+          
+          {/* 通常の決済方法のフォーム */}
+          {(paymentMethod !== 'apple_pay' && paymentMethod !== 'google_pay') && (
+            <>
+              {/* 決済方法のアイコンとタイトル */}
+              <div className="mb-4 flex items-center">
+                {paymentMethod === 'credit_card' && <CreditCard className="w-5 h-5 text-blue-600 mr-2" />}
+                {paymentMethod === 'convenience' && <Store className="w-5 h-5 text-blue-600 mr-2" />}
+                {paymentMethod === 'bank_transfer' && <Building className="w-5 h-5 text-blue-600 mr-2" />}
+                {paymentMethod === 'qr_code' && <QrCode className="w-5 h-5 text-blue-600 mr-2" />}
+                <h3 className="text-lg font-medium text-gray-800">
+                  {paymentMethod === 'credit_card' && t('payment.methods.creditCard')}
+                  {paymentMethod === 'convenience' && 'コンビニ支払い情報'}
+                  {paymentMethod === 'bank_transfer' && '銀行振込情報'}
+                  {paymentMethod === 'qr_code' && 'QRコード決済情報'}
+                </h3>
+              </div>
+              
+              {paymentMethod === 'credit_card' && (
+                <CreditCardForm
+                  onDataChange={setCardData}
+                  errors={errors}
+                  disabled={isProcessing}
+                  onBlur={handleFieldBlur}
+                  fieldStatus={fieldStatus}
+                />
+              )}
 
-          {paymentMethod === 'bank_transfer' && (
-            <BankTransferForm
-              onDataChange={setBankData}
-              errors={errors}
-              amount={totalAmount}
-              disabled={isProcessing}
-              onBlur={handleFieldBlur}
-              fieldStatus={fieldStatus}
-            />
-          )}
+              {paymentMethod === 'convenience' && (
+                <ConvenienceStoreForm
+                  onDataChange={setConvenienceData}
+                  errors={errors}
+                  disabled={isProcessing}
+                  onBlur={handleFieldBlur}
+                  fieldStatus={fieldStatus}
+                />
+              )}
 
-          {paymentMethod === 'qr_code' && (
-            <QRCodeForm
-              onDataChange={setQrData}
-              errors={errors}
-              disabled={isProcessing}
-              onBlur={handleFieldBlur}
-              fieldStatus={fieldStatus}
-            />
+              {paymentMethod === 'bank_transfer' && (
+                <BankTransferForm
+                  onDataChange={setBankData}
+                  errors={errors}
+                  amount={totalAmount}
+                  disabled={isProcessing}
+                  onBlur={handleFieldBlur}
+                  fieldStatus={fieldStatus}
+                />
+              )}
+
+              {paymentMethod === 'qr_code' && (
+                <QRCodeForm
+                  onDataChange={setQrData}
+                  errors={errors}
+                  disabled={isProcessing}
+                  onBlur={handleFieldBlur}
+                  fieldStatus={fieldStatus}
+                />
+              )}
+            </>
           )}
         </div>
       )}
@@ -501,36 +593,44 @@ const PaymentForm: React.FC<PaymentFormProps> = ({ totalAmount, onPaymentSubmit,
             {paymentMethod === 'qr_code' && (
               <p>決済確定後、QRコードが表示されます。スマートフォンでスキャンして決済を完了してください。有効期限は30分です。</p>
             )}
+            {paymentMethod === 'apple_pay' && (
+              <p>Apple Payを使用すると、安全かつ簡単にお支払いができます。Touch IDまたはFace IDで認証します。</p>
+            )}
+            {paymentMethod === 'google_pay' && (
+              <p>Google Payを使用すると、安全かつ簡単にお支払いができます。指紋認証またはパスコードで認証します。</p>
+            )}
           </div>
         </div>
       )}
       
-      {/* 送信ボタン */}
-      <div className="mt-8">
-        <button
-          type="submit"
-          disabled={isProcessing || paymentSuccess}
-          className={`w-full flex items-center justify-center space-x-2 px-6 py-3 rounded-md text-white font-medium transition-all ${
-            isProcessing || paymentSuccess
-              ? 'bg-gray-400 cursor-not-allowed'
-              : formCompleteness >= 100 ? 'bg-green-600 hover:bg-green-700' : 'bg-blue-600 hover:bg-blue-700'
-          }`}
-        >
-          <span>
-            {isProcessing
-              ? '処理中...'
-              : paymentSuccess
-              ? '完了しました'
-              : '決済を確定する'}
-          </span>
-          {!isProcessing && !paymentSuccess && <ArrowRight className="w-5 h-5" />}
-        </button>
-        {isProcessing && (
-          <p className="text-center text-sm text-gray-500 mt-2">
-            決済処理中です。このページを閉じないでください...
-          </p>
-        )}
-      </div>
+      {/* 送信ボタン - モバイル決済の場合は非表示 */}
+      {paymentMethod && paymentMethod !== 'apple_pay' && paymentMethod !== 'google_pay' && (
+        <div className="mt-8">
+          <button
+            type="submit"
+            disabled={isProcessing || paymentSuccess}
+            className={`w-full flex items-center justify-center space-x-2 px-6 py-3 rounded-md text-white font-medium transition-all ${
+              isProcessing || paymentSuccess
+                ? 'bg-gray-400 cursor-not-allowed'
+                : formCompleteness >= 100 ? 'bg-green-600 hover:bg-green-700' : 'bg-blue-600 hover:bg-blue-700'
+            }`}
+          >
+            <span>
+              {isProcessing
+                ? t('payment.processingPayment')
+                : paymentSuccess
+                ? t('payment.paymentSuccess')
+                : '決済を確定する'}
+            </span>
+            {!isProcessing && !paymentSuccess && <ArrowRight className="w-5 h-5" />}
+          </button>
+          {isProcessing && (
+            <p className="text-center text-sm text-gray-500 mt-2">
+              決済処理中です。このページを閉じないでください...
+            </p>
+          )}
+        </div>
+      )}
 
       {/* 注意事項 */}
       <div className="mt-6 text-sm text-gray-600 space-y-2 border-t pt-4">

@@ -1,0 +1,187 @@
+      {/* 身分証明書セクション */}
+      <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+        <h3 className="text-lg font-medium mb-4">身分証明書</h3>
+        <p className="text-sm text-gray-500 mb-4">
+          アテンダーとして活動するには、身分証明書の提出が必要です。提出された情報は厳重に管理され、確認後に当社のデータベースに安全に保存されます。
+        </p>
+        
+        <div className="space-y-4">
+          {/* 身分証明書タイプ */}
+          <div>
+            <label htmlFor="identificationDocument.type" className="block text-sm font-medium text-gray-700 mb-1">
+              身分証明書の種類 <span className="text-red-500">*</span>
+            </label>
+            <select
+              id="identificationDocument.type"
+              name="identificationDocument.type"
+              value={formData.identificationDocument?.type || ''}
+              onChange={handleIdDocChange}
+              className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${
+                errors['identificationDocument.type'] ? 'border-red-500' : 'border-gray-300'
+              }`}
+            >
+              <option value="">選択してください</option>
+              <option value="passport">パスポート</option>
+              <option value="driver_license">運転免許証</option>
+              <option value="id_card">マイナンバーカード</option>
+              <option value="residence_card">在留カード（外国籍の方）</option>
+              <option value="other">その他</option>
+            </select>
+            {errors['identificationDocument.type'] && (
+              <p className="mt-1 text-sm text-red-500">{errors['identificationDocument.type']}</p>
+            )}
+          </div>
+          
+          {/* 身分証明書番号 */}
+          <div>
+            <label htmlFor="identificationDocument.number" className="block text-sm font-medium text-gray-700 mb-1">
+              身分証明書番号 <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              id="identificationDocument.number"
+              name="identificationDocument.number"
+              value={formData.identificationDocument?.number || ''}
+              onChange={handleIdDocChange}
+              className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${
+                errors['identificationDocument.number'] ? 'border-red-500' : 'border-gray-300'
+              }`}
+              placeholder="身分証明書に記載されている番号"
+            />
+            {errors['identificationDocument.number'] && (
+              <p className="mt-1 text-sm text-red-500">{errors['identificationDocument.number']}</p>
+            )}
+          </div>
+          
+          {/* 有効期限 */}
+          <div>
+            <label htmlFor="identificationDocument.expirationDate" className="block text-sm font-medium text-gray-700 mb-1">
+              有効期限 <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="date"
+              id="identificationDocument.expirationDate"
+              name="identificationDocument.expirationDate"
+              value={formData.identificationDocument?.expirationDate || ''}
+              onChange={handleIdDocChange}
+              className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${
+                errors['identificationDocument.expirationDate'] ? 'border-red-500' : 'border-gray-300'
+              }`}
+            />
+            {errors['identificationDocument.expirationDate'] && (
+              <p className="mt-1 text-sm text-red-500">{errors['identificationDocument.expirationDate']}</p>
+            )}
+          </div>
+          
+          {/* 身分証明書の表面画像 */}
+          <div>
+            <label htmlFor="frontImage" className="block text-sm font-medium text-gray-700 mb-1">
+              身分証明書の表面画像 <span className="text-red-500">*</span>
+            </label>
+            <div className="mt-1 flex items-center">
+              <input
+                type="file"
+                id="frontImage"
+                name="frontImage"
+                accept="image/*"
+                onChange={(e) => handleImageUpload(e, true)}
+                className="sr-only"
+              />
+              <label
+                htmlFor="frontImage"
+                className="relative cursor-pointer bg-white border border-gray-300 rounded-md py-2 px-3 flex items-center justify-center text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              >
+                <span>ファイルを選択</span>
+              </label>
+              <span className="ml-2 text-sm text-gray-500">
+                {frontImageFile ? frontImageFile.name : '選択されていません'}
+              </span>
+            </div>
+            {errors['identificationDocument.frontImageUrl'] && (
+              <p className="mt-1 text-sm text-red-500">{errors['identificationDocument.frontImageUrl']}</p>
+            )}
+          </div>
+          
+          {/* 身分証明書の裏面画像（任意） */}
+          <div>
+            <label htmlFor="backImage" className="block text-sm font-medium text-gray-700 mb-1">
+              身分証明書の裏面画像（任意）
+            </label>
+            <div className="mt-1 flex items-center">
+              <input
+                type="file"
+                id="backImage"
+                name="backImage"
+                accept="image/*"
+                onChange={(e) => handleImageUpload(e, false)}
+                className="sr-only"
+              />
+              <label
+                htmlFor="backImage"
+                className="relative cursor-pointer bg-white border border-gray-300 rounded-md py-2 px-3 flex items-center justify-center text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              >
+                <span>ファイルを選択</span>
+              </label>
+              <span className="ml-2 text-sm text-gray-500">
+                {backImageFile ? backImageFile.name : '選択されていません'}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      {/* SNSリンク */}
+      <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+        <h3 className="text-lg font-medium mb-4">SNSリンク（任意）</h3>
+        <p className="text-sm text-gray-500 mb-4">
+          あなたのSNSアカウントやウェブサイトを共有することで、ゲストにあなたの活動や提供する体験についてより詳しく知ってもらうことができます。
+        </p>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Instagram */}
+          <div>
+            <label htmlFor="instagram" className="block text-sm font-medium text-gray-700 mb-1">
+              Instagram
+            </label>
+            <input
+              type="text"
+              id="instagram"
+              name="instagram"
+              value={formData.socialMediaLinks?.instagram || ''}
+              onChange={handleSocialMediaChange}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              placeholder="https://instagram.com/username"
+            />
+          </div>
+          
+          {/* Twitter */}
+          <div>
+            <label htmlFor="twitter" className="block text-sm font-medium text-gray-700 mb-1">
+              Twitter
+            </label>
+            <input
+              type="text"
+              id="twitter"
+              name="twitter"
+              value={formData.socialMediaLinks?.twitter || ''}
+              onChange={handleSocialMediaChange}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              placeholder="https://twitter.com/username"
+            />
+          </div>
+          
+          {/* YouTube */}
+          <div>
+            <label htmlFor="youtube" className="block text-sm font-medium text-gray-700 mb-1">
+              YouTube
+            </label>
+            <input
+              type="text"
+              id="youtube"
+              name="youtube"
+              value={formData.socialMediaLinks?.youtube || ''}
+              onChange={handleSocialMediaChange}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              placeholder="https://youtube.com/channel/xyz"
+            />
+          </div>

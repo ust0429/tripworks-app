@@ -3,7 +3,7 @@
  */
 
 // 決済方法の種類
-export type PaymentMethodType = 'credit_card' | 'convenience' | 'bank_transfer' | 'qr_code';
+export type PaymentMethodType = 'credit_card' | 'convenience' | 'bank_transfer' | 'qr_code' | 'apple_pay' | 'google_pay';
 
 // クレジットカード情報
 export interface CreditCardData {
@@ -46,6 +46,8 @@ export type PaymentData = {
   | { paymentMethod: 'convenience'; convenienceData: ConvenienceStoreData }
   | { paymentMethod: 'bank_transfer'; bankData: BankTransferData }
   | { paymentMethod: 'qr_code'; qrData: QRCodeData }
+  | { paymentMethod: 'apple_pay' }
+  | { paymentMethod: 'google_pay' }
 );
 
 // フォームエラーの型
@@ -73,6 +75,9 @@ export interface PaymentResult {
   requires3DSecure?: boolean;
   threeDSecureUrl?: string;
   threeDSecureId?: string;
+  // 不正検知と追加認証関連のフィールド
+  requiresAction?: boolean;
+  actionType?: string;
 }
 
 // 3Dセキュアの状態

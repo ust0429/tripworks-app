@@ -1,0 +1,203 @@
+/**
+ * 身分証明・追加情報入力ステップ
+ * 
+ * アテンダー申請フォームの身分証明書と追加情報を入力するステップ
+ */
+import React, { useState } from 'react';
+import { useAttenderApplication } from '../../../../contexts/AttenderApplicationContext';
+import { AdditionalDocument, Reference, SocialMediaLinks } from '../../../../types/attender';
+
+interface IdentificationStepProps {
+  onNext: () => void;
+  onBack: () => void;
+}
+
+// 拡張された推薦者型（フォーム入力用）
+interface ReferenceForm {
+  name: string;
+  relationship: string;
+  email: string;
+  phoneNumber?: string;
+  contactInfo?: string;
+  yearsKnown?: number;
+  message?: string;
+  verified?: boolean;
+}
+
+const IdentificationStep: React.FC<IdentificationStepProps> = ({ onNext, onBack }) => {
+  const { 
+    formData, 
+    updateFormData, 
+    errors, 
+    clearError,
+    addReference,
+    updateReference,
+    removeReference,
+    addDocument,
+    removeDocument,
+    updateSocialMediaLinks
+  } = useAttenderApplication();
+  
+  // ファイルアップロード用の状態
+  const [frontImageFile, setFrontImageFile] = useState<File | null>(null);
+  const [backImageFile, setBackImageFile] = useState<File | null>(null);
+  const [additionalDocFile, setAdditionalDocFile] = useState<File | null>(null);
+  
+  // 新しい推薦者情報
+  const [newReference, setNewReference] = useState<ReferenceForm>({
+    name: '',
+    relationship: '',
+    email: '',
+    contactInfo: '',
+    yearsKnown: 0
+  });
+  
+  // 新しい追加書類情報
+  const [newDocument, setNewDocument] = useState<Omit<AdditionalDocument, 'fileUrl' | 'uploadDate'>>({
+    type: '' as 'certification' | 'license' | 'insurance' | 'reference_letter' | 'other',
+    title: '',
+    description: ''
+  });
+  
+  // 身分証明書情報の更新
+  const handleIdDocChange = (e: React.ChangeEvent<HTMLSelectElement | HTMLInputElement>) => {
+    const { name, value } = e.target;
+    const fieldName = name.split('.')[1] as 'type' | 'number' | 'expirationDate' | 'frontImageUrl' | 'backImageUrl';
+    
+    // 現在のidentificationDocument情報を取得または初期化
+    const currentIdDoc = formData.identificationDocument || {
+      type: '' as 'passport' | 'driver_license' | 'id_card' | 'residence_card' | 'other',
+      number: '',
+      expirationDate: '',
+      frontImageUrl: ''
+    };
+    
+    updateFormData({
+      identificationDocument: {
+        ...currentIdDoc,
+        [fieldName]: value
+      }
+    });
+    
+    clearError(name);
+  };
+  
+  // 身分証明書画像のアップロード処理
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>, isFront: boolean) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    // 実際の実装ではクラウドストレージへのアップロード処理を行い、URLを取得する
+    // ここではモック実装としてファイル名をURLとして扱う
+    const mockUrl = `https://storage.example.com/ids/${Date.now()}-${file.name}`;
+    
+    // 現在のidentificationDocument情報を取得または初期化
+    const currentIdDoc = formData.identificationDocument || {
+      type: '' as 'passport' | 'driver_license' | 'id_card' | 'residence_card' | 'other',
+      number: '',
+      expirationDate: '',
+      frontImageUrl: ''
+    };
+    
+    if (isFront) {
+      setFrontImageFile(file);
+      updateFormData({
+        identificationDocument: {
+          ...currentIdDoc,
+          frontImageUrl: mockUrl
+        }
+      });
+      clearError('identificationDocument.frontImageUrl');
+    } else {
+      setBackImageFile(file);
+      updateFormData({
+        identificationDocument: {
+          ...currentIdDoc,
+          backImageUrl: mockUrl
+        }
+      });
+    }
+  };
+  
+  // SNSリンクの更新
+  const handleSocialMediaChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    updateSocialMediaLinks({ [name]: value });
+  };
+  
+  // 推薦者情報の入力変更
+  const handleReferenceChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setNewReference({
+      ...newReference,
+      [name]: name === 'yearsKnown' ? parseFloat(value) : value
+    });
+  };
+  
+  // 推薦者の追加
+  const handleAddReference = () => {
+    if (newReference.name && newReference.relationship && (newReference.contactInfo || newReference.email)) {
+      // contactInfo から email または phoneNumber を設定
+      const reference: Reference = {
+        name: newReference.name,
+        relationship: newReference.relationship,
+        email: newReference.email || newReference.contactInfo || '',
+        phoneNumber: newReference.phoneNumber,
+        yearsKnown: newReference.yearsKnown,
+        message: newReference.message,
+        verified: newReference.verified
+      };
+      
+      addReference(reference);
+      setNewReference({
+        name: '',
+        relationship: '',
+        email: '',
+        contactInfo: '',
+        yearsKnown: 0
+      });
+    }
+  };
+  
+  // 追加書類の入力変更
+  const handleDocumentChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setNewDocument({
+      ...newDocument,
+      [name]: value
+    });
+  };
+  
+  // 追加書類のアップロード処理
+  const handleDocumentUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    setAdditionalDocFile(file);
+  };
+  
+  // 追加書類の追加
+  const handleAddDocument = () => {
+    if (newDocument.type && newDocument.title && additionalDocFile) {
+      // 実際の実装ではクラウドストレージへのアップロード処理を行い、URLを取得する
+      // ここではモック実装としてファイル名をURLとして扱う
+      const mockUrl = `https://storage.example.com/docs/${Date.now()}-${additionalDocFile.name}`;
+      
+      addDocument({
+        ...newDocument,
+        fileUrl: mockUrl,
+        uploadDate: new Date().toISOString()
+      } as AdditionalDocument);
+      
+      setNewDocument({
+        type: '' as 'certification' | 'license' | 'insurance' | 'reference_letter' | 'other',
+        title: '',
+        description: ''
+      });
+      setAdditionalDocFile(null);
+    }
+  };
+  
+  return (
+    <div className="space-y-8">
+      <h2 className="text-xl font-semibold mb-4">身分証明と追加情報</h2>
