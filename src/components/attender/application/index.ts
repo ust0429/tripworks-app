@@ -1,2 +1,4 @@
-export { default as IdentificationUploader } from './IdentificationUploader';
-export { default as ExperienceImageUploader } from './ExperienceImageUploader';
+export { default as AttenderApplicationForm } from './AttenderApplicationFormPart1';
+export * from './AttenderApplicationFormPart1';
+export * from './AttenderApplicationFormPart2';
+export * from './AttenderApplicationFormPart3';

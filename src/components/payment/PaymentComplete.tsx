@@ -71,7 +71,7 @@ interface PaymentCompleteProps {
     time: string;
     location: string;
   };
-  attender: {
+  attender?: {
     name: string;
     type: string;
   };
@@ -319,7 +319,7 @@ const PaymentComplete: React.FC<PaymentCompleteProps> = ({
             <p className="text-gray-600">{experience.location}</p>
           </div>
         </div>
-        <p className="text-gray-600 mt-2">アテンダー: {attender.name}</p>
+        <p className="text-gray-600 mt-2">{attender ? `アテンダー: ${attender.name}` : ''}</p>
         <div className="flex justify-between items-center mt-3 pt-3 border-t border-gray-200">
           <span className="text-gray-700">お支払い金額</span>
           <span className="font-bold text-gray-900">

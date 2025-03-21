@@ -4,7 +4,7 @@ import UploadProgressBar from './UploadProgressBar';
 import { UploadProgress } from '../../../services/upload/FileUploadService';
 
 interface FileUploaderProps {
-  onFileSelect: (file: File) => Promise<string>;
+  onFileSelect?: (file: File) => Promise<string>; // オプショナルに変更
   onSuccess?: (url: string) => void;
   onError?: (error: Error) => void;
   accept?: string;
@@ -19,6 +19,11 @@ interface FileUploaderProps {
   previewAsBackground?: boolean; // 背景として画像プレビューを表示するかどうか
   multiple?: boolean; // 複数ファイルの選択を許可するかどうか
   initialImageUrl?: string; // 初期画像URL
+  
+  // ProfileHeaderで使用されている追加プロパティ
+  onFileSelected?: (file: File) => Promise<void>;
+  disabled?: boolean;
+  children?: React.ReactNode;
 }
 
 /**
@@ -41,7 +46,11 @@ const FileUploader: React.FC<FileUploaderProps> = ({
   showPreview = true,
   previewAsBackground = false,
   multiple = false,
-  initialImageUrl
+  initialImageUrl,
+  // 追加プロパティ
+  onFileSelected,
+  disabled = false,
+  children
 }) => {
   const [isDragActive, setIsDragActive] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -118,13 +127,26 @@ const FileUploader: React.FC<FileUploaderProps> = ({
     
     // アップロードを実行
     try {
-      const url = await onFileSelect(file);
-      
-      if (onSuccess) {
-        onSuccess(url);
+      // ProfileHeaderで使用しているonFileSelectedがあればそちらを優先
+      if (onFileSelected) {
+        await onFileSelected(file);
+        return "";
       }
       
-      return url;
+      // 通常のonFileSelectを使用
+      if (onFileSelect) {
+        const url = await onFileSelect(file);
+        
+        if (onSuccess) {
+          onSuccess(url);
+        }
+        
+        return url;
+      }
+      
+      // 両方のハンドラが指定されていない場合
+      console.warn('Neither onFileSelect nor onFileSelected was provided to FileUploader');
+      return "";
     } catch (err) {
       const error = err instanceof Error ? err : new Error('ファイルアップロードに失敗しました');
       setError(error.message);
@@ -135,7 +157,7 @@ const FileUploader: React.FC<FileUploaderProps> = ({
       
       return null;
     }
-  }, [accept, maxSize, onFileSelect, onSuccess, onError, showPreview]);
+  }, [accept, maxSize, onFileSelect, onSuccess, onError, showPreview, onFileSelected]);
 
   // ファイル選択時のハンドラー
   const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -229,6 +251,7 @@ const FileUploader: React.FC<FileUploaderProps> = ({
         onChange={handleChange}
         className="hidden"
         multiple={multiple}
+        disabled={disabled}
       />
       
       {/* エラーメッセージ */}
@@ -251,58 +274,66 @@ const FileUploader: React.FC<FileUploaderProps> = ({
       
       {/* プレビュー表示エリア */}
       {renderPreview()}
-      
-      {/* ドロップゾーン */}
-      <div
-        onClick={handleButtonClick}
-        onDragEnter={handleDrag}
-        onDragLeave={handleDrag}
-        onDragOver={handleDrag}
-        onDrop={handleDrop}
-        className={`
-          w-full border-2 border-dashed rounded-md p-4 text-center cursor-pointer
-          transition-colors duration-200 ease-in-out
-          ${isDragActive
-            ? 'border-blue-400 bg-blue-50'
-            : selectedFile
-              ? 'border-green-400 bg-green-50'
-              : 'border-gray-300 hover:border-blue-300 bg-gray-50 hover:bg-blue-50'
-          }
-        `}
-      >
-        {/* アイコンと説明テキスト */}
-        <div className="flex flex-col items-center justify-center">
-          {selectedFile ? (
-            <>
-              <FileImage className="w-10 h-10 text-green-500 mb-2" />
-              <p className="text-sm font-medium text-gray-700">{selectedFile.name}</p>
-              <p className="text-xs text-gray-500">
-                {Math.round(selectedFile.size / 1024)} KB
-              </p>
-            </>
-          ) : (
-            <>
-              {isDragActive ? (
-                <>
-                  <Upload className="w-10 h-10 text-blue-500 mb-2" />
-                  <p className="text-sm font-medium text-blue-600">{dragActiveText}</p>
-                </>
-              ) : (
-                <>
-                  <ImagePlus className="w-10 h-10 text-gray-400 mb-2" />
-                  <p className="text-sm text-gray-500 mb-2">{dragInactiveText}</p>
-                  <button
-                    type="button"
-                    className="px-4 py-2 bg-blue-500 text-white text-sm rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-                  >
-                    {buttonText}
-                  </button>
-                </>
-              )}
-            </>
-          )}
+
+      {/* childrenがあれば表示し、なければ通常のドロップゾーンを表示 */}
+      {children ? (
+        <div onClick={handleButtonClick}>
+          {children}
         </div>
-      </div>
+      ) : (
+        /* ドロップゾーン */
+        <div
+          onClick={handleButtonClick}
+          onDragEnter={handleDrag}
+          onDragLeave={handleDrag}
+          onDragOver={handleDrag}
+          onDrop={handleDrop}
+          className={`
+            w-full border-2 border-dashed rounded-md p-4 text-center cursor-pointer
+            transition-colors duration-200 ease-in-out
+            ${isDragActive
+              ? 'border-blue-400 bg-blue-50'
+              : selectedFile
+                ? 'border-green-400 bg-green-50'
+                : 'border-gray-300 hover:border-blue-300 bg-gray-50 hover:bg-blue-50'
+            }
+          `}
+        >
+          {/* アイコンと説明テキスト */}
+          <div className="flex flex-col items-center justify-center">
+            {selectedFile ? (
+              <>
+                <FileImage className="w-10 h-10 text-green-500 mb-2" />
+                <p className="text-sm font-medium text-gray-700">{selectedFile.name}</p>
+                <p className="text-xs text-gray-500">
+                  {Math.round(selectedFile.size / 1024)} KB
+                </p>
+              </>
+            ) : (
+              <>
+                {isDragActive ? (
+                  <>
+                    <Upload className="w-10 h-10 text-blue-500 mb-2" />
+                    <p className="text-sm font-medium text-blue-600">{dragActiveText}</p>
+                  </>
+                ) : (
+                  <>
+                    <ImagePlus className="w-10 h-10 text-gray-400 mb-2" />
+                    <p className="text-sm text-gray-500 mb-2">{dragInactiveText}</p>
+                    <button
+                      type="button"
+                      className="px-4 py-2 bg-blue-500 text-white text-sm rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                      disabled={disabled}
+                    >
+                      {buttonText}
+                    </button>
+                  </>
+                )}
+              </>
+            )}
+          </div>
+        </div>
+      )}
       
       {/* ファイル選択済みの場合の削除ボタン */}
       {selectedFile && (
@@ -311,6 +342,7 @@ const FileUploader: React.FC<FileUploaderProps> = ({
             type="button"
             onClick={handleRemoveFile}
             className="text-sm text-red-600 hover:text-red-700 flex items-center"
+            disabled={disabled}
           >
             <X className="w-4 h-4 mr-1" />
             削除
@@ -322,3 +354,6 @@ const FileUploader: React.FC<FileUploaderProps> = ({
 };
 
 export default FileUploader;
+
+// 互換性のために名前付きエクスポートも追加
+export { FileUploader };

@@ -65,8 +65,10 @@ const ReviewsList: React.FC<ReviewsListProps> = ({
   }).length;
 
   // フィルターの適用
-  const handleFilterChange = (newFilters: FilterState) => {
-    setFilters(newFilters);
+  const handleFilterChange = (newFilters: Partial<FilterState>) => {
+    // 既存のFiltersと新しいFiltersをマージ
+    const mergedFilters = { ...filters, ...newFilters };
+    setFilters(mergedFilters as FilterState);
     
     let results = [...reviews];
     
@@ -83,17 +85,17 @@ const ReviewsList: React.FC<ReviewsListProps> = ({
     }
     
     // 日付範囲でフィルター
-    if (newFilters.dateRange.from !== null || newFilters.dateRange.to !== null) {
+    if (newFilters.dateRange && (newFilters.dateRange.from !== null || newFilters.dateRange.to !== null)) {
       results = results.filter(review => {
         const reviewDate = new Date(review.date);
         let isInRange = true;
         
-        if (newFilters.dateRange.from !== null) {
+        if (newFilters.dateRange && newFilters.dateRange.from !== null) {
           const fromDate = new Date(newFilters.dateRange.from);
           isInRange = isInRange && reviewDate >= fromDate;
         }
         
-        if (newFilters.dateRange.to !== null) {
+        if (newFilters.dateRange && newFilters.dateRange.to !== null) {
           const toDate = new Date(newFilters.dateRange.to);
           toDate.setHours(23, 59, 59, 999); // その日の終わりまで
           isInRange = isInRange && reviewDate <= toDate;
@@ -187,7 +189,16 @@ const ReviewsList: React.FC<ReviewsListProps> = ({
       {/* フィルター */}
       {showFilters && reviews.length > 0 && (
         <ReviewFilters
+          filters={filters}
+          experiences={[]}
           onFilterChange={handleFilterChange}
+          onResetFilters={() => handleFilterChange({
+            ratingFilter: null,
+            photoFilter: null,
+            dateRange: { from: null, to: null },
+            searchTerm: '',
+            sortBy: 'newest'
+          } as FilterState)}
           totalReviews={reviews.length}
           reviewCounts={reviewCounts}
           photoReviewsCount={photoReviewsCount}
@@ -215,7 +226,7 @@ const ReviewsList: React.FC<ReviewsListProps> = ({
               dateRange: { from: null, to: null },
               searchTerm: '',
               sortBy: 'newest'
-            })}
+            } as FilterState)}
             className="mt-2 text-sm text-black hover:underline"
           >
             フィルターをクリア

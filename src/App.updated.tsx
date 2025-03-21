@@ -1,13 +1,26 @@
 import React, { useState, useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route, useNavigate } from 'react-router-dom';
 import { MessageCircle, Menu, X, User, Home, Compass, Heart, Users, ShoppingBag, Gift, Calendar, LogOut } from 'lucide-react';
 import { AuthProvider, useAuth } from './AuthComponents';
+import { LocaleProvider } from './contexts/LocaleContext';
+import { FraudDetectionProvider } from './components/security';
+import SettingsScreen from './components/settings/SettingsScreen';
+import { PaymentProvider } from './contexts/PaymentContext';
 import AttenderDetailScreen from './components/AttenderDetailScreen';
+import ExperienceDetailScreen from './components/ExperienceDetailScreen';
 import ExploreScreen from './components/ExploreScreen';
 import { MessagesScreen } from './components/messages';
 import BookingConfirmationScreen from './components/BookingConfirmationScreen';
 import OnboardingScreen from './components/screens/OnboardingScreen';
 import BookingHistoryScreen from './components/screens/BookingHistoryScreen';
 import { HomeScreen } from './components/screens';
+
+// 新しく追加したコンポーネント
+import ReservationList from './components/reservation/ReservationList';
+import CancelReservation from './components/reservation/CancelReservation';
+import UserProfile from './components/user/UserProfile';
+import ReviewForm from './components/reviews/ReviewForm';
+
 import { AttenderType } from './types';
 
 // サンプルデータ
@@ -121,6 +134,7 @@ const SeasonalEventsScreen = () => {
 // プロフィール画面
 const ProfileScreen = () => {
   const { user, logout } = useAuth();
+  const navigate = useNavigate();
   
   return (
     <div className="p-4 space-y-6">
@@ -138,7 +152,10 @@ const ProfileScreen = () => {
         </div>
         
         <div className="mt-8 flex justify-between">
-          <button className="px-4 py-2 bg-gray-100 text-black rounded-lg">
+          <button 
+            onClick={() => navigate('/profile')}
+            className="px-4 py-2 bg-gray-100 text-black rounded-lg"
+          >
             プロフィールを編集
           </button>
           <button 
@@ -153,13 +170,20 @@ const ProfileScreen = () => {
   );
 };
 
+// PaymentProviderのラッパーコンポーネント
+const PaymentProviderWithNavigate = ({ children }: { children: React.ReactNode }) => {
+  const navigate = useNavigate();
+  return <PaymentProvider navigate={navigate}>{children}</PaymentProvider>;
+};
+
 // アプリのコンテンツ部分
 const AppContent = () => {
   const [activeTab, setActiveTab] = useState('home');
   const [menuOpen, setMenuOpen] = useState(false);
   const [selectedAttenderId, setSelectedAttenderId] = useState<number | null>(null);
+  const [selectedExperienceId, setSelectedExperienceId] = useState<number | null>(null);
   const [bookingData, setBookingData] = useState<{
-    attenderId: number;
+    attenderId?: number;
     experienceId?: number;
     date: string;
     time: string;
@@ -194,10 +218,20 @@ const AppContent = () => {
   const handleBackFromDetail = () => {
     setSelectedAttenderId(null);
   };
+  
+  // 体験詳細ページに遷移する関数
+  const handleExperienceClick = (id: number) => {
+    setSelectedExperienceId(id);
+  };
+  
+  // 体験詳細ページから戻る関数
+  const handleBackFromExperienceDetail = () => {
+    setSelectedExperienceId(null);
+  };
 
   // 予約確認画面を表示する関数
   const handleBookingRequest = (data: {
-    attenderId: number;
+    attenderId?: number;
     experienceId?: number;
     date: string;
     time: string;
@@ -215,10 +249,7 @@ const AppContent = () => {
 
   // 予約確定処理
   const handleConfirmBooking = () => {
-    // 実際のアプリではAPIリクエストを送信
-    console.log('予約を確定:', bookingData);
-    
-    // 予約確認画面を閉じて旅程画面に遷移
+    // 旅程画面に遷移
     setBookingData(null);
     setActiveTab('trips');
   };
@@ -268,39 +299,57 @@ const AppContent = () => {
 
       {/* メインコンテンツ */}
       <main className="flex-1 overflow-auto pb-16">
-        {bookingData ? (
-          <BookingConfirmationScreen 
-            attenderId={bookingData.attenderId}
-            experienceId={bookingData.experienceId}
-            date={bookingData.date}
-            time={bookingData.time}
-            duration={bookingData.duration}
-            location={bookingData.location}
-            price={bookingData.price}
-            onBack={handleBackFromBooking}
-            onConfirm={handleConfirmBooking}
-            onCancel={handleBackFromBooking}
-            attendersData={attendersData}
-          />
-        ) : selectedAttenderId ? (
-          <AttenderDetailScreen 
-            attenderId={selectedAttenderId} 
-            onBack={handleBackFromDetail}
-            onBookingRequest={handleBookingRequest}
-          />
-        ) : (
-          <>
-            {activeTab === 'home' && <HomeScreen onAttenderClick={handleAttenderClick} attendersData={attendersData} />}
-            {activeTab === 'explore' && <ExploreScreen onAttenderClick={handleAttenderClick} attendersData={attendersData} />}
-            {activeTab === 'trips' && <BookingHistoryScreen />}
-            {activeTab === 'saved' && <SavedScreen />}
-            {activeTab === 'market' && <MarketScreen />}
-            {activeTab === 'community' && <CommunityScreen />}
-            {activeTab === 'events' && <SeasonalEventsScreen />}
-            {activeTab === 'profile' && <ProfileScreen />}
-            {activeTab === 'messages' && <MessagesScreen />}
-          </>
-        )}
+        <Routes>
+          {/* メインフロー */}
+          <Route path="/" element={
+            bookingData ? (
+              <BookingConfirmationScreen 
+                attenderId={bookingData.attenderId}
+                experienceId={bookingData.experienceId}
+                date={bookingData.date}
+                time={bookingData.time}
+                duration={bookingData.duration}
+                location={bookingData.location}
+                price={bookingData.price}
+                onBack={handleBackFromBooking}
+                onConfirm={handleConfirmBooking}
+                onCancel={handleBackFromBooking}
+                attendersData={attendersData}
+              />
+            ) : selectedExperienceId ? (
+              <ExperienceDetailScreen
+                experienceId={selectedExperienceId}
+                onBack={handleBackFromExperienceDetail}
+                onBookingRequest={handleBookingRequest}
+              />
+            ) : selectedAttenderId ? (
+              <AttenderDetailScreen 
+                attenderId={selectedAttenderId} 
+                onBack={handleBackFromDetail}
+                onBookingRequest={handleBookingRequest}
+              />
+            ) : (
+              <>
+                {activeTab === 'home' && <HomeScreen onAttenderClick={handleAttenderClick} attendersData={attendersData} />}
+                {activeTab === 'explore' && <ExploreScreen onAttenderClick={handleAttenderClick} onExperienceClick={handleExperienceClick} attendersData={attendersData} />}
+                {activeTab === 'trips' && <BookingHistoryScreen />}
+                {activeTab === 'saved' && <SavedScreen />}
+                {activeTab === 'market' && <MarketScreen />}
+                {activeTab === 'community' && <CommunityScreen />}
+                {activeTab === 'events' && <SeasonalEventsScreen />}
+                {activeTab === 'profile' && <ProfileScreen />}
+                {activeTab === 'messages' && <MessagesScreen />}
+                {activeTab === 'settings' && <SettingsScreen />}
+              </>
+            )
+          } />
+          
+          {/* 新しく追加した機能のルート */}
+          <Route path="/reservations" element={<ReservationList />} />
+          <Route path="/reservations/:id/cancel" element={<CancelReservation />} />
+          <Route path="/profile" element={<UserProfile />} />
+          <Route path="/reviews/create/:id" element={<ReviewForm />} />
+        </Routes>
       </main>
 
       {/* メニュー (サイドバー) */}
@@ -387,7 +436,13 @@ const AppContent = () => {
                 <li className="border-t my-2 pt-2 flex items-center space-x-3 text-gray-700 hover:text-black cursor-pointer">
                   <span>ヘルプ</span>
                 </li>
-                <li className="flex items-center space-x-3 text-gray-700 hover:text-black cursor-pointer">
+                <li 
+                  className="flex items-center space-x-3 text-gray-700 hover:text-black cursor-pointer"
+                  onClick={() => {
+                    setActiveTab('settings');
+                    setMenuOpen(false);
+                  }}
+                >
                   <span>設定</span>
                 </li>
                 {isAuthenticated && (
@@ -452,12 +507,24 @@ const AppContent = () => {
 };
 
 // メインアプリコンポーネント
-const TripworksApp = () => {
+const EchoApp = () => {
   return (
-    <AuthProvider>
-      <AppContent />
-    </AuthProvider>
+    <Router>
+      <AuthProvider>
+        <LocaleProvider>
+          <FraudDetectionProvider>
+            <Routes>
+              <Route path="*" element={
+                <PaymentProviderWithNavigate>
+                  <AppContent />
+                </PaymentProviderWithNavigate>
+              } />
+            </Routes>
+          </FraudDetectionProvider>
+        </LocaleProvider>
+      </AuthProvider>
+    </Router>
   );
 };
 
-export default TripworksApp;
+export default EchoApp;

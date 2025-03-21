@@ -26,19 +26,15 @@ const validateAttenderApplicationData = () => {
     ],
     isLocalResident: true,
     isMigrant: false,
-    expertise: [
-      {
-        category: "アート",
-        subcategories: ["デジタルアート", "グラフィックデザイン"],
-        yearsOfExperience: 5,
-        description: "デザイン会社で5年間勤務し、様々なプロジェクトに携わってきました。",
-        certifications: ["Adobe認定エキスパート"]
-      }
-    ],
+    expertise: ["アート", "デザイン", "カフェ巡り"],
     experienceSamples: [
       {
+        id: "exp-001",
         title: "デザインスタジオツアー",
         description: "東京のデザインスタジオを巡るツアーです。",
+        imageUrl: "https://example.com/tour.jpg",
+        duration: 180,
+        // 互換性のための古いプロパティも追加
         category: "アート",
         estimatedDuration: 180,
         maxParticipants: 6,
@@ -63,6 +59,11 @@ const validateAttenderApplicationData = () => {
       }
     ],
     identificationDocument: {
+      documentType: "driver_license",
+      documentNumber: "T12345678",
+      expiryDate: new Date("2028-12-31"),
+      documentImageUrl: "https://example.com/license_front.jpg",
+      // 互換性のための古いプロパティも追加
       type: "driver_license",
       number: "T12345678",
       expirationDate: "2028-12-31",
@@ -123,9 +124,13 @@ const validateReference = () => {
 // AdditionalDocumentのチェック
 const validateAdditionalDocument = () => {
   const validDocument: AdditionalDocument = {
+    documentType: "certification",
+    description: "取得した資格の証明書です。",
+    documentUrl: "https://example.com/certificate.pdf",
+    uploadedAt: new Date("2025-03-01T12:00:00Z"),
+    // 互換性のための古い形式のプロパティも持つ
     type: "certification",
     title: "デザイン資格証",
-    description: "取得した資格の証明書です。",
     fileUrl: "https://example.com/certificate.pdf",
     uploadDate: "2025-03-01T12:00:00Z"
   };

@@ -8,7 +8,7 @@ import { usePayment } from '../contexts/PaymentContext';
 import { PaymentMethodType } from '../types/payment';
 
 interface BookingConfirmationScreenProps {
-  attenderId: number;
+  attenderId?: number;
   experienceId?: number;
   date: string;
   time: string;
@@ -49,9 +49,9 @@ const BookingConfirmationScreen: React.FC<BookingConfirmationScreenProps> = ({
   
   
   // アテンダー情報を取得
-  const attender = attendersData.find(a => a.id === attenderId);
+  const attender = attenderId ? attendersData.find(a => a.id === attenderId) : null;
   
-  if (!attender) {
+  if (!attender && attenderId) {
     return (
       <div className="p-4">
         <div className="flex items-center mb-4">
@@ -122,8 +122,8 @@ const BookingConfirmationScreen: React.FC<BookingConfirmationScreenProps> = ({
 
   // 体験タイトルを生成
   const experienceTitle = experienceId 
-    ? `${attender.type}の体験` 
-    : `${attender.type}との自由なプラン`;
+    ? `体験ID ${experienceId}` 
+    : attender ? `${attender.type}との自由なプラン` : '体験予約';
 
   // 各画面の描画
   const renderStage = () => {
@@ -145,7 +145,7 @@ const BookingConfirmationScreen: React.FC<BookingConfirmationScreenProps> = ({
               <div className="bg-white rounded-lg shadow-sm p-4">
                 <h2 className="text-lg font-bold mb-2">体験概要</h2>
                 <p className="text-gray-800">{experienceTitle}</p>
-                <p className="text-gray-600 text-sm mt-1">{attender.description}</p>
+                <p className="text-gray-600 text-sm mt-1">{attender?.description || ''}</p>
               </div>
               
               {/* 日時と場所 */}
@@ -177,18 +177,20 @@ const BookingConfirmationScreen: React.FC<BookingConfirmationScreenProps> = ({
               </div>
               
               {/* アテンダー情報 */}
-              <div className="bg-white rounded-lg shadow-sm p-4">
-                <h2 className="text-lg font-bold mb-3">アテンダー</h2>
-                <div className="flex items-center">
-                  <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center mr-3">
-                    {attender.icon}
-                  </div>
-                  <div>
-                    <h3 className="font-medium">{attender.name}</h3>
-                    <p className="text-gray-600 text-sm">{attender.type}</p>
+              {attender && (
+                <div className="bg-white rounded-lg shadow-sm p-4">
+                  <h2 className="text-lg font-bold mb-3">アテンダー</h2>
+                  <div className="flex items-center">
+                    <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center mr-3">
+                      {attender.icon}
+                    </div>
+                    <div>
+                      <h3 className="font-medium">{attender.name}</h3>
+                      <p className="text-gray-600 text-sm">{attender.type}</p>
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
               
               {/* 料金詳細 */}
               <div className="bg-white rounded-lg shadow-sm p-4">
@@ -299,10 +301,10 @@ const BookingConfirmationScreen: React.FC<BookingConfirmationScreenProps> = ({
                 time: `${time}（${duration}）`,
                 location: location
               }}
-              attender={{
+              attender={attender ? {
                 name: attender.name,
                 type: attender.type
-              }}
+              } : undefined}
               amount={totalPrice}
               onClose={handleCompleteBooking}
               onRetry={handleRetryPayment}

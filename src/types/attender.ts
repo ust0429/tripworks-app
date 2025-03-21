@@ -1,210 +1,286 @@
 /**
- * アテンダーに関連する型定義
+ * アテンダーに関する型定義
  */
 
-// アテンダー申請フォームのデータ
-export interface AttenderApplicationData {
-  // 基本情報
-  id?: string;
-  name: string;
-  email: string;
-  phoneNumber: string;
-  avatarImageUrl?: string;
-  biography: string;
-  
-  // 居住地情報
-  location: {
-    country: string;
-    region: string;
-    city: string;
-    address?: string;
-    postalCode?: string;
-  };
-  
-  // 地元住民かどうか
-  isLocalResident: boolean;
-  
-  // 移住者の場合の追加情報
-  isMigrant?: boolean;
-  previousLocation?: string;
-  yearsMoved?: number;
-  
-  // 専門分野とスキル
-  specialties: string[];
-  languages: {
-    language: string;
-    proficiency: 'beginner' | 'intermediate' | 'advanced' | 'native';
-  }[];
-  expertise: ExpertiseArea[];
-  
-  // 体験サンプル
-  experienceSamples: ExperienceSample[];
-  
-  // 利用可能時間
-  availableTimes: AvailabilityTimeSlot[];
-  
-  // 身分証明書
-  identificationDocument: IdentificationDocument;
-  
-  // 追加書類
-  additionalDocuments?: AdditionalDocument[];
-  
-  // SNSアカウント
-  socialMediaLinks?: SocialMediaLinks;
-  
-  // 推薦者
-  references?: Reference[];
-  
-  // 同意事項
-  agreements: {
-    termsOfService: boolean;
-    privacyPolicy: boolean;
-    codeOfConduct: boolean;
-    backgroundCheck: boolean;
-  };
-  
-  // ポートフォリオ
-  portfolioItems?: PortfolioItem[];
-  
-  // 申請ステータス
-  status?: 'draft' | 'submitted' | 'under_review' | 'approved' | 'rejected';
-  
-  // 審査コメント
-  reviewComments?: string;
-  
-  // 登録日時
-  registeredAt?: string;
-  updatedAt?: string;
-}
+/**
+ * UUID型の定義
+ */
+export type UUID = string;
 
-// 専門分野
+/**
+ * 専門分野の型定義
+ */
 export interface ExpertiseArea {
-  category: string;
-  subcategories: string[];
-  yearsOfExperience: number;
-  description: string;
-  certifications?: string[];
-}
-
-// 体験サンプル
-export interface ExperienceSample {
-  id?: string;
-  title: string;
-  description: string;
-  category: string;
-  subcategories?: string[];
-  estimatedDuration: number; // 分単位
-  maxParticipants: number;
-  pricePerPerson: number;
-  currency?: string;
-  included?: string[];
-  excluded?: string[];
-  locationDescription?: string;
-  imageUrls?: string[];
-  tags?: string[];
-  includesFood?: boolean;
-  includesTransportation?: boolean;
-  cancellationPolicy?: 'flexible' | 'moderate' | 'strict';
-  specialRequirements?: string;
-}
-
-// 利用可能時間スロット
-export interface AvailabilityTimeSlot {
-  id?: string;
-  dayOfWeek: 0 | 1 | 2 | 3 | 4 | 5 | 6;
-  isAvailable: boolean;
-  startTime: string; // HH:MM形式
-  endTime: string; // HH:MM形式
-  notes?: string;
-  day?: 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday' | 'sunday';
-  timeSlot?: 'morning' | 'afternoon' | 'evening';
-}
-
-// 身分証明書
-export interface IdentificationDocument {
-  type: 'passport' | 'driver_license' | 'id_card' | 'residence_card' | 'other';
-  number: string;
-  expirationDate: string; // YYYY-MM-DD形式
-  issuingCountry?: string;
-  frontImageUrl: string;
-  backImageUrl?: string;
-  additionalInfo?: string;
-}
-
-// 追加書類
-export interface AdditionalDocument {
-  id?: string;
-  type: 'certification' | 'license' | 'insurance' | 'reference_letter' | 'other';
-  title: string;
+  id: string;
+  name: string;
   description?: string;
-  fileUrl: string;
-  issuedAt?: string; // YYYY-MM-DD形式
-  expiresAt?: string; // YYYY-MM-DD形式
-  uploadDate?: string;
-  name?: string;
+  icon?: string;
 }
 
-// SNSリンク
+/**
+ * 利用可能な時間枠の型定義
+ */
+export interface AvailabilityTimeSlot {
+  dayOfWeek: 0 | 1 | 2 | 3 | 4 | 5 | 6; // 曜日の値
+  startTime: string; // 開始時間 (例: "09:00")
+  endTime: string; // 終了時間 (例: "17:00")
+  isAvailable: boolean; // 利用可能かどうか
+}
+
+// 実装上の互換性のために古い形式のプロパティも許可
+export interface AvailabilityTimeSlot {
+  day?: string; // 古いプロパティ形式
+  available?: boolean; // 古いプロパティ形式
+}
+
+/**
+ * 身分証明書の型定義
+ */
+export interface IdentificationDocument {
+  documentType: string; // 身分証明書の種類 (例: "passport", "drivers_license")
+  documentNumber: string; // 身分証明書番号
+  issuedDate?: Date; // 発行日
+  expiryDate: Date; // 有効期限
+  issuingCountry?: string; // 発行国
+  documentImageUrl: string; // 画像URL
+  verificationStatus?: string; // 検証状態
+  
+  // 実装上の互換性のために古い形式のプロパティも許可
+  type?: string; // documentTypeの別名
+  number?: string; // documentNumberの別名
+  expirationDate?: string; // expiryDateの文字列形式
+  frontImageUrl?: string; // documentImageUrlの別名
+  backImageUrl?: string; // 裏面画像
+  [key: string]: any; // その他の任意プロパティを許可
+}
+
+/**
+ * 追加書類の型定義
+ */
+export interface AdditionalDocument {
+  documentType: string; // 書類の種類
+  description?: string; // 説明
+  documentUrl: string; // 書類のURL
+  uploadedAt: Date; // アップロード日時
+  verificationStatus?: string; // 検証状態
+  
+  // 実装上の互換性のために古い形式のプロパティも許可
+  type?: string; // documentTypeの別名
+  title?: string; // タイトル
+  fileUrl?: string; // documentUrlの別名
+  uploadDate?: string; // uploadedAtの文字列形式
+  [key: string]: any; // その他の任意プロパティを許可
+}
+
+/**
+ * 参照情報の型定義
+ */
+export interface Reference {
+  name: string; // 紹介者名
+  relationship: string; // 関係性
+  contactInfo: string; // 連絡先
+  referenceText?: string; // 紹介文
+  
+  // 実装上の互換性のために古い形式のプロパティも許可
+  email?: string; // メールアドレス
+  phoneNumber?: string; // 電話番号
+  yearsKnown?: number; // 面識年数
+  message?: string; // メッセージ
+  verified?: boolean; // 検証済みかどうか
+  [key: string]: any; // その他の任意プロパティを許可
+}
+
+/**
+ * SNSリンクの型定義
+ */
 export interface SocialMediaLinks {
-  instagram?: string;
   twitter?: string;
+  instagram?: string;
   facebook?: string;
   linkedin?: string;
-  youtube?: string;
   tiktok?: string;
+  youtube?: string;
   website?: string;
-  blog?: string;
-  other?: {
-    title: string;
-    url: string;
-  }[];
+  other?: Record<string, string>; // その他のSNS
 }
 
-// 推薦者
-export interface Reference {
-  id?: string;
-  name: string;
-  relationship: string;
-  email: string;
-  phoneNumber?: string;
-  message?: string;
-  verified?: boolean;
-  contactInfo?: string;
-  yearsKnown?: number;
-}
-
-// ポートフォリオアイテム
+/**
+ * ポートフォリオ項目の型定義
+ */
 export interface PortfolioItem {
-  id?: string;
+  id: string;
   title: string;
   description?: string;
-  category: string;
-  imageUrls: string[];
-  tags?: string[];
-  createdAt?: string;
+  mediaUrls: string[]; // 画像・動画などのURL
+  category?: string;
+  date?: Date;
+  featured?: boolean; // 注目の作品かどうか
+  
+  // 実装上の互換性のために古い形式のプロパティも許可
+  imageUrls?: string[]; // mediaUrlsの別名
+  tags?: string[]; // タグ
+  [key: string]: any; // その他の任意プロパティを許可
 }
 
-// アテンダーの詳細情報
-export interface AttenderProfile extends Omit<AttenderApplicationData, 'agreements' | 'status' | 'reviewComments'> {
+/**
+ * アテンダープロフィールの型定義
+ */
+export interface IAttenderProfile {
+  // 基本情報
   id: string;
-  rating?: number;
-  reviewCount?: number;
-  totalExperiences?: number;
-  badges?: {
-    id: string;
-    name: string;
-    description: string;
-    imageUrl: string;
-  }[];
-  verificationStatus: {
-    identity: boolean;
-    email: boolean;
-    phone: boolean;
-    address?: boolean;
-    socialMedia?: boolean;
-  };
-  memberSince: string;
-  responseRate?: number;
-  responseTime?: string;
-  featured?: boolean;
+  userId: string;
+  displayName: string;
+  bio: string;
+  location: string;
+  languages: string[];
+  profileImage: string;
+  
+  // 専門情報
+  expertise: string[];
+  experiences: IExperienceSample[];
+  
+  // 利用可能時間情報
+  availability: Record<string, IAvailabilityDay>;
+  
+  // ステータス情報
+  rating: number;
+  reviewCount: number;
+  verified: boolean;
+  
+  // 時間情報
+  createdAt: Date;
+  updatedAt: Date;
 }
+
+/**
+ * 体験サンプルの型定義
+ */
+export interface IExperienceSample {
+  id: string;
+  title: string;
+  description: string;
+  imageUrl: string;
+  duration: number; // 分単位
+  price?: number;
+  
+  // 実装上の互換性のために古い形式のプロパティも許可
+  category?: string; // カテゴリ
+  estimatedDuration?: number; // durationの別名
+  maxParticipants?: number; // 最大参加人数
+  pricePerPerson?: number; // 一人当たりの価格
+  includesFood?: boolean; // 食事込み
+  includesTransportation?: boolean; // 交通費込み
+  cancellationPolicy?: string; // キャンセルポリシー
+  imageUrls?: string[]; // 画像URL配列
+  [key: string]: any; // その他の任意プロパティを許可
+}
+
+/**
+ * 利用可能日情報の型定義
+ */
+export interface IAvailabilityDay {
+  available: boolean;
+  timeRange: [number, number]; // [開始時間, 終了時間] (例: [9, 17] は 9:00〜17:00)
+}
+
+/**
+ * 体験の型定義
+ */
+export interface IExperience {
+  id: string;
+  attenderId: string;
+  title: string;
+  description: string;
+  category: string[];
+  location: {
+    address: string;
+    latitude?: number;
+    longitude?: number;
+  };
+  images: string[];
+  mainImage: string;
+  duration: number; // 分単位
+  price: number;
+  maxParticipants: number;
+  includesItems: string[];
+  excludesItems: string[];
+  requirements: string[];
+  status: ExperienceStatus;
+  rating: number;
+  reviewCount: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+/**
+ * 体験のステータスの列挙型
+ */
+export enum ExperienceStatus {
+  DRAFT = 'draft',        // 下書き
+  PENDING = 'pending',    // 審査待ち
+  ACTIVE = 'active',      // 公開中
+  INACTIVE = 'inactive',  // 非公開
+  REJECTED = 'rejected'   // 却下
+}
+
+/**
+ * アテンダー申請の型定義
+ */
+export interface IAttenderApplication {
+  id?: string;
+  userId?: string;
+  personalInfo?: {
+    fullName: string;
+    phoneNumber: string;
+    email: string;
+    address: string;
+  };
+  identificationDocument?: {
+    documentType: string;
+    documentNumber: string;
+    expiryDate: Date;
+    documentImageUrl: string;
+    [key: string]: any; 
+  };
+  expertise?: string[];
+  experienceSamples?: IExperienceSample[];
+  applicationStatus?: ApplicationStatus;
+  rejectionReason?: string;
+  createdAt?: Date;
+  updatedAt?: Date;
+  
+  // 古い形式のプロパティも許可
+  name?: string;
+  email?: string;
+  phoneNumber?: string;
+  biography?: string;
+  location?: any;
+  isLocalResident?: boolean;
+  isMigrant?: boolean;
+  specialties?: string[];
+  languages?: any[];
+  availableTimes?: any[];
+  agreements?: any;
+  socialMediaLinks?: any;
+  references?: any[];
+  additionalDocuments?: any[];
+  
+  // 任意のプロパティを許可
+  [key: string]: any;
+}
+
+/**
+ * アテンダー申請のステータスの列挙型
+ */
+export enum ApplicationStatus {
+  PENDING = 'pending',      // 審査待ち
+  APPROVED = 'approved',    // 承認済み
+  REJECTED = 'rejected',    // 却下
+  INCOMPLETE = 'incomplete' // 情報不足
+}
+
+/**
+ * 型の別名 - 古い型名との後方互換性のため
+ */
+export type AttenderProfile = IAttenderProfile;
+export type AttenderApplicationData = IAttenderApplication;

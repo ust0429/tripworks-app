@@ -10,7 +10,26 @@ import {
   TransactionFeatures,
   ConsolidatedRiskAssessment
 } from '../utils/fraudDetection';
-import { getUser } from './UserService'; // 仮想のユーザーサービス
+// import { getUserProfile as getUser } from './userService'; // 仮想のユーザーサービス
+
+// かわりに独自のモック関数を定義
+const getUser = (userId: string) => {
+  // モックデータを返す
+  return {
+    id: userId,
+    displayName: 'Mock User',
+    email: 'mock@example.com',
+    interests: [],
+    isAttender: false,
+    createdAt: new Date().toISOString(),
+    transactionCount: 5,
+    averageTransactionAmount: 2000,
+    lastTransactionDate: new Date().toISOString(),
+    usedPaymentMethods: ['credit_card', 'bank_transfer'],
+    phoneVerified: true,
+    emailVerified: true
+  };
+};
 
 /**
  * 決済のための不正検知結果

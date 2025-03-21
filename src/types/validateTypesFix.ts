@@ -26,6 +26,11 @@ function validateTypes() {
 
   // IdentificationDocument型の確認
   const idDocument: IdentificationDocument = {
+    documentType: 'passport',
+    documentNumber: 'AB1234567',
+    expiryDate: new Date('2025-12-31'),
+    documentImageUrl: 'https://example.com/front.jpg',
+    // 互換性のための古い形式のプロパティも取得可能
     type: 'passport',
     number: 'AB1234567',
     expirationDate: '2025-12-31',
@@ -38,7 +43,9 @@ function validateTypes() {
     id: '1',
     title: 'サンプル作品',
     description: '説明文',
+    mediaUrls: ['https://example.com/image1.jpg', 'https://example.com/image2.jpg'],
     category: 'アート',
+    // 互換性のための古い形式のプロパティも取得可能
     imageUrls: ['https://example.com/image1.jpg', 'https://example.com/image2.jpg'],
     tags: ['伝統工芸', '陶芸']
   };
@@ -60,18 +67,15 @@ function validateTypes() {
       { language: 'ja', proficiency: 'native' },
       { language: 'en', proficiency: 'intermediate' }
     ],
-    expertise: [
-      {
-        category: 'アート',
-        subcategories: ['陶芸', '書道'],
-        yearsOfExperience: 5,
-        description: '大学で陶芸を専攻し、以来5年間制作活動を続けています。'
-      }
-    ],
+    expertise: ['アート', '陶芸', '書道'],
     experienceSamples: [
       {
+        id: 'exp-001',
         title: '陶芸体験ワークショップ',
         description: '初心者向けの陶芸体験です。',
+        imageUrl: 'https://example.com/ceramics.jpg',
+        duration: 120,
+        // 互換性のための古い形式のプロパティも持つ
         category: 'アート',
         estimatedDuration: 120,
         maxParticipants: 6,
@@ -88,6 +92,11 @@ function validateTypes() {
       }
     ],
     identificationDocument: {
+      documentType: 'passport',
+      documentNumber: 'AB1234567',
+      expiryDate: new Date('2025-12-31'),
+      documentImageUrl: 'https://example.com/front.jpg',
+      // 互換性のための古いプロパティ
       type: 'passport',
       number: 'AB1234567',
       expirationDate: '2025-12-31',

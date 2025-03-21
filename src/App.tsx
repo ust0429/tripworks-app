@@ -1,12 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { BrowserRouter as Router, Routes, Route, useNavigate } from 'react-router-dom';
-import { MessageCircle, Menu, X, User, Home, Compass, Heart, Users, ShoppingBag, Gift, Calendar, LogOut } from 'lucide-react';
+import { MessageCircle, Menu, X, User, Home, Compass, Heart, Users, ShoppingBag, Gift, Calendar, LogOut, Bell } from 'lucide-react';
 import { AuthProvider, useAuth } from './AuthComponents';
 import { LocaleProvider } from './contexts/LocaleContext';
 import { FraudDetectionProvider } from './components/security';
 import SettingsScreen from './components/settings/SettingsScreen';
 import { PaymentProvider } from './contexts/PaymentContext';
+import { NotificationCenter, NotificationBadge } from './components/notifications';
 import AttenderDetailScreen from './components/AttenderDetailScreen';
+import ExperienceDetailScreen from './components/ExperienceDetailScreen';
 import ExploreScreen from './components/ExploreScreen';
 import { MessagesScreen } from './components/messages';
 import BookingConfirmationScreen from './components/BookingConfirmationScreen';
@@ -169,8 +171,11 @@ const AppContent = () => {
   const [activeTab, setActiveTab] = useState('home');
   const [menuOpen, setMenuOpen] = useState(false);
   const [selectedAttenderId, setSelectedAttenderId] = useState<number | null>(null);
+  const [selectedExperienceId, setSelectedExperienceId] = useState<number | null>(null);
+  const [notificationOpen, setNotificationOpen] = useState(false);
+  const notificationRef = useRef<HTMLDivElement>(null);
   const [bookingData, setBookingData] = useState<{
-    attenderId: number;
+    attenderId?: number;
     experienceId?: number;
     date: string;
     time: string;
@@ -205,10 +210,20 @@ const AppContent = () => {
   const handleBackFromDetail = () => {
     setSelectedAttenderId(null);
   };
+  
+  // 体験詳細ページに遷移する関数
+  const handleExperienceClick = (id: number) => {
+    setSelectedExperienceId(id);
+  };
+  
+  // 体験詳細ページから戻る関数
+  const handleBackFromExperienceDetail = () => {
+    setSelectedExperienceId(null);
+  };
 
   // 予約確認画面を表示する関数
   const handleBookingRequest = (data: {
-    attenderId: number;
+    attenderId?: number;
     experienceId?: number;
     date: string;
     time: string;
@@ -231,6 +246,33 @@ const AppContent = () => {
     setActiveTab('trips');
   };
 
+  // Close notifications when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (notificationRef.current && !notificationRef.current.contains(event.target as Node)) {
+        setNotificationOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
+  // Handle notification navigation
+  const handleNotificationNavigate = (url: string) => {
+    // Handle navigation to different parts of the app
+    if (url.startsWith('/messages/')) {
+      setActiveTab('messages');
+    } else if (url.startsWith('/reservations/')) {
+      setActiveTab('trips');
+    } else if (url.includes('explore')) {
+      setActiveTab('explore');
+    }
+    setNotificationOpen(false);
+  };
+
   return (
     <div className="flex flex-col h-screen bg-gray-100">
       {/* オンボーディング画面 */}
@@ -247,7 +289,35 @@ const AppContent = () => {
             <span className="text-xs align-top ml-1" style={{ opacity: 0.7 }}>β</span>
           </h1>
         </div>
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center space-x-4">
+          <div className="relative">
+            <button
+              onClick={() => setNotificationOpen(!notificationOpen)}
+              className="p-2 rounded-full hover:bg-gray-800 relative"
+            >
+              <Bell size={20} />
+              {isAuthenticated && (
+                <NotificationBadge 
+                  userId={user?.id || 'user123'} 
+                  className="absolute -top-1 -right-1"
+                />
+              )}
+            </button>
+            
+            {notificationOpen && (
+              <div 
+                ref={notificationRef}
+                className="absolute top-12 right-0 z-50"
+              >
+                <NotificationCenter 
+                  userId={user?.id || 'user123'} 
+                  onClose={() => setNotificationOpen(false)}
+                  onNavigate={handleNotificationNavigate}
+                />
+              </div>
+            )}
+          </div>
+          
           {isAuthenticated ? (
             <button
               onClick={() => setMenuOpen(!menuOpen)}
@@ -290,6 +360,12 @@ const AppContent = () => {
             onCancel={handleBackFromBooking}
             attendersData={attendersData}
           />
+        ) : selectedExperienceId ? (
+          <ExperienceDetailScreen
+            experienceId={selectedExperienceId}
+            onBack={handleBackFromExperienceDetail}
+            onBookingRequest={handleBookingRequest}
+          />
         ) : selectedAttenderId ? (
           <AttenderDetailScreen 
             attenderId={selectedAttenderId} 
@@ -299,7 +375,7 @@ const AppContent = () => {
         ) : (
           <>
             {activeTab === 'home' && <HomeScreen onAttenderClick={handleAttenderClick} attendersData={attendersData} />}
-            {activeTab === 'explore' && <ExploreScreen onAttenderClick={handleAttenderClick} attendersData={attendersData} />}
+            {activeTab === 'explore' && <ExploreScreen onAttenderClick={handleAttenderClick} onExperienceClick={handleExperienceClick} attendersData={attendersData} />}
             {activeTab === 'trips' && <BookingHistoryScreen />}
             {activeTab === 'saved' && <SavedScreen />}
             {activeTab === 'market' && <MarketScreen />}

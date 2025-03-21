@@ -1,3 +1,37 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Toggle Switch Styles for Notification Settings */
+.toggle-checkbox {
+  right: 0;
+  z-index: 1;
+  border-color: #e9e9e9;
+  transition: all 0.3s;
+}
+
+.toggle-checkbox:checked {
+  right: 0;
+  border-color: #fff;
+}
+
+.toggle-checkbox:checked + .toggle-label {
+  background-color: #6366f1;
+}
+
+.toggle-label {
+  display: block;
+  overflow: hidden;
+  cursor: pointer;
+  border-radius: 9999px;
+}
+
+/* Notification Center Utility Classes */
+@layer utilities {
+  .line-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+}
