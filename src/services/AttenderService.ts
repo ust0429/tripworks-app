@@ -21,6 +21,12 @@ import api, { logApiRequest, logApiResponse } from '../utils/apiClient';
 import { ENDPOINTS } from '../config/api';
 import { isDevelopment } from '../config/env';
 
+// アテンダー申請検証結果の型定義
+interface ApplicationValidationResult {
+  valid: boolean;
+  errors: string[];
+}
+
 // モックデータは簡易版のみを保持（開発環境でのみ使用）
 const MOCK_ATTENDERS: Record<string, Attender> = {
   'att_123': {
@@ -148,54 +154,12 @@ export async function getAllAttenders(filters?: {
 }
 
 /**
- * アテンダー申請を送信
- * 
- * @param applicationData アテンダー申請データ
- * @returns 申請ID
- */
-export async function submitAttenderApplication(applicationData: AttenderApplicationData): Promise<string> {
-  try {
-    // バリデーション
-    validateApplicationData(applicationData);
-    
-    // 開発環境ではモックデータを使用
-    if (isDevelopment()) {
-      // 申請IDを生成
-      const applicationId = `app_${uuidv4()}`;
-      
-      // モックデータに保存
-      PENDING_APPLICATIONS[applicationId] = applicationData;
-      
-      // 申請IDを返す
-      return applicationId;
-    }
-    
-    // 本番環境ではAPIを使用
-    const response = await api.post<{ applicationId: string }>(
-      ENDPOINTS.ATTENDER.APPLICATION,
-      applicationData
-    );
-    
-    if (response.success && response.data) {
-      return response.data.applicationId;
-    }
-    
-    throw new Error('アテンダー申請の送信に失敗しました');
-  } catch (error) {
-    console.error('アテンダー申請送信エラー:', error);
-    throw error instanceof Error 
-      ? error 
-      : new Error('アテンダー申請の送信中に予期せぬエラーが発生しました');
-  }
-}
-
-/**
  * アテンダー申請データのバリデーション
  * 
  * @param data 検証するアテンダー申請データ
- * @throws バリデーションエラーの場合
+ * @returns 検証結果オブジェクト
  */
-function validateApplicationData(data: AttenderApplicationData): void {
+function validateApplicationData(data: AttenderApplicationData): ApplicationValidationResult {
   const errors: string[] = [];
   
   // 必須フィールドのチェック
@@ -211,7 +175,7 @@ function validateApplicationData(data: AttenderApplicationData): void {
   if (!data.identificationDocument) errors.push('身分証明書情報は必須です');
   
   // 同意事項のチェック
-  if (!data.agreements) errors.push('すべての同意事項を承諾する必要があります');
+  if (!data.agreements) errors.push('すべての同意事項を承認する必要があります');
   else {
     if (!data.agreements.termsOfService) errors.push('利用規約への同意が必要です');
     if (!data.agreements.privacyPolicy) errors.push('プライバシーポリシーへの同意が必要です');
@@ -223,7 +187,7 @@ function validateApplicationData(data: AttenderApplicationData): void {
   if (data.expertise) {
     data.expertise.forEach((exp, index) => {
       if (!exp.category) errors.push(`専門分野${index + 1}: カテゴリは必須です`);
-      if (!exp.subcategories || exp.subcategories.length === 0) errors.push(`専門分野${index + 1}: サブカテゴリは少なくとも1つ必要です`);
+      if (!exp.subcategories || exp.subcategories.length === 0) errors.push(`専門分野${index + 1}: サブカテゴリーは少なくとも1つ必要です`);
     });
   }
   
@@ -232,9 +196,76 @@ function validateApplicationData(data: AttenderApplicationData): void {
     errors.push('体験サンプルは少なくとも1つ必要です');
   }
   
-  // エラーがあれば例外をスロー
-  if (errors.length > 0) {
-    throw new Error(`アテンダー申請の検証に失敗しました: ${errors.join(', ')}`);
+  return {
+    valid: errors.length === 0,
+    errors
+  };
+}
+
+/**
+ * アテンダー申請を送信
+ * 
+ * @param applicationData アテンダー申請データ
+ * @returns 申請ID
+ */
+export async function submitAttenderApplication(applicationData: AttenderApplicationData): Promise<string> {
+  try {
+    // アプリケーションデータのログ（開発用）
+    console.info('アテンダー申請データを検証中...');
+    
+    // バリデーション
+    const validationResult = validateApplicationData(applicationData);
+    if (!validationResult.valid) {
+      const errorMessage = `入力内容に問題があります: ${validationResult.errors.join('、')}`;
+      console.error('バリデーションエラー:', errorMessage);
+      throw new Error(errorMessage);
+    }
+    
+    console.info('アテンダー申請データの検証に成功しました');
+    
+    // 開発環境ではモックデータを使用
+    if (isDevelopment()) {
+      console.info('開発環境でアテンダー申請を処理中...');
+      
+      // 申請処理を模擬するために遅延
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      // 申請IDを生成
+      const applicationId = `app_${uuidv4()}`;
+      
+      // モックデータに保存
+      PENDING_APPLICATIONS[applicationId] = applicationData;
+      
+      console.info(`アテンダー申請が正常に処理されました。申請ID: ${applicationId}`);
+      
+      // 申請IDを返す
+      return applicationId;
+    }
+    
+    // 本番環境ではAPIを使用
+    logApiRequest('POST', ENDPOINTS.ATTENDER.APPLICATION, { dataSize: JSON.stringify(applicationData).length });
+    console.info('本番環境でアテンダー申請を送信中...');
+    
+    const response = await api.post<{ applicationId: string }>(
+      ENDPOINTS.ATTENDER.APPLICATION,
+      applicationData
+    );
+    
+    logApiResponse('POST', ENDPOINTS.ATTENDER.APPLICATION, response);
+    
+    if (response.success && response.data) {
+      console.info(`アテンダー申請が正常に送信されました。申請ID: ${response.data.applicationId}`);
+      return response.data.applicationId;
+    }
+    
+    // エラーレスポンスの処理
+    const errorMessage = response.error?.message || 'アテンダー申請の送信に失敗しました';
+    throw new Error(errorMessage);
+  } catch (error) {
+    console.error('アテンダー申請送信エラー:', error);
+    throw error instanceof Error 
+      ? error 
+      : new Error('アテンダー申請の送信中に予期せぬエラーが発生しました');
   }
 }
 

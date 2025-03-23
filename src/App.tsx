@@ -15,6 +15,7 @@ import BookingConfirmationScreen from './components/BookingConfirmationScreen';
 import OnboardingScreen from './components/screens/OnboardingScreen';
 import BookingHistoryScreen from './components/screens/BookingHistoryScreen';
 import { HomeScreen } from './components/screens';
+import AttenderApplicationFormWrapper from './components/attender/application/AttenderApplicationForm';
 import { AttenderType } from './types';
 
 // サンプルデータ
@@ -128,6 +129,11 @@ const SeasonalEventsScreen = () => {
 // プロフィール画面
 const ProfileScreen = () => {
   const { user, logout } = useAuth();
+  const navigate = useNavigate();
+  
+  const handleBecomeAttender = () => {
+    navigate('/apply-to-be-attender');
+  };
   
   return (
     <div className="p-4 space-y-6">
@@ -144,15 +150,24 @@ const ProfileScreen = () => {
           </div>
         </div>
         
-        <div className="mt-8 flex justify-between">
-          <button className="px-4 py-2 bg-gray-100 text-black rounded-lg">
-            プロフィールを編集
-          </button>
+        <div className="mt-8 flex flex-col space-y-3">
+          <div className="flex justify-between">
+            <button className="px-4 py-2 bg-gray-100 text-black rounded-lg">
+              プロフィールを編集
+            </button>
+            <button 
+              onClick={logout}
+              className="px-4 py-2 bg-red-50 text-red-600 rounded-lg"
+            >
+              ログアウト
+            </button>
+          </div>
+          
           <button 
-            onClick={logout}
-            className="px-4 py-2 bg-red-50 text-red-600 rounded-lg"
+            onClick={handleBecomeAttender}
+            className="w-full py-3 mt-4 bg-black text-white rounded-lg font-medium flex justify-center items-center space-x-2"
           >
-            ログアウト
+            <span>アテンダーになる</span>
           </button>
         </div>
       </div>
@@ -550,6 +565,7 @@ const TripworksApp = () => {
         <LocaleProvider>
           <FraudDetectionProvider>
             <Routes>
+              <Route path="/apply-to-be-attender" element={<AttenderApplicationFormWrapper />} />
               <Route path="*" element={
                 <PaymentProviderWithNavigate>
                   <AppContent />

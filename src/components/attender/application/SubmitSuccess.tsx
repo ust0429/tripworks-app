@@ -1,34 +1,27 @@
 /**
  * 申請成功時のコンポーネント
  * 
- * アテンダー申請が成功した際に表示する
+ * アテンダー申請が成功した際に表示する完了画面
  */
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { CheckCircle, Home, User, Mail, ArrowLeft } from 'lucide-react';
 
 interface SubmitSuccessProps {
   applicationId: string;
+  onReturnHome?: () => void;
 }
 
-const SubmitSuccess: React.FC<SubmitSuccessProps> = ({ applicationId }) => {
+const SubmitSuccess: React.FC<SubmitSuccessProps> = ({ applicationId, onReturnHome }) => {
+  // 成功画面が表示されたことをログに記録
+  useEffect(() => {
+    console.info(`アテンダー申請が正常に完了しました。申請ID: ${applicationId}`);
+  }, [applicationId]);
   return (
     <div className="max-w-4xl mx-auto p-8 bg-white rounded-lg shadow-md text-center">
       <div className="mb-6">
         <div className="mx-auto w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
-          <svg
-            className="w-8 h-8 text-green-500"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M5 13l4 4L19 7"
-            />
-          </svg>
+          <CheckCircle className="w-8 h-8 text-green-500" />
         </div>
       </div>
       
@@ -61,23 +54,26 @@ const SubmitSuccess: React.FC<SubmitSuccessProps> = ({ applicationId }) => {
       </div>
       
       <div className="flex flex-col sm:flex-row justify-center gap-4">
-        <Link
-          to="/"
-          className="px-6 py-3 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors"
+        <button
+          onClick={onReturnHome || (() => {})}
+          className="px-6 py-3 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors flex items-center justify-center gap-2"
         >
+          <ArrowLeft className="w-4 h-4" />
           ホームへ戻る
-        </Link>
+        </button>
         <Link
-          to="/dashboard"
-          className="px-6 py-3 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 transition-colors"
+          to="/profile"
+          className="px-6 py-3 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 transition-colors flex items-center justify-center gap-2"
         >
-          マイページへ
+          <User className="w-4 h-4" />
+          プロフィールへ
         </Link>
       </div>
       
       <p className="mt-8 text-sm text-gray-500">
         ご不明な点がございましたら、
-        <a href="mailto:support@echo.jp" className="text-blue-500 hover:underline">
+        <a href="mailto:support@echo.jp" className="text-blue-500 hover:underline flex items-center gap-1 inline-flex">
+          <Mail className="w-3 h-3" />
           support@echo.jp
         </a>
         までお問い合わせください。

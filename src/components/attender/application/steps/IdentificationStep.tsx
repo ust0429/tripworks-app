@@ -3,9 +3,11 @@
  * 
  * アテンダー申請フォームの身分証明書と追加情報を入力するステップ
  */
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAttenderApplication } from '../../../../contexts/AttenderApplicationContext';
 import { AdditionalDocument, Reference, SocialMediaLinks, IdentificationDocument } from '../../../../types/attender/index';
+import IdentificationUploader from '../IdentificationUploader';
+import { AlertCircle, CheckCircle, HelpCircle } from 'lucide-react';
 
 interface IdentificationStepProps {
   onNext: () => void;
@@ -248,10 +250,23 @@ const IdentificationStep: React.FC<IdentificationStepProps> = ({ onNext, onBack 
 
       {/* 身分証明書セクション */}
       <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
-        <h3 className="text-lg font-medium mb-4">身分証明書</h3>
-        <p className="text-sm text-gray-500 mb-4">
-          アテンダーとして活動するには、身分証明書の提出が必要です。提出された情報は厳重に管理され、確認後に当社のデータベースに安全に保存されます。
-        </p>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-medium">身分証明書</h3>
+          <div className="flex items-center bg-blue-50 px-3 py-1 rounded-full text-blue-700 text-xs">
+            <AlertCircle className="w-4 h-4 mr-1" />
+            <span>審査に必要です</span>
+          </div>
+        </div>
+
+        <div className="mb-4 p-3 bg-blue-50 rounded-md text-sm text-blue-800 flex items-start">
+          <HelpCircle className="w-5 h-5 mr-2 flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="mb-1 font-medium">身分証明書について</p>
+            <p>
+              アテンダーとして活動するには、身分証明書の提出が必要です。提出された情報は厳重に管理され、確認後に安全に保存されます。有効期限が切れている身分証明書は使用できません。
+            </p>
+          </div>
+        </div>
         
         <div className="space-y-4">
           {/* 身分証明書タイプ */}
@@ -321,60 +336,39 @@ const IdentificationStep: React.FC<IdentificationStepProps> = ({ onNext, onBack 
             )}
           </div>
           
-          {/* 身分証明書の表面画像 */}
-          <div>
-            <label htmlFor="frontImage" className="block text-sm font-medium text-gray-700 mb-1">
-              身分証明書の表面画像 <span className="text-red-500">*</span>
-            </label>
-            <div className="mt-1 flex items-center">
-              <input
-                type="file"
-                id="frontImage"
-                name="frontImage"
-                accept="image/*"
-                onChange={(e) => handleImageUpload(e, true)}
-                className="sr-only"
-              />
-              <label
-                htmlFor="frontImage"
-                className="relative cursor-pointer bg-white border border-gray-300 rounded-md py-2 px-3 flex items-center justify-center text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-              >
-                <span>ファイルを選択</span>
-              </label>
-              <span className="ml-2 text-sm text-gray-500">
-                {frontImageFile ? frontImageFile.name : '選択されていません'}
-              </span>
+          {/* 身分証明書の表面画像 - アップローダーコンポーネントを使用 */}
+          {formData.identificationDocument?.type && (
+            <div className="mt-6">
+              <h4 className="font-medium text-gray-800 mb-3">身分証明書の画像</h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <IdentificationUploader 
+                    documentType={formData.identificationDocument.type} 
+                    side="front"
+                    initialImageUrl={formData.identificationDocument.frontImageUrl}
+                  />
+                  {errors['identificationDocument.frontImageUrl'] && (
+                    <p className="mt-1 text-sm text-red-500">{errors['identificationDocument.frontImageUrl']}</p>
+                  )}
+                </div>
+                
+                <div>
+                  <IdentificationUploader 
+                    documentType={formData.identificationDocument.type} 
+                    side="back"
+                    initialImageUrl={formData.identificationDocument.backImageUrl}
+                  />
+                </div>
+              </div>
+              
+              <div className="mt-3 text-xs text-gray-500 p-2 bg-gray-50 rounded">
+                <p className="flex items-center">
+                  <CheckCircle className="w-4 h-4 text-green-500 mr-1" /> 
+                  アップロードされた画像は安全に暗号化され保存されます
+                </p>
+              </div>
             </div>
-            {errors['identificationDocument.frontImageUrl'] && (
-              <p className="mt-1 text-sm text-red-500">{errors['identificationDocument.frontImageUrl']}</p>
-            )}
-          </div>
-          
-          {/* 身分証明書の裏面画像（任意） */}
-          <div>
-            <label htmlFor="backImage" className="block text-sm font-medium text-gray-700 mb-1">
-              身分証明書の裏面画像（任意）
-            </label>
-            <div className="mt-1 flex items-center">
-              <input
-                type="file"
-                id="backImage"
-                name="backImage"
-                accept="image/*"
-                onChange={(e) => handleImageUpload(e, false)}
-                className="sr-only"
-              />
-              <label
-                htmlFor="backImage"
-                className="relative cursor-pointer bg-white border border-gray-300 rounded-md py-2 px-3 flex items-center justify-center text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-              >
-                <span>ファイルを選択</span>
-              </label>
-              <span className="ml-2 text-sm text-gray-500">
-                {backImageFile ? backImageFile.name : '選択されていません'}
-              </span>
-            </div>
-          </div>
+          )}
         </div>
       </div>
       
