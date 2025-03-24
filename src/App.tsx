@@ -16,6 +16,7 @@ import OnboardingScreen from './components/screens/OnboardingScreen';
 import BookingHistoryScreen from './components/screens/BookingHistoryScreen';
 import { HomeScreen } from './components/screens';
 import AttenderApplicationFormWrapper from './components/attender/application/AttenderApplicationForm';
+import AttenderInfoPage from './components/attender/info/AttenderInfoPage';
 import { AttenderType } from './types';
 
 // サンプルデータ
@@ -132,7 +133,7 @@ const ProfileScreen = () => {
   const navigate = useNavigate();
   
   const handleBecomeAttender = () => {
-    navigate('/apply-to-be-attender');
+    window.location.href = '/attender/info';
   };
   
   return (
@@ -183,6 +184,7 @@ const PaymentProviderWithNavigate = ({ children }: { children: React.ReactNode }
 
 // アプリのコンテンツ部分
 const AppContent = () => {
+  const [showAttenderInfo, setShowAttenderInfo] = useState(false);
   const [activeTab, setActiveTab] = useState('home');
   const [menuOpen, setMenuOpen] = useState(false);
   const [selectedAttenderId, setSelectedAttenderId] = useState<number | null>(null);
@@ -201,6 +203,16 @@ const AppContent = () => {
   const [showOnboarding, setShowOnboarding] = useState(false);
   const { isAuthenticated, user, logout, openLoginModal } = useAuth();
 
+  // URLに基づく状態管理
+  useEffect(() => {
+    const location = window.location.pathname;
+    if (location === '/attender/info') {
+      setShowAttenderInfo(true);
+    } else {
+      setShowAttenderInfo(false);
+    }
+  }, []);
+
   // 初回起動時にオンボーディング表示
   useEffect(() => {
     // localStorage でオンボーディング表示済みかチェック
@@ -209,6 +221,18 @@ const AppContent = () => {
       setShowOnboarding(true);
     }
   }, []);
+
+  // アテンダー情報ページに遷移する関数
+  const navigateToAttenderInfo = () => {
+    setShowAttenderInfo(true);
+    window.history.pushState({}, '', '/attender/info');
+  };
+
+  // アテンダー情報ページから戻る関数
+  const handleBackFromAttenderInfo = () => {
+    setShowAttenderInfo(false);
+    window.history.pushState({}, '', '/');
+  };
 
   // オンボーディング完了時の処理
   const handleOnboardingComplete = () => {
@@ -361,7 +385,9 @@ const AppContent = () => {
 
       {/* メインコンテンツ */}
       <main className="flex-1 overflow-auto pb-16">
-        {bookingData ? (
+        {showAttenderInfo ? (
+          <AttenderInfoPage onBack={handleBackFromAttenderInfo} />
+        ) : bookingData ? (
           <BookingConfirmationScreen 
             attenderId={bookingData.attenderId}
             experienceId={bookingData.experienceId}
@@ -389,7 +415,7 @@ const AppContent = () => {
           />
         ) : (
           <>
-            {activeTab === 'home' && <HomeScreen onAttenderClick={handleAttenderClick} attendersData={attendersData} />}
+            {activeTab === 'home' && <HomeScreen onAttenderClick={handleAttenderClick} attendersData={attendersData} navigateToAttenderInfo={navigateToAttenderInfo} />}
             {activeTab === 'explore' && <ExploreScreen onAttenderClick={handleAttenderClick} onExperienceClick={handleExperienceClick} attendersData={attendersData} />}
             {activeTab === 'trips' && <BookingHistoryScreen />}
             {activeTab === 'saved' && <SavedScreen />}

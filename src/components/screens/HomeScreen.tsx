@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, MapPin, Calendar, Clock, Music, Camera, Utensils, Coffee, Gift } from 'lucide-react';
+import { Search, MapPin, Calendar, Clock, Music, Camera, Utensils, Coffee, Gift, UserPlus, ArrowRight } from 'lucide-react';
 import { useAuth } from '../../AuthComponents';
 import { AttenderType } from '../../types';
 import AttenderCard from '../AttenderCard';
@@ -10,6 +10,7 @@ import { popularRequests } from '../../mockData';
 interface HomeScreenProps {
   onAttenderClick: (id: number) => void;
   attendersData: AttenderType[];
+  navigateToAttenderInfo?: () => void;
 }
 
 // アイコンタイプを対応するコンポーネントに変換する関数
@@ -30,7 +31,7 @@ const getIconComponent = (iconType: string) => {
   }
 };
 
-const HomeScreen: React.FC<HomeScreenProps> = ({ onAttenderClick, attendersData }) => {
+const HomeScreen: React.FC<HomeScreenProps> = ({ onAttenderClick, attendersData, navigateToAttenderInfo }) => {
   const [currentLocation, _setCurrentLocation] = useState('東京');
   const [requestModalOpen, setRequestModalOpen] = useState(false);
   const { isAuthenticated, openLoginModal } = useAuth();
@@ -123,6 +124,33 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ onAttenderClick, attendersData 
               <AttenderCard attender={attender} />
             </div>
           ))}
+        </div>
+      </div>
+
+      {/* アテンダー募集バナー */}
+      <div className="bg-gradient-to-r from-cyan-600 to-teal-600 rounded-lg p-6 text-white shadow-lg mt-8">
+        <div className="flex items-center justify-between">
+          <div className="space-y-2">
+            <div className="flex items-center space-x-2">
+              <UserPlus size={24} className="text-white" />
+              <h3 className="text-xl font-bold">アテンダーになりませんか？</h3>
+            </div>
+            <p className="text-white/90">あなたの街の魅力を旅行者に伝えてみませんか？自分のペースで活動できるアテンダーとして、新しい出会いと収入を得ることができます。</p>
+              <button 
+                onClick={() => navigateToAttenderInfo ? navigateToAttenderInfo() : window.location.href = '/attender/info'}
+                className="mt-3 bg-white text-teal-700 px-4 py-2 rounded-lg font-medium flex items-center space-x-1 hover:bg-gray-100 transition duration-200">
+                <span>詳細を見る</span>
+                <ArrowRight size={16} />
+              </button>
+          </div>
+          <div className="hidden md:block">
+            <img 
+              src="/images/attender-illustration.svg" 
+              alt="アテンダーイラスト" 
+              className="w-32 h-32 object-contain"
+              onError={(e) => e.currentTarget.style.display = 'none'} 
+            />
+          </div>
         </div>
       </div>
 
