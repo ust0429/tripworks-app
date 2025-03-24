@@ -22,9 +22,11 @@ import { ENDPOINTS } from '../config/api';
 import { isDevelopment } from '../config/env';
 
 // アテンダー申請検証結果の型定義
-interface ApplicationValidationResult {
+export interface ApplicationValidationResult {
   valid: boolean;
   errors: string[];
+  warnings?: string[];
+  fieldErrors?: Record<string, string>;
 }
 
 // モックデータは簡易版のみを保持（開発環境でのみ使用）
@@ -161,44 +163,189 @@ export async function getAllAttenders(filters?: {
  */
 function validateApplicationData(data: AttenderApplicationData): ApplicationValidationResult {
   const errors: string[] = [];
+  const warnings: string[] = [];
+  const fieldErrors: Record<string, string> = {};
   
   // 必須フィールドのチェック
-  if (!data.name) errors.push('名前は必須です');
-  if (!data.email) errors.push('メールアドレスは必須です');
-  if (!data.phoneNumber) errors.push('電話番号は必須です');
-  if (!data.location) errors.push('所在地は必須です');
-  if (!data.biography) errors.push('自己紹介文は必須です');
-  if (!data.specialties || data.specialties.length === 0) errors.push('専門分野は少なくとも1つ必要です');
-  if (!data.languages || data.languages.length === 0) errors.push('言語は少なくとも1つ必要です');
-  if (!data.expertise || data.expertise.length === 0) errors.push('専門知識は少なくとも1つ必要です');
-  if (!data.availableTimes || data.availableTimes.length === 0) errors.push('利用可能時間は必須です');
-  if (!data.identificationDocument) errors.push('身分証明書情報は必須です');
-  
-  // 同意事項のチェック
-  if (!data.agreements) errors.push('すべての同意事項を承認する必要があります');
-  else {
-    if (!data.agreements.termsOfService) errors.push('利用規約への同意が必要です');
-    if (!data.agreements.privacyPolicy) errors.push('プライバシーポリシーへの同意が必要です');
-    if (!data.agreements.codeOfConduct) errors.push('行動規範への同意が必要です');
-    if (!data.agreements.backgroundCheck) errors.push('バックグラウンドチェックへの同意が必要です');
+  if (!data.name) {
+    errors.push('名前は必須です');
+    fieldErrors['name'] = '名前を入力してください';
   }
   
-  // 専門知識のバリデーション（簡略化）
-  if (data.expertise) {
+  if (!data.email) {
+    errors.push('メールアドレスは必須です');
+    fieldErrors['email'] = 'メールアドレスを入力してください';
+  } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) {
+    errors.push('無効なメールアドレス形式です');
+    fieldErrors['email'] = '有効なメールアドレスを入力してください';
+  }
+  
+  if (!data.phoneNumber) {
+    errors.push('電話番号は必須です');
+    fieldErrors['phoneNumber'] = '電話番号を入力してください';
+  } else if (!/^[0-9\-+() ]+$/.test(data.phoneNumber)) {
+    warnings.push('電話番号の形式が標準的ではない可能性があります');
+  }
+  
+  if (!data.location) {
+    errors.push('所在地は必須です');
+    fieldErrors['location'] = '所在地情報を入力してください';
+  } else {
+    if (!data.location.country) {
+      errors.push('国名は必須です');
+      fieldErrors['location.country'] = '国名を選択してください';
+    }
+    if (!data.location.region) {
+      errors.push('地域は必須です');
+      fieldErrors['location.region'] = '地域を選択してください';
+    }
+    if (!data.location.city) {
+      errors.push('都市は必須です');
+      fieldErrors['location.city'] = '都市を入力してください';
+    }
+  }
+  
+  if (!data.biography) {
+    errors.push('自己紹介文は必須です');
+    fieldErrors['biography'] = '自己紹介文を入力してください';
+  } else if (data.biography.length < 50) {
+    errors.push('自己紹介文は50文字以上必要です');
+    fieldErrors['biography'] = '自己紹介文は少なくとも50文字以上で記入してください';
+  }
+  
+  if (!data.specialties || data.specialties.length === 0) {
+    errors.push('専門分野は少なくとも1つ必要です');
+    fieldErrors['specialties'] = '少なくとも1つの専門分野を選択してください';
+  }
+  
+  if (!data.languages || data.languages.length === 0) {
+    errors.push('言語は少なくとも1つ必要です');
+    fieldErrors['languages'] = '少なくとも1つの言語を選択してください';
+  }
+  
+  if (!data.expertise || data.expertise.length === 0) {
+    errors.push('専門知識は少なくとも1つ必要です');
+    fieldErrors['expertise'] = '少なくとも1つの専門知識を入力してください';
+  } else {
     data.expertise.forEach((exp, index) => {
-      if (!exp.category) errors.push(`専門分野${index + 1}: カテゴリは必須です`);
-      if (!exp.subcategories || exp.subcategories.length === 0) errors.push(`専門分野${index + 1}: サブカテゴリーは少なくとも1つ必要です`);
+      if (!exp.category) {
+        errors.push(`専門分野${index + 1}: カテゴリは必須です`);
+        fieldErrors[`expertise[${index}].category`] = 'カテゴリを選択してください';
+      }
+      if (!exp.subcategories || exp.subcategories.length === 0) {
+        errors.push(`専門分野${index + 1}: サブカテゴリーは少なくとも1つ必要です`);
+        fieldErrors[`expertise[${index}].subcategories`] = '少なくとも1つのサブカテゴリーを選択してください';
+      }
+      if (!exp.description) {
+        errors.push(`専門分野${index + 1}: 説明は必須です`);
+        fieldErrors[`expertise[${index}].description`] = '説明を入力してください';
+      }
     });
   }
   
-  // 提供体験サンプルのバリデーション（簡略化）
+  if (!data.availableTimes || data.availableTimes.length === 0) {
+    errors.push('利用可能時間は必須です');
+    fieldErrors['availableTimes'] = '少なくとも1つの利用可能時間を設定してください';
+  } else {
+    const hasAvailable = data.availableTimes.some(time => time.isAvailable);
+    if (!hasAvailable) {
+      errors.push('利用可能時間が設定されていません');
+      fieldErrors['availableTimes'] = '少なくとも1つの利用可能な時間帯を設定してください';
+    }
+  }
+  
+  // 身分証明書情報のチェック
+  if (!data.identificationDocument) {
+    errors.push('身分証明書情報は必須です');
+    fieldErrors['identificationDocument'] = '身分証明書情報を入力してください';
+  } else {
+    if (!data.identificationDocument.type) {
+      errors.push('身分証明書の種類は必須です');
+      fieldErrors['identificationDocument.type'] = '身分証明書の種類を選択してください';
+    }
+    if (!data.identificationDocument.number) {
+      errors.push('身分証明書番号は必須です');
+      fieldErrors['identificationDocument.number'] = '身分証明書番号を入力してください';
+    }
+    if (!data.identificationDocument.expirationDate) {
+      errors.push('身分証明書の有効期限は必須です');
+      fieldErrors['identificationDocument.expirationDate'] = '有効期限を入力してください';
+    } else {
+      const expirationDate = new Date(data.identificationDocument.expirationDate);
+      const today = new Date();
+      if (isNaN(expirationDate.getTime())) {
+        errors.push('身分証明書の有効期限が無効な形式です');
+        fieldErrors['identificationDocument.expirationDate'] = '有効な日付形式で入力してください';
+      } else if (expirationDate < today) {
+        errors.push('身分証明書の有効期限が過ぎています');
+        fieldErrors['identificationDocument.expirationDate'] = '有効期限が切れています。有効期限内の身分証明書が必要です';
+      }
+    }
+    if (!data.identificationDocument.frontImageUrl) {
+      errors.push('身分証明書の表面画像は必須です');
+      fieldErrors['identificationDocument.frontImageUrl'] = '身分証明書の表面画像をアップロードしてください';
+    }
+  }
+  
+  // 提供体験サンプルのバリデーション
   if (!data.experienceSamples || data.experienceSamples.length === 0) {
     errors.push('体験サンプルは少なくとも1つ必要です');
+    fieldErrors['experienceSamples'] = '少なくとも1つの体験サンプルを追加してください';
+  } else {
+    data.experienceSamples.forEach((sample, index) => {
+      if (!sample.title) {
+        errors.push(`体験サンプル${index + 1}: タイトルは必須です`);
+        fieldErrors[`experienceSamples[${index}].title`] = 'タイトルを入力してください';
+      }
+      
+      if (!sample.description) {
+        errors.push(`体験サンプル${index + 1}: 説明は必須です`);
+        fieldErrors[`experienceSamples[${index}].description`] = '説明を入力してください';
+      } else if (sample.description.length < 50) {
+        errors.push(`体験サンプル${index + 1}: 説明は50文字以上必要です`);
+        fieldErrors[`experienceSamples[${index}].description`] = '説明は少なくとも50文字以上で入力してください';
+      }
+      
+      if (!sample.category) {
+        errors.push(`体験サンプル${index + 1}: カテゴリは必須です`);
+        fieldErrors[`experienceSamples[${index}].category`] = 'カテゴリを選択してください';
+      }
+      
+      if (sample.estimatedDuration <= 0) {
+        errors.push(`体験サンプル${index + 1}: 所要時間は0より大きい値が必要です`);
+        fieldErrors[`experienceSamples[${index}].estimatedDuration`] = '有効な所要時間を入力してください';
+      }
+    });
+  }
+  
+  // 同意事項のチェック
+  if (!data.agreements) {
+    errors.push('すべての同意事項を承認する必要があります');
+    fieldErrors['agreements'] = '同意事項への同意が必要です';
+  } else {
+    if (!data.agreements.termsOfService) {
+      errors.push('利用規約への同意が必要です');
+      fieldErrors['agreements.termsOfService'] = '利用規約に同意してください';
+    }
+    if (!data.agreements.privacyPolicy) {
+      errors.push('プライバシーポリシーへの同意が必要です');
+      fieldErrors['agreements.privacyPolicy'] = 'プライバシーポリシーに同意してください';
+    }
+    if (!data.agreements.codeOfConduct) {
+      errors.push('行動規範への同意が必要です');
+      fieldErrors['agreements.codeOfConduct'] = '行動規範に同意してください';
+    }
+    if (!data.agreements.backgroundCheck) {
+      errors.push('バックグラウンドチェックへの同意が必要です');
+      fieldErrors['agreements.backgroundCheck'] = 'バックグラウンドチェックに同意してください';
+    }
   }
   
   return {
     valid: errors.length === 0,
-    errors
+    errors,
+    warnings,
+    fieldErrors
   };
 }
 
@@ -218,7 +365,18 @@ export async function submitAttenderApplication(applicationData: AttenderApplica
     if (!validationResult.valid) {
       const errorMessage = `入力内容に問題があります: ${validationResult.errors.join('、')}`;
       console.error('バリデーションエラー:', errorMessage);
+      
+      // フィールドごとのエラーをログに記録（開発用）
+      if (validationResult.fieldErrors) {
+        console.debug('フィールドエラー詳細:', validationResult.fieldErrors);
+      }
+      
       throw new Error(errorMessage);
+    }
+    
+    // 警告があれば記録
+    if (validationResult.warnings && validationResult.warnings.length > 0) {
+      console.warn('検証警告:', validationResult.warnings.join(', '));
     }
     
     console.info('アテンダー申請データの検証に成功しました');
