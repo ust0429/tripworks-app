@@ -1,4 +1,4 @@
-import React, { useState, createContext, useContext, ReactNode } from 'react';
+import React, { useState, createContext, useContext, ReactNode, useEffect } from 'react';
 import { X, Mail, Lock, User, Eye, EyeOff } from 'lucide-react';
 
 // 認証コンテキストの型定義
@@ -41,6 +41,29 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showSignupModal, setShowSignupModal] = useState(false);
 
+  // 初期化時に認証状態を確認
+  useEffect(() => {
+    // ローカルストレージから認証情報を読み込む
+    const storedUser = localStorage.getItem('echo_user');
+    const storedCurrentUser = localStorage.getItem('echo_currentUser');
+    
+    if (storedUser && storedCurrentUser) {
+      try {
+        const parsedUser = JSON.parse(storedUser);
+        const parsedCurrentUser = JSON.parse(storedCurrentUser);
+        
+        setUser(parsedUser);
+        setCurrentUser(parsedCurrentUser);
+        setIsAuthenticated(true);
+      } catch (error) {
+        console.error('Failed to parse stored auth data:', error);
+        // 解析エラーが発生した場合は認証情報をクリア
+        localStorage.removeItem('echo_user');
+        localStorage.removeItem('echo_currentUser');
+      }
+    }
+  }, []);
+
   // ログイン処理（モック）
   const login = async (email: string, password: string): Promise<boolean> => {
     // ここでは簡易的に成功させる
@@ -65,6 +88,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           photoUrl: undefined,
           type: 'user' as const
         };
+        
+        // ユーザー情報をlocalStorageに保存
+        localStorage.setItem('echo_user', JSON.stringify(userData));
+        localStorage.setItem('echo_currentUser', JSON.stringify(currentUserData));
         
         setUser(userData);
         setCurrentUser(currentUserData);
@@ -103,6 +130,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         type: 'user' as const
       };
       
+      // ユーザー情報をlocalStorageに保存
+      localStorage.setItem('echo_user', JSON.stringify(userData));
+      localStorage.setItem('echo_currentUser', JSON.stringify(currentUserData));
+      
       setUser(userData);
       setCurrentUser(currentUserData);
       setIsAuthenticated(true);
@@ -116,6 +147,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   // ログアウト処理
   const logout = () => {
+    // localStorageから認証情報を削除
+    localStorage.removeItem('echo_user');
+    localStorage.removeItem('echo_currentUser');
+    
     setUser(null);
     setCurrentUser(null);
     setIsAuthenticated(false);

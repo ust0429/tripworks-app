@@ -6,6 +6,7 @@
  */
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { navigateToProfile, navigateTo } from '../../../utils/navigation';
 import { CheckCircle, Home, User, Mail, ArrowLeft, Calendar, FileText, AlertTriangle, Copy, Check } from 'lucide-react';
 
 interface SubmitSuccessProps {
@@ -162,6 +163,10 @@ const SubmitSuccess: React.FC<SubmitSuccessProps> = ({ applicationId, onReturnHo
         <Link
           to="/profile"
           className="px-6 py-3 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 transition-colors flex items-center justify-center gap-2"
+          onClick={(e) => {
+            e.preventDefault();
+            navigateToProfile();
+          }}
         >
           <User className="w-5 h-5" />
           マイページを表示
@@ -169,6 +174,10 @@ const SubmitSuccess: React.FC<SubmitSuccessProps> = ({ applicationId, onReturnHo
         <Link
           to="/attender/status"
           className="px-6 py-3 border border-blue-500 text-blue-600 rounded-md hover:bg-blue-50 transition-colors flex items-center justify-center gap-2"
+          onClick={(e) => {
+            e.preventDefault();
+            navigateTo('/attender/status');
+          }}
         >
           <FileText className="w-5 h-5" />
           申請状況を確認

@@ -7,6 +7,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { 
+  navigateTo, 
+  navigateToProfile, 
+  navigateToHome, 
+  cancelWithConfirmation 
+} from '../../../utils/navigation';
+import { 
   AttenderApplicationProvider, 
   useAttenderApplication 
 } from '../../../contexts/AttenderApplicationContext';
@@ -211,8 +217,8 @@ const AttenderApplicationFormContent: React.FC = () => {
   
   // ホームに戻る
   const handleReturnHome = useCallback(() => {
-    navigate('/');
-  }, [navigate]);
+    navigateToHome();
+  }, []);
   
   // 申請が完了した場合
   if (applicationId) {
@@ -288,6 +294,12 @@ const AttenderApplicationFormContent: React.FC = () => {
           <Link
             to="/profile"
             className="text-gray-500 hover:text-gray-700 flex items-center"
+            onClick={(e) => {
+              // イベントを処理
+              e.preventDefault();
+              // マイページへ移動
+              navigateToProfile();
+            }}
           >
             <User className="w-5 h-5 mr-1" />
             <span className="hidden sm:inline">マイページ</span>
@@ -433,19 +445,32 @@ const AttenderApplicationFormContent: React.FC = () => {
       
       {/* ナビゲーションボタン */}
       <div className="flex justify-between">
-        <button
-          type="button"
-          onClick={prevStep}
-          disabled={currentStep === 1}
-          className={`px-4 py-2 rounded-md flex items-center ${
-            currentStep === 1
-              ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-          }`}
-        >
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          前へ
-        </button>
+        <div className="flex space-x-2">
+          <button
+            type="button"
+            onClick={prevStep}
+            disabled={currentStep === 1}
+            className={`px-4 py-2 rounded-md flex items-center ${
+              currentStep === 1
+                ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            }`}
+          >
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            前へ
+          </button>
+          
+          <button
+            type="button"
+            onClick={() => {
+              // キャンセル確認とナビゲーション
+              cancelWithConfirmation('入力内容が保存されずに失われますが、申請をキャンセルしますか？');
+            }}
+            className="px-4 py-2 rounded-md border border-red-300 text-red-600 hover:bg-red-50"
+          >
+            キャンセル
+          </button>
+        </div>
         
         <button
           type="button"

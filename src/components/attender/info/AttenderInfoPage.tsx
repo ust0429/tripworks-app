@@ -166,8 +166,8 @@ const AttenderInfoPage: React.FC<AttenderInfoPageProps> = ({ onBack }) => {
                   <div className="w-8 h-8 bg-teal-600 text-white rounded-full flex items-center justify-center font-bold">1</div>
                 </div>
                 <div>
-                  <h3 className="font-bold text-lg">基本情報の入力</h3>
-                  <p className="text-gray-600">名前、連絡先、活動可能な地域などの基本情報を入力します。</p>
+                  <h3 className="font-bold text-lg">基本情報とSNSリンクの入力</h3>
+                  <p className="text-gray-600">名前、連絡先、自己紹介、SNSリンクなどの基本情報を入力します。</p>
                 </div>
               </div>
               
@@ -176,8 +176,8 @@ const AttenderInfoPage: React.FC<AttenderInfoPageProps> = ({ onBack }) => {
                   <div className="w-8 h-8 bg-teal-600 text-white rounded-full flex items-center justify-center font-bold">2</div>
                 </div>
                 <div>
-                  <h3 className="font-bold text-lg">専門分野と提供可能な体験の登録</h3>
-                  <p className="text-gray-600">あなたの得意分野や提供できる体験内容を登録します。地元の食、アート、歴史などカテゴリー別に登録できます。</p>
+                  <h3 className="font-bold text-lg">身分証明書の提出（任意）</h3>
+                  <p className="text-gray-600">安全なコミュニティを維持するための本人確認書類です。後からの提出も可能ですが、売上が発生する前に必要になります。</p>
                 </div>
               </div>
               
@@ -186,8 +186,8 @@ const AttenderInfoPage: React.FC<AttenderInfoPageProps> = ({ onBack }) => {
                   <div className="w-8 h-8 bg-teal-600 text-white rounded-full flex items-center justify-center font-bold">3</div>
                 </div>
                 <div>
-                  <h3 className="font-bold text-lg">本人確認</h3>
-                  <p className="text-gray-600">安全なコミュニティを維持するため、身分証明書による本人確認を行います。（すべての情報は厳重に管理されます）</p>
+                  <h3 className="font-bold text-lg">同意事項の確認</h3>
+                  <p className="text-gray-600">利用規約や活動ガイドラインなどの確認と同意を行います。これで基本登録は完了です。</p>
                 </div>
               </div>
               
@@ -196,8 +196,8 @@ const AttenderInfoPage: React.FC<AttenderInfoPageProps> = ({ onBack }) => {
                   <div className="w-8 h-8 bg-teal-600 text-white rounded-full flex items-center justify-center font-bold">4</div>
                 </div>
                 <div>
-                  <h3 className="font-bold text-lg">審査と承認</h3>
-                  <p className="text-gray-600">通常3〜5営業日程度で審査が完了します。承認されるとアテンダーとして活動開始できます。</p>
+                  <h3 className="font-bold text-lg">任意情報の入力（専門分野・体験・利用可能時間）</h3>
+                  <p className="text-gray-600">基本登録後、専門分野や提供可能な体験、利用可能な時間帯などの詳細情報を入力できます。</p>
                 </div>
               </div>
               
@@ -206,8 +206,8 @@ const AttenderInfoPage: React.FC<AttenderInfoPageProps> = ({ onBack }) => {
                   <div className="w-8 h-8 bg-teal-600 text-white rounded-full flex items-center justify-center font-bold">5</div>
                 </div>
                 <div>
-                  <h3 className="font-bold text-lg">活動開始</h3>
-                  <p className="text-gray-600">あなたのプロフィールが公開され、旅行者からのリクエストを受け付けられるようになります。</p>
+                  <h3 className="font-bold text-lg">審査と承認</h3>
+                  <p className="text-gray-600">通常3〜5営業日程度で審査が完了します。承認されるとアテンダーとして活動開始できます。</p>
                 </div>
               </div>
             </div>

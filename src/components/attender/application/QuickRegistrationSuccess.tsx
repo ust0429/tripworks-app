@@ -6,6 +6,7 @@
  */
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { navigateToProfile } from '../../../utils/navigation';
 import { CheckCircle, Home, User, Mail, ArrowRight, Calendar, FileText, AlertTriangle, Copy, Check, Award } from 'lucide-react';
 
 interface QuickRegistrationSuccessProps {
@@ -183,6 +184,10 @@ const QuickRegistrationSuccess: React.FC<QuickRegistrationSuccessProps> = ({
         <Link
           to="/profile"
           className="px-6 py-3 border border-gray-300 text-gray-600 rounded-md hover:bg-gray-50 transition-colors flex items-center justify-center gap-2"
+          onClick={(e) => {
+            e.preventDefault();
+            navigateToProfile();
+          }}
         >
           <User className="w-5 h-5" />
           マイページを表示

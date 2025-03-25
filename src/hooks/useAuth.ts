@@ -24,15 +24,15 @@ export const useAuth = () => {
   };
   
   // 実際の実装ではこのコメントを解除
-  // const auth = useContext(AuthContext);
+  const auth = useContext(AuthContext);
   
-  // 仮の実装として上記のモックを使用
-  const auth = {
-    ...mockContext,
-    // 型エラーを修正するために引数を受け付けるように修正
-    login: async (email: string, password: string) => {},
-    register: async (userData: any) => {}
-  };
+  // // 仮の実装として上記のモックを使用
+  // const auth = {
+  //   ...mockContext,
+  //   // 型エラーを修正するために引数を受け付けるように修正
+  //   login: async (email: string, password: string) => {},
+  //   register: async (userData: any) => {}
+  // };
 
   /**
    * 認証トークンを取得する

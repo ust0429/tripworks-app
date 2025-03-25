@@ -15,7 +15,8 @@ const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ onNext }) => {
     formData, 
     updateFormData, 
     errors, 
-    clearError 
+    clearError,
+    updateSocialMediaLinks
   } = useAttenderApplication();
   
   // 国のリスト（実際の実装ではより包括的なリストを使用）
@@ -77,6 +78,12 @@ const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ onNext }) => {
     clearError(name);
   };
   
+  // SNSリンクの更新
+  const handleSocialMediaChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    updateSocialMediaLinks({ [name]: value });
+  };
+
   // 初期レンダリング時に日本を選択
   useEffect(() => {
     if (!formData.location?.country) {
@@ -358,6 +365,128 @@ const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ onNext }) => {
           </div>
         </div>
       )}
+      
+      {/* SNSリンク */}
+      <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+        <h3 className="text-lg font-medium mb-4">SNSリンク（任意）</h3>
+        <p className="text-sm text-gray-500 mb-4">
+          あなたのSNSアカウントやウェブサイトを共有することで、ゲストにあなたの活動や提供する体験についてより詳しく知ってもらうことができます。
+        </p>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Instagram */}
+          <div>
+            <label htmlFor="instagram" className="block text-sm font-medium text-gray-700 mb-1">
+              Instagram
+            </label>
+            <input
+              type="text"
+              id="instagram"
+              name="instagram"
+              value={formData.socialMediaLinks?.instagram || ''}
+              onChange={handleSocialMediaChange}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              placeholder="https://instagram.com/username"
+            />
+          </div>
+          
+          {/* Twitter */}
+          <div>
+            <label htmlFor="twitter" className="block text-sm font-medium text-gray-700 mb-1">
+              Twitter
+            </label>
+            <input
+              type="text"
+              id="twitter"
+              name="twitter"
+              value={formData.socialMediaLinks?.twitter || ''}
+              onChange={handleSocialMediaChange}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              placeholder="https://twitter.com/username"
+            />
+          </div>
+          
+          {/* YouTube */}
+          <div>
+            <label htmlFor="youtube" className="block text-sm font-medium text-gray-700 mb-1">
+              YouTube
+            </label>
+            <input
+              type="text"
+              id="youtube"
+              name="youtube"
+              value={formData.socialMediaLinks?.youtube || ''}
+              onChange={handleSocialMediaChange}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              placeholder="https://youtube.com/channel/xyz"
+            />
+          </div>
+          
+          {/* TikTok */}
+          <div>
+            <label htmlFor="tiktok" className="block text-sm font-medium text-gray-700 mb-1">
+              TikTok
+            </label>
+            <input
+              type="text"
+              id="tiktok"
+              name="tiktok"
+              value={formData.socialMediaLinks?.tiktok || ''}
+              onChange={handleSocialMediaChange}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              placeholder="https://tiktok.com/@username"
+            />
+          </div>
+          
+          {/* Facebook */}
+          <div>
+            <label htmlFor="facebook" className="block text-sm font-medium text-gray-700 mb-1">
+              Facebook
+            </label>
+            <input
+              type="text"
+              id="facebook"
+              name="facebook"
+              value={formData.socialMediaLinks?.facebook || ''}
+              onChange={handleSocialMediaChange}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              placeholder="https://facebook.com/username"
+            />
+          </div>
+          
+          {/* ウェブサイト */}
+          <div>
+            <label htmlFor="website" className="block text-sm font-medium text-gray-700 mb-1">
+              ウェブサイト
+            </label>
+            <input
+              type="text"
+              id="website"
+              name="website"
+              value={formData.socialMediaLinks?.website || ''}
+              onChange={handleSocialMediaChange}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              placeholder="https://yourwebsite.com"
+            />
+          </div>
+          
+          {/* ブログ */}
+          <div>
+            <label htmlFor="blog" className="block text-sm font-medium text-gray-700 mb-1">
+              ブログ
+            </label>
+            <input
+              type="text"
+              id="blog"
+              name="blog"
+              value={formData.socialMediaLinks?.blog || ''}
+              onChange={handleSocialMediaChange}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              placeholder="https://yourblog.com"
+            />
+          </div>
+        </div>
+      </div>
     </div>
   );
 };
