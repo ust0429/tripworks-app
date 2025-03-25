@@ -15,7 +15,7 @@ import {
   IdentificationDocument,
   FormStatusType
 } from '../types/attender/index';
-import { submitAttenderApplication } from '../services/AttenderService';
+import { submitAttenderApplication, saveDraftApplication } from '../services/AttenderService';
 
 // 必須ステップと任意ステップの定義
 export const REQUIRED_STEPS = ['BasicInfo', 'Identification', 'Agreements'];
@@ -39,6 +39,8 @@ interface AttenderApplicationContextType {
   formData: Partial<AttenderApplicationData>;
   currentStep: number;
   isSubmitting: boolean;
+  isSavingDraft: boolean;
+  lastSaved: Date | null;
   errors: Record<string, string>;
   formStatus: FormStatusType;
   maxSteps: number;
@@ -86,6 +88,9 @@ interface AttenderApplicationContextType {
   // フォームの送信
   submitForm: () => Promise<string>;
   
+  // 下書きの保存
+  saveDraft: () => Promise<string>;
+  
   // エラーを設定
   setError: (field: string, message: string) => void;
   
@@ -125,6 +130,8 @@ export const AttenderApplicationProvider: React.FC<{ children: ReactNode }> = ({
   const [formData, setFormData] = useState<Partial<AttenderApplicationData>>(initialFormData);
   const [currentStep, setCurrentStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSavingDraft, setIsSavingDraft] = useState(false);
+  const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [formStatus, setFormStatus] = useState<FormStatusType>('required');
   
@@ -695,11 +702,35 @@ export const AttenderApplicationProvider: React.FC<{ children: ReactNode }> = ({
     return validationErrors;
   };
   
+  // 下書きを保存する関数
+  const saveDraft = async (): Promise<string> => {
+    try {
+      setIsSavingDraft(true);
+      // 必要なユーザーIDを取得（実際にはAuthコンテキストから取得するか、より安全な方法を使用する必要があります）
+      const userId = formData.userId || 'temp_user';
+      
+      // 下書きを保存
+      const draftId = await saveDraftApplication(userId, formData);
+      
+      // 保存時間を更新
+      setLastSaved(new Date());
+      
+      setIsSavingDraft(false);
+      return draftId;
+    } catch (error) {
+      console.error('下書き保存エラー:', error);
+      setIsSavingDraft(false);
+      throw error;
+    }
+  };
+
   // コンテキスト値の作成
   const contextValue: AttenderApplicationContextType = {
     formData,
     currentStep,
     isSubmitting,
+    isSavingDraft,
+    lastSaved,
     errors,
     formStatus,
     maxSteps,
@@ -722,6 +753,7 @@ export const AttenderApplicationProvider: React.FC<{ children: ReactNode }> = ({
     prevStep,
     goToStep,
     submitForm,
+    saveDraft,
     setError,
     clearError,
     clearAllErrors,
