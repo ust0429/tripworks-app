@@ -19,6 +19,11 @@ import AttenderApplicationFormWrapper from './components/attender/application/At
 import AttenderInfoPage from './components/attender/info/AttenderInfoPage';
 import { AttenderType } from './types';
 
+// 完全版スクリーンのインポート
+import MarketScreen from './components/screens/MarketScreen';
+import CommunityScreen from './components/screens/CommunityScreen';
+import SeasonalEventsScreen from './components/screens/SeasonalEventsScreen';
+
 // サンプルデータ
 const attendersData: AttenderType[] = [
   {
@@ -50,21 +55,6 @@ const attendersData: AttenderType[] = [
   },
 ];
 
-// マーケット画面
-const MarketScreen = () => {
-  return (
-    <div className="p-4 flex items-center justify-center h-full">
-      <div className="text-center">
-        <div className="bg-gray-100 rounded-full p-6 inline-flex mb-4">
-          <ShoppingBag size={48} className="text-gray-400" />
-        </div>
-        <h2 className="text-xl font-bold mb-2">マーケット</h2>
-        <p className="text-gray-600">地域の特産品や限定アイテムを<br/>購入できるマーケット機能は<br/>現在開発中です。</p>
-      </div>
-    </div>
-  );
-};
-
 // 保存済み画面
 const SavedScreen = () => {
   const { isAuthenticated, openLoginModal } = useAuth();
@@ -93,36 +83,6 @@ const SavedScreen = () => {
     <div className="p-4">
       <h1 className="text-2xl font-bold mb-4">保存済み</h1>
       <p className="text-gray-600">お気に入りはありません</p>
-    </div>
-  );
-};
-
-// コミュニティ画面
-const CommunityScreen = () => {
-  return (
-    <div className="p-4 flex items-center justify-center h-full">
-      <div className="text-center">
-        <div className="bg-gray-100 rounded-full p-6 inline-flex mb-4">
-          <Users size={48} className="text-gray-400" />
-        </div>
-        <h2 className="text-xl font-bold mb-2">コミュニティ</h2>
-        <p className="text-gray-600">地域コミュニティとの交流や<br/>コミュニティプロジェクトへの<br/>参加機能は現在開発中です。</p>
-      </div>
-    </div>
-  );
-};
-
-// 季節限定イベント画面
-const SeasonalEventsScreen = () => {
-  return (
-    <div className="p-4 flex items-center justify-center h-full">
-      <div className="text-center">
-        <div className="bg-gray-100 rounded-full p-6 inline-flex mb-4">
-          <Gift size={48} className="text-gray-400" />
-        </div>
-        <h2 className="text-xl font-bold mb-2">季節限定イベント</h2>
-        <p className="text-gray-600">季節ごとの特別イベントや<br/>限定体験の情報は<br/>現在開発中です。</p>
-      </div>
     </div>
   );
 };
