@@ -203,45 +203,8 @@ const IdentificationStep: React.FC<IdentificationStepProps> = ({ onNext, onBack 
   
   // 次のステップへ進む前のバリデーション
   const handleNext = () => {
-    let isValid = true;
-    
-    // 必須項目のチェック
-    if (!formData.identificationDocument?.type) {
-      isValid = false;
-    }
-    
-    if (!formData.identificationDocument?.number) {
-      isValid = false;
-    }
-    
-    if (!formData.identificationDocument?.expirationDate) {
-      isValid = false;
-    }
-    
-    if (!formData.identificationDocument?.frontImageUrl) {
-      isValid = false;
-    }
-    
-    if (isValid) {
-      onNext();
-    } else {
-      // エラーメッセージを表示
-      if (!formData.identificationDocument?.type) {
-        // エラー処理
-      }
-      
-      if (!formData.identificationDocument?.number) {
-        // エラー処理
-      }
-      
-      if (!formData.identificationDocument?.expirationDate) {
-        // エラー処理
-      }
-      
-      if (!formData.identificationDocument?.frontImageUrl) {
-        // エラー処理
-      }
-    }
+    // 身分証明書は任意のため、バリデーションなしで次へ進める
+    onNext();
   };
   
   return (
@@ -252,18 +215,18 @@ const IdentificationStep: React.FC<IdentificationStepProps> = ({ onNext, onBack 
       <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-medium">身分証明書</h3>
-          <div className="flex items-center bg-blue-50 px-3 py-1 rounded-full text-blue-700 text-xs">
+          <div className="flex items-center bg-amber-50 px-3 py-1 rounded-full text-amber-700 text-xs">
             <AlertCircle className="w-4 h-4 mr-1" />
-            <span>審査に必要です</span>
+            <span>任意情報</span>
           </div>
         </div>
 
-        <div className="mb-4 p-3 bg-blue-50 rounded-md text-sm text-blue-800 flex items-start">
+<div className="mb-4 p-3 bg-amber-100 rounded-md text-sm text-amber-800 flex items-start">
           <HelpCircle className="w-5 h-5 mr-2 flex-shrink-0 mt-0.5" />
           <div>
-            <p className="mb-1 font-medium">身分証明書について</p>
+            <p className="mb-1 font-medium">本人確認は現時点では任意です</p>
             <p>
-              アテンダーとして活動するには、身分証明書の提出が必要です。提出された情報は厳重に管理され、確認後に安全に保存されます。有効期限が切れている身分証明書は使用できません。
+              本人確認の提出は現時点では任意です。売上が発生し、振込手続きが必要になった時点で提出をお願いいたします。本ページをスキップして先に進むことも可能です。
             </p>
           </div>
         </div>
@@ -272,7 +235,7 @@ const IdentificationStep: React.FC<IdentificationStepProps> = ({ onNext, onBack 
           {/* 身分証明書タイプ */}
           <div>
             <label htmlFor="identificationDocument.type" className="block text-sm font-medium text-gray-700 mb-1">
-              身分証明書の種類 <span className="text-red-500">*</span>
+              身分証明書の種類
             </label>
             <select
               id="identificationDocument.type"
@@ -298,7 +261,7 @@ const IdentificationStep: React.FC<IdentificationStepProps> = ({ onNext, onBack 
           {/* 身分証明書番号 */}
           <div>
             <label htmlFor="identificationDocument.number" className="block text-sm font-medium text-gray-700 mb-1">
-              身分証明書番号 <span className="text-red-500">*</span>
+              身分証明書番号
             </label>
             <input
               type="text"
@@ -319,7 +282,7 @@ const IdentificationStep: React.FC<IdentificationStepProps> = ({ onNext, onBack 
           {/* 有効期限 */}
           <div>
             <label htmlFor="identificationDocument.expirationDate" className="block text-sm font-medium text-gray-700 mb-1">
-              有効期限 <span className="text-red-500">*</span>
+              有効期限
             </label>
             <input
               type="date"
@@ -646,7 +609,7 @@ const IdentificationStep: React.FC<IdentificationStepProps> = ({ onNext, onBack 
           onClick={handleNext}
           className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
         >
-          次へ
+          スキップして次へ
         </button>
       </div>
     </div>

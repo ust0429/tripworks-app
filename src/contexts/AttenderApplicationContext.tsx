@@ -12,9 +12,27 @@ import {
   ExperienceSample,
   Reference,
   AdditionalDocument,
-  IdentificationDocument
+  IdentificationDocument,
+  FormStatusType
 } from '../types/attender/index';
 import { submitAttenderApplication } from '../services/AttenderService';
+
+// 必須ステップと任意ステップの定義
+export const REQUIRED_STEPS = ['BasicInfo', 'Identification', 'Agreements'];
+export const OPTIONAL_STEPS = ['Expertise', 'ExperienceSamples', 'Availability'];
+
+// 各ステップのキータイプ
+export type StepKey = 'BasicInfo' | 'Identification' | 'Agreements' | 'Expertise' | 'ExperienceSamples' | 'Availability';
+
+// 各ステップのメタデータ
+export const STEP_METADATA: Record<StepKey, { title: string; description: string }> = {
+  BasicInfo: { title: '基本情報', description: '個人情報とプロフィール' },
+  Expertise: { title: '専門分野', description: '専門知識と言語スキル' },
+  ExperienceSamples: { title: '体験サンプル', description: '提供できる体験の例' },
+  Availability: { title: '利用可能時間', description: '活動可能な時間帯' },
+  Identification: { title: '本人確認', description: '身分証明書の提出' },
+  Agreements: { title: '同意事項', description: '規約と条件の確認' }
+};
 
 // コンテキストの型定義
 interface AttenderApplicationContextType {
@@ -22,7 +40,11 @@ interface AttenderApplicationContextType {
   currentStep: number;
   isSubmitting: boolean;
   errors: Record<string, string>;
+  formStatus: FormStatusType;
   maxSteps: number;
+  
+  // フォーム状態の変更
+  setFormStatus: (status: FormStatusType) => void;
   
   // フォームの値を更新する関数
   updateFormData: (data: Partial<AttenderApplicationData>) => void;
@@ -91,7 +113,8 @@ const initialFormData: Partial<AttenderApplicationData> = {
     privacyPolicy: false,
     codeOfConduct: false,
     backgroundCheck: false
-  }
+  },
+  formStatus: 'required' as const // 申請の状態を追加
 };
 
 // コンテキストの作成
@@ -103,9 +126,12 @@ export const AttenderApplicationProvider: React.FC<{ children: ReactNode }> = ({
   const [currentStep, setCurrentStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [formStatus, setFormStatus] = useState<FormStatusType>('required');
   
-  // 全ステップ数
-  const maxSteps = 6;
+  // フォーム状態に応じたステップ数の計算
+  const maxSteps = formStatus === 'required' 
+    ? REQUIRED_STEPS.length 
+    : REQUIRED_STEPS.length + OPTIONAL_STEPS.length;
   
   // フォームデータの更新
   const updateFormData = (data: Partial<AttenderApplicationData>) => {
@@ -247,53 +273,87 @@ export const AttenderApplicationProvider: React.FC<{ children: ReactNode }> = ({
     clearAllErrors(); // 前回のエラーをクリア
     
     try {
-      // バリデーション
-      const validationErrors = validateForm(formData);
+      // フォーム状態に応じたバリデーション
+      const validationErrors = validateForm(formData, formStatus);
       if (Object.keys(validationErrors).length > 0) {
         setErrors(validationErrors);
         setIsSubmitting(false);
         throw new Error('入力内容に誤りがあります。各フィールドを確認してください。');
       }
       
-      // フォームが完全なデータを持っていることを検証
-      if (!isFullyValidApplicationData(formData)) {
-        setError('form', '申請データが不完全です。すべての必須項目を入力してください。');
-        setIsSubmitting(false);
-        throw new Error('申請データが不完全です。すべての必須項目を入力してください。');
+      // フォーム状態に応じたデータの準備
+      let completeFormData: AttenderApplicationData;
+      
+      if (formStatus === 'required') {
+        // 必須情報のみの場合
+        completeFormData = {
+          name: formData.name!,
+          email: formData.email!,
+          phoneNumber: formData.phoneNumber!,
+          location: formData.location!,
+          biography: formData.biography!,
+          isLocalResident: formData.isLocalResident === true,
+          isMigrant: formData.isMigrant === true,
+          // 身分証明書情報は任意
+        identificationDocument: formData.identificationDocument,
+          agreements: formData.agreements!,
+          // 最低限の空の配列を設定
+          specialties: [],
+          languages: [],
+          expertise: [],
+          availableTimes: [],
+          experienceSamples: [],
+          // フォーム状態を明示的に設定
+          formStatus: 'required' as const
+        };
+        
+        // 存在する場合は値を設定（任意）
+        if (formData.specialties) completeFormData.specialties = formData.specialties;
+        if (formData.languages) completeFormData.languages = formData.languages;
+        if (formData.yearsMoved) completeFormData.yearsMoved = formData.yearsMoved;
+        if (formData.previousLocation) completeFormData.previousLocation = formData.previousLocation;
+        
+      } else {
+        // 全情報の場合（従来通り）
+        completeFormData = {
+          ...formData as Partial<AttenderApplicationData>,
+          // 以下のフィールドは必須なので存在しない場合はエラーになるはず
+          name: formData.name!,
+          email: formData.email!,
+          phoneNumber: formData.phoneNumber!,
+          location: formData.location!,
+          biography: formData.biography!,
+          specialties: formData.specialties || [],
+          languages: formData.languages || [],
+          isLocalResident: formData.isLocalResident === true,
+          isMigrant: formData.isMigrant === true,
+          expertise: formData.expertise || [],
+          experienceSamples: formData.experienceSamples || [],
+          availableTimes: formData.availableTimes || [],
+          // 身分証明書情報は任意
+          identificationDocument: formData.identificationDocument,
+          agreements: formData.agreements!,
+          // フォーム状態を明示的に設定
+          formStatus: 'completed' as const
+        };
       }
       
-      console.info('アテンダー申請の送信を開始します...');
+      console.info('アテンダー申請の送信を開始します...', formStatus === 'required' ? '(必須情報のみ)' : '(全情報)');
       
-      // API呼び出し前の最終確認
+      // API呼び出し前の最終確認（必須部分のみ）
       try {
         verifyIdentificationDocument(formData.identificationDocument);
-        verifyExperienceSamples(formData.experienceSamples || []);
         verifyAgreements(formData.agreements);
+        
+        // 全情報モードの場合のみ体験サンプルをチェック
+        if (formStatus === 'completed' && formData.experienceSamples) {
+          verifyExperienceSamples(formData.experienceSamples);
+        }
       } catch (validationError) {
         setError('formValidation', validationError instanceof Error ? validationError.message : '検証エラー');
         setIsSubmitting(false);
         throw validationError;
       }
-      
-      // 必須フィールドがisMigrantとisLocalResidentが確実にboolean型になるように設定
-      const completeFormData: AttenderApplicationData = {
-        ...formData as Partial<AttenderApplicationData>,
-        // 以下のフィールドは必須なので存在しない場合はエラーになるはず
-        name: formData.name!,
-        email: formData.email!,
-        phoneNumber: formData.phoneNumber!,
-        location: formData.location!,
-        biography: formData.biography!,
-        specialties: formData.specialties || [],
-        languages: formData.languages || [],
-        isLocalResident: formData.isLocalResident === true,  // undefinedの場合はfalseに設定
-        isMigrant: formData.isMigrant === true,  // undefinedの場合はfalseに設定
-        expertise: formData.expertise || [],
-        experienceSamples: formData.experienceSamples || [],
-        availableTimes: formData.availableTimes || [],
-        identificationDocument: formData.identificationDocument!,
-        agreements: formData.agreements!,
-      };
       
       // APIを呼び出してフォームを送信
       const applicationId = await submitAttenderApplication(completeFormData);
@@ -320,25 +380,6 @@ export const AttenderApplicationProvider: React.FC<{ children: ReactNode }> = ({
     }
   };
   
-  // フォームデータが完全かどうかをチェック
-  const isFullyValidApplicationData = (data: Partial<AttenderApplicationData>): data is AttenderApplicationData => {
-    // すべての必須フィールドが存在するかチェック
-    return !!(
-      data.name &&
-      data.email &&
-      data.phoneNumber &&
-      data.location &&
-      data.biography &&
-      data.specialties &&
-      data.languages &&
-      data.expertise &&
-      data.availableTimes &&
-      data.experienceSamples &&
-      data.identificationDocument &&
-      data.agreements
-    );
-  };
-  
   // エラーを設定
   const setError = (field: string, message: string) => {
     setErrors(prev => ({ ...prev, [field]: message }));
@@ -360,53 +401,65 @@ export const AttenderApplicationProvider: React.FC<{ children: ReactNode }> = ({
   
   // ステップが完了しているか確認
   const isStepCompleted = (step: number): boolean => {
-    switch (step) {
-      case 1: // 基本情報
-        return !!(
-          formData.name && 
-          formData.email && 
-          formData.phoneNumber && 
-          formData.location && 
-          formData.biography && 
-          formData.isLocalResident !== undefined
-        );
-      case 2: // 専門分野と言語
-        return !!(
-          formData.specialties && 
-          formData.specialties.length > 0 && 
-          formData.languages && 
-          formData.languages.length > 0 && 
-          formData.expertise && 
-          formData.expertise.length > 0
-        );
-      case 3: // 体験サンプル
-        return !!(
-          formData.experienceSamples && 
-          formData.experienceSamples.length > 0
-        );
-      case 4: // 利用可能時間
-        return !!(
-          formData.availableTimes && 
-          formData.availableTimes.length > 0
-        );
-      case 5: // 身分証明と追加情報
-        return !!(
-          formData.identificationDocument
-        );
-      case 6: // 同意事項
-        return !!(
-          formData.agreements &&
-          formData.agreements.termsOfService && 
-          formData.agreements.privacyPolicy && 
-          formData.agreements.codeOfConduct && 
-          formData.agreements.backgroundCheck
-        );
-      default:
-        return false;
-    }
+  // ステップ番号をインデックスに変換
+  const stepIndex = step - 1;
+  
+  // ステップキーを取得
+  const stepKeys = formStatus === 'required' 
+  ? REQUIRED_STEPS 
+  : [...REQUIRED_STEPS, ...OPTIONAL_STEPS];
+  
+  if (stepIndex < 0 || stepIndex >= stepKeys.length) {
+  return false;
+  }
+  
+  const stepKey = stepKeys[stepIndex] as StepKey;
+  
+  switch (stepKey) {
+  case 'BasicInfo': // 基本情報
+  return !!(    
+  formData.name && 
+  formData.email && 
+  formData.phoneNumber && 
+  formData.location && 
+  formData.biography && 
+  formData.isLocalResident !== undefined
+  );
+  case 'Identification': // 身分証明 - 任意のため常に完了として扱う
+  return true;
+  case 'Agreements': // 同意事項
+  return !!(    
+      formData.agreements &&
+    formData.agreements.termsOfService && 
+  formData.agreements.privacyPolicy && 
+  formData.agreements.codeOfConduct && 
+  formData.agreements.backgroundCheck
+  );
+  case 'Expertise': // 専門分野と言語
+  return !!(    
+      formData.specialties && 
+    formData.specialties.length > 0 && 
+  formData.languages && 
+  formData.languages.length > 0 && 
+  formData.expertise && 
+  formData.expertise.length > 0
+  );
+  case 'ExperienceSamples': // 体験サンプル
+  return !!(    
+      formData.experienceSamples && 
+    formData.experienceSamples.length > 0
+  );
+  case 'Availability': // 利用可能時間
+  return !!(    
+      formData.availableTimes && 
+    formData.availableTimes.length > 0
+  );
+  default:
+  return false;
+  }
   };
   
-    // 身分証明書の検証
+  // 身分証明書の検証
   const verifyIdentificationDocument = (idDoc?: IdentificationDocument): void => {
     if (!idDoc) {
       throw new Error('身分証明書情報が提供されていません');
@@ -511,10 +564,10 @@ export const AttenderApplicationProvider: React.FC<{ children: ReactNode }> = ({
   };
   
   // フォームのバリデーション
-  const validateForm = (data: Partial<AttenderApplicationData>): Record<string, string> => {
+  const validateForm = (data: Partial<AttenderApplicationData>, status: FormStatusType): Record<string, string> => {
     const validationErrors: Record<string, string> = {};
     
-    // ステップ1: 基本情報
+    // ステップ1: 基本情報（必須）
     if (!data.name) validationErrors.name = '名前は必須です';
     if (!data.email) validationErrors.email = 'メールアドレスは必須です';
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) {
@@ -538,69 +591,7 @@ export const AttenderApplicationProvider: React.FC<{ children: ReactNode }> = ({
       validationErrors.yearsMoved = '移住してからの年数を入力してください';
     }
     
-    // ステップ2: 専門分野と言語
-    if (!data.specialties || data.specialties.length === 0) {
-      validationErrors.specialties = '少なくとも1つの専門分野を選択してください';
-    }
-    if (!data.languages || data.languages.length === 0) {
-      validationErrors.languages = '少なくとも1つの言語を選択してください';
-    }
-    if (!data.expertise || data.expertise.length === 0) {
-      validationErrors.expertise = '少なくとも1つの専門知識を追加してください';
-    } else {
-      data.expertise.forEach((expertise, index) => {
-        if (!expertise.category) {
-          validationErrors[`expertise[${index}].category`] = 'カテゴリは必須です';
-        }
-        if (!expertise.subcategories || expertise.subcategories.length === 0) {
-          validationErrors[`expertise[${index}].subcategories`] = '少なくとも1つのサブカテゴリを選択してください';
-        }
-        if (expertise.yearsOfExperience === undefined || expertise.yearsOfExperience < 0) {
-          validationErrors[`expertise[${index}].yearsOfExperience`] = '有効な経験年数を入力してください';
-        }
-        if (!expertise.description) {
-          validationErrors[`expertise[${index}].description`] = '説明は必須です';
-        }
-      });
-    }
-    
-    // ステップ3: 体験サンプル
-    if (!data.experienceSamples || data.experienceSamples.length === 0) {
-      validationErrors.experienceSamples = '少なくとも1つの体験サンプルを追加してください';
-    } else {
-      data.experienceSamples.forEach((sample, index) => {
-        if (!sample.title) {
-          validationErrors[`experienceSamples[${index}].title`] = 'タイトルは必須です';
-        }
-        if (!sample.description) {
-          validationErrors[`experienceSamples[${index}].description`] = '説明は必須です';
-        }
-        if (!sample.category) {
-          validationErrors[`experienceSamples[${index}].category`] = 'カテゴリは必須です';
-        }
-        if (!sample.estimatedDuration || sample.estimatedDuration <= 0) {
-          validationErrors[`experienceSamples[${index}].estimatedDuration`] = '有効な予想所要時間を入力してください';
-        }
-        if (!sample.maxParticipants || sample.maxParticipants <= 0) {
-          validationErrors[`experienceSamples[${index}].maxParticipants`] = '有効な最大参加者数を入力してください';
-        }
-        if (sample.pricePerPerson === undefined || sample.pricePerPerson < 0) {
-          validationErrors[`experienceSamples[${index}].pricePerPerson`] = '有効な価格を入力してください';
-        }
-      });
-    }
-    
-    // ステップ4: 利用可能時間
-    if (!data.availableTimes || data.availableTimes.length === 0) {
-      validationErrors.availableTimes = '少なくとも1つの利用可能時間を設定してください';
-    } else {
-      const hasAvailable = data.availableTimes.some(time => time.isAvailable);
-      if (!hasAvailable) {
-        validationErrors.availableTimes = '少なくとも1つの利用可能時間を設定してください';
-      }
-    }
-    
-    // ステップ5: 身分証明
+    // ステップ5: 身分証明（必須）
     if (!data.identificationDocument) {
       validationErrors.identificationDocument = '身分証明書情報は必須です';
     } else {
@@ -618,7 +609,7 @@ export const AttenderApplicationProvider: React.FC<{ children: ReactNode }> = ({
       }
     }
     
-    // ステップ6: 同意事項
+    // ステップ6: 同意事項（必須）
     if (!data.agreements) {
       validationErrors.agreements = 'すべての同意事項を承諾する必要があります';
     } else {
@@ -636,6 +627,71 @@ export const AttenderApplicationProvider: React.FC<{ children: ReactNode }> = ({
       }
     }
     
+    // 必須フェーズでない場合のみ、追加の検証を実行
+    if (status !== 'required') {
+      // ステップ2: 専門分野と言語
+      if (!data.specialties || data.specialties.length === 0) {
+        validationErrors.specialties = '少なくとも1つの専門分野を選択してください';
+      }
+      if (!data.languages || data.languages.length === 0) {
+        validationErrors.languages = '少なくとも1つの言語を選択してください';
+      }
+      if (!data.expertise || data.expertise.length === 0) {
+        validationErrors.expertise = '少なくとも1つの専門知識を追加してください';
+      } else {
+        data.expertise.forEach((expertise, index) => {
+          if (!expertise.category) {
+            validationErrors[`expertise[${index}].category`] = 'カテゴリは必須です';
+          }
+          if (!expertise.subcategories || expertise.subcategories.length === 0) {
+            validationErrors[`expertise[${index}].subcategories`] = '少なくとも1つのサブカテゴリを選択してください';
+          }
+          if (expertise.yearsOfExperience === undefined || expertise.yearsOfExperience < 0) {
+            validationErrors[`expertise[${index}].yearsOfExperience`] = '有効な経験年数を入力してください';
+          }
+          if (!expertise.description) {
+            validationErrors[`expertise[${index}].description`] = '説明は必須です';
+          }
+        });
+      }
+      
+      // ステップ3: 体験サンプル
+      if (!data.experienceSamples || data.experienceSamples.length === 0) {
+        validationErrors.experienceSamples = '少なくとも1つの体験サンプルを追加してください';
+      } else {
+        data.experienceSamples.forEach((sample, index) => {
+          if (!sample.title) {
+            validationErrors[`experienceSamples[${index}].title`] = 'タイトルは必須です';
+          }
+          if (!sample.description) {
+            validationErrors[`experienceSamples[${index}].description`] = '説明は必須です';
+          }
+          if (!sample.category) {
+            validationErrors[`experienceSamples[${index}].category`] = 'カテゴリは必須です';
+          }
+          if (!sample.estimatedDuration || sample.estimatedDuration <= 0) {
+            validationErrors[`experienceSamples[${index}].estimatedDuration`] = '有効な予想所要時間を入力してください';
+          }
+          if (!sample.maxParticipants || sample.maxParticipants <= 0) {
+            validationErrors[`experienceSamples[${index}].maxParticipants`] = '有効な最大参加者数を入力してください';
+          }
+          if (sample.pricePerPerson === undefined || sample.pricePerPerson < 0) {
+            validationErrors[`experienceSamples[${index}].pricePerPerson`] = '有効な価格を入力してください';
+          }
+        });
+      }
+      
+      // ステップ4: 利用可能時間
+      if (!data.availableTimes || data.availableTimes.length === 0) {
+        validationErrors.availableTimes = '少なくとも1つの利用可能時間を設定してください';
+      } else {
+        const hasAvailable = data.availableTimes.some(time => time.isAvailable);
+        if (!hasAvailable) {
+          validationErrors.availableTimes = '少なくとも1つの利用可能時間を設定してください';
+        }
+      }
+    }
+    
     return validationErrors;
   };
   
@@ -645,7 +701,9 @@ export const AttenderApplicationProvider: React.FC<{ children: ReactNode }> = ({
     currentStep,
     isSubmitting,
     errors,
+    formStatus,
     maxSteps,
+    setFormStatus,
     updateFormData,
     addExpertise,
     updateExpertise,

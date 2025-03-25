@@ -115,6 +115,9 @@ export interface PortfolioItem {
   link?: string;
 }
 
+// アテンダー申請フォームの状態
+export type FormStatusType = 'required' | 'optional' | 'completed';
+
 // アテンダー登録申請フォームデータ
 // 言語スキルの型定義
 export interface LanguageSkill {
@@ -153,9 +156,8 @@ export interface AttenderApplicationData {
   // 利用可能時間
   availableTimes: AvailabilityTimeSlot[];
   
-  // 身分証明書
-  identificationDocument: {
-    type: 'passport' | 'driver_license' | 'id_card' | 'residence_card' | 'other';
+  // 身分証明書（任意）
+  identificationDocument?: {    type: 'passport' | 'driver_license' | 'id_card' | 'residence_card' | 'other';
     number: string;
     expirationDate: string;
     frontImageUrl: string;
@@ -174,6 +176,9 @@ export interface AttenderApplicationData {
   socialMediaLinks?: SocialMediaLinks;
   references?: Reference[];
   additionalDocuments?: AdditionalDocument[];
+  
+  // フォーム状態
+  formStatus?: FormStatusType;
 }
 
 // 体験サンプル（アテンダー申請時に入力する提供可能な体験の例）

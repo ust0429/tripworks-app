@@ -1,12 +1,7 @@
-/**
- * フォーム進行状況コンポーネント
- * 
- * マルチステップフォームの進行状況を表示
- * ユーザビリティとアクセシビリティを向上
- */
 import React from 'react';
 import { useAttenderApplication } from '../../../contexts/AttenderApplicationContext';
 import { Check } from 'lucide-react';
+import { REQUIRED_STEPS, OPTIONAL_STEPS, STEP_METADATA, StepKey } from '../../../constants/applicationSteps';
 
 interface FormProgressProps {
   currentStep: number;
@@ -21,17 +16,11 @@ const FormProgress: React.FC<FormProgressProps> = ({
   stepLabels: propStepLabels,
   onStepClick
 }) => {
-  const { goToStep, isStepCompleted } = useAttenderApplication();
+  // コンテキストから必要な情報を取得
+  const { goToStep, isStepCompleted, formStatus } = useAttenderApplication();
   
-  // ステップのラベル（プロパティから渡されなければデフォルト値を使用）
-  const stepLabels = propStepLabels || [
-    '基本情報',
-    '専門分野',
-    '体験サンプル',
-    '活動時間',
-    '身分証明',
-    '同意事項'
-  ];
+  // ステップのラベル（プロパティから渡されなければメタデータから取得）
+  const stepLabels = propStepLabels || Object.values(STEP_METADATA).map(meta => meta.title);
   
   // ステップのクリックハンドラ
   const handleStepClick = (step: number) => {
@@ -90,72 +79,87 @@ const FormProgress: React.FC<FormProgressProps> = ({
           style={{width: `${progressPercentage}%`}}
         ></div>
         
-        {stepLabels.slice(0, maxSteps).map((label, index) => {
-          const stepNumber = index + 1;
-          const isActive = stepNumber === currentStep;
-          const isCompleted = stepNumber < currentStep;
-          const isPending = stepNumber > currentStep;
-          const isClickable = stepNumber <= currentStep || isStepCompleted(stepNumber - 1);
-          
-          // 各ステップの状態に応じたスタイル
-          const circleStyle = isActive
-            ? 'bg-blue-600 text-white border-2 border-blue-600 ring-4 ring-blue-100'
-            : isCompleted
-            ? 'bg-green-500 text-white border-2 border-green-500'
-            : 'bg-white text-gray-400 border-2 border-gray-300';
+        {/* 全ステップの代わりにフォーム状態に応じたステップを使用 */}
+        {(() => {
+          // 必要なステップまたは全ステップを選択
+          const stepKeys = formStatus === 'required' 
+            ? REQUIRED_STEPS 
+            : [...REQUIRED_STEPS, ...OPTIONAL_STEPS];
+
+          return stepKeys.map((stepKey, index) => {
+            const stepNumber = index + 1;
+            const isActive = stepNumber === currentStep;
+            const isCompleted = stepNumber < currentStep;
+            const isPending = stepNumber > currentStep;
+            const isClickable = stepNumber <= currentStep || isStepCompleted(stepNumber - 1);
+            const currentStepKey = stepKey as StepKey;
             
-          const textStyle = isActive
-            ? 'text-blue-600 font-semibold'
-            : isCompleted
-            ? 'text-green-600'
-            : 'text-gray-500';
-          
-          return (
-            <div
-              key={stepNumber}
-              className={`flex flex-col items-center ${
-                isClickable ? 'cursor-pointer hover:opacity-80' : 'cursor-default'
-              }`}
-              onClick={() => isClickable && handleStepClick(stepNumber)}
-              role="button"
-              tabIndex={isClickable ? 0 : -1}
-              aria-current={isActive ? 'step' : undefined}
-              aria-label={`ステップ ${stepNumber}: ${label} ${
-                isCompleted ? '(完了)' : isActive ? '(現在のステップ)' : '(未完了)'
-              }`}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault();
-                  isClickable && handleStepClick(stepNumber);
-                }
-              }}
-            >
+            // 各ステップの状態に応じたスタイル
+            const circleStyle = isActive
+              ? 'bg-blue-600 text-white border-2 border-blue-600 ring-4 ring-blue-100'
+              : isCompleted
+              ? 'bg-green-500 text-white border-2 border-green-500'
+              : 'bg-white text-gray-400 border-2 border-gray-300';
+              
+            const textStyle = isActive
+              ? 'text-blue-600 font-semibold'
+              : isCompleted
+              ? 'text-green-600'
+              : 'text-gray-500';
+            
+            return (
               <div
-                className={`w-9 h-9 flex items-center justify-center rounded-full transition-all duration-300 ${circleStyle}`}
-                title={`ステップ ${stepNumber}: ${label}`}
+                key={stepNumber}
+                className={`flex flex-col items-center ${isClickable ? 'cursor-pointer hover:opacity-80' : 'cursor-default'}`}
+                onClick={() => isClickable && handleStepClick(stepNumber)}
+                role="button"
+                tabIndex={isClickable ? 0 : -1}
+                aria-current={isActive ? 'step' : undefined}
+                aria-label={`ステップ ${stepNumber}: ${STEP_METADATA[currentStepKey]?.title} ${isCompleted ? '(完了)' : isActive ? '(現在のステップ)' : '(未完了)'}`}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    isClickable && handleStepClick(stepNumber);
+                  }
+                }}
               >
-                {isCompleted ? (
-                  <Check className="w-5 h-5" />
-                ) : (
-                  <span className="text-sm font-medium">{stepNumber}</span>
-                )}
+                <div
+                  className={`w-9 h-9 flex items-center justify-center rounded-full transition-all duration-300 ${circleStyle}`}
+                  title={`ステップ ${stepNumber}: ${STEP_METADATA[currentStepKey]?.title}`}
+                >
+                  {isCompleted ? (
+                    <Check className="w-5 h-5" />
+                  ) : (
+                    <span className="text-sm font-medium">{stepNumber}</span>
+                  )}
+                </div>
+                <div
+                  className={`mt-2 text-xs max-w-[80px] text-center transition-colors duration-300 ${textStyle}`}
+                >
+                  {STEP_METADATA[currentStepKey]?.title}
+                  {formStatus === 'required' && REQUIRED_STEPS.includes(stepKey) && (
+                    <span className="bg-cyan-100 text-cyan-800 px-1 py-0.5 rounded-sm text-[9px] ml-1">必須</span>
+                  )}
+                </div>
               </div>
-              <div
-                className={`mt-2 text-xs max-w-[80px] text-center transition-colors duration-300 ${textStyle}`}
-              >
-                {label}
-              </div>
-            </div>
-          );
-        })}
+            );
+          });
+        })()} 
       </div>
       
       {/* 現在のステップ情報 */}
       <div className="text-center mt-2">
         <p className="text-xs text-gray-500">
+          {formStatus === 'required' && (
+            <span className="bg-cyan-100 text-cyan-800 px-2 py-0.5 rounded-full text-xs mr-2">
+              基本登録
+            </span>
+          )}
           {currentStep < maxSteps 
             ? `ステップ ${currentStep} - 必須項目を入力して「次へ」をクリックしてください`
-            : '最終ステップ - 内容を確認して申請を完了してください'
+            : formStatus === 'required'
+              ? '最終ステップ - 内容を確認して基本登録を完了してください'
+              : '最終ステップ - 内容を確認して申請を完了してください'
           }
         </p>
       </div>

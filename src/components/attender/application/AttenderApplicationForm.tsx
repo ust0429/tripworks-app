@@ -10,6 +10,7 @@ import {
   AttenderApplicationProvider, 
   useAttenderApplication 
 } from '../../../contexts/AttenderApplicationContext';
+import { AttenderApplicationData } from '../../../types/attender/index';
 import {
   BasicInfoStep,
   ExpertiseStep,
@@ -20,18 +21,19 @@ import {
 } from './steps';
 import FormProgress from './FormProgress';
 import SubmitSuccess from './SubmitSuccess';
+import QuickRegistrationSuccess from './QuickRegistrationSuccess';
 import { useAuth } from '../../../AuthComponents';
 import { AlertTriangle, Info, ArrowLeft, ArrowRight, Loader2, HelpCircle, User } from 'lucide-react';
 
-// ステップのメタデータ
-const STEP_METADATA = [
-  { title: '基本情報', description: '個人情報とプロフィール' },
-  { title: '専門分野', description: '専門知識と言語スキル' },
-  { title: '体験サンプル', description: '提供できる体験の例' },
-  { title: '利用可能時間', description: '活動可能な時間帯' },
-  { title: '本人確認', description: '身分証明書の提出' },
-  { title: '同意事項', description: '規約と条件の確認' }
-];
+// 以前のステップメタデータは削除し、constants/applicationSteps.tsからインポートしたものを使用する
+import { 
+  REQUIRED_STEPS, 
+  OPTIONAL_STEPS, 
+  STEP_METADATA, 
+  StepKey, 
+  getStepKeyByIndex,
+  getStepsForStatus
+} from '../../../constants/applicationSteps';
 
 // アテンダー申請フォームのラッパーコンポーネント
 const AttenderApplicationFormWrapper: React.FC = () => {
@@ -56,7 +58,9 @@ const AttenderApplicationFormContent: React.FC = () => {
     errors,
     formData,
     updateFormData,
-    clearAllErrors
+    clearAllErrors,
+    formStatus,
+    setFormStatus
   } = useAttenderApplication();
   
   const navigate = useNavigate();
@@ -110,6 +114,59 @@ const AttenderApplicationFormContent: React.FC = () => {
         return;
       }
       
+      // フォーム状態に応じたデータの準備
+      let completeFormData;
+      
+      if (formStatus === 'required') {
+        // 必須情報のみ送信
+        completeFormData = {
+          name: formData.name!,
+          email: formData.email!,
+          phoneNumber: formData.phoneNumber!,
+          location: formData.location!,
+          biography: formData.biography!,
+          isLocalResident: formData.isLocalResident === true,
+          isMigrant: formData.isMigrant === true,
+          identificationDocument: formData.identificationDocument!,
+          agreements: formData.agreements!,
+          // 最低限の空の配列を設定
+          specialties: formData.specialties || [],
+          languages: formData.languages || [],
+          // 必要な場合は任意フィールドを追加
+          yearsMoved: formData.yearsMoved,
+          previousLocation: formData.previousLocation,
+          // フォーム状態を明示的に設定
+          formStatus: 'required' as const
+        };
+        
+        // 存在する場合は任意情報を設定する必要がなくなったのでコメントアウト
+        // if (formData.yearsMoved) completeFormData.yearsMoved = formData.yearsMoved;
+        // if (formData.previousLocation) completeFormData.previousLocation = formData.previousLocation;
+        
+      } else {
+        // 全情報の場合
+        completeFormData = {
+          ...formData as Partial<AttenderApplicationData>,
+          // 以下のフィールドは必須なので存在しない場合はエラーになるはず
+          name: formData.name!,
+          email: formData.email!,
+          phoneNumber: formData.phoneNumber!,
+          location: formData.location!,
+          biography: formData.biography!,
+          specialties: formData.specialties || [],
+          languages: formData.languages || [],
+          isLocalResident: formData.isLocalResident === true,
+          isMigrant: formData.isMigrant === true,
+          expertise: formData.expertise || [],
+          experienceSamples: formData.experienceSamples || [],
+          availableTimes: formData.availableTimes || [],
+          identificationDocument: formData.identificationDocument!,
+          agreements: formData.agreements!,
+          // フォーム状態を明示的に設定
+          formStatus: 'completed' as const
+        };
+      }
+      
       const id = await submitForm();
       console.info(`申請ID: ${id} が正常に作成されました`);
       
@@ -125,7 +182,8 @@ const AttenderApplicationFormContent: React.FC = () => {
             userId: user?.id,
             specialties: formData.specialties,
             isLocalResident: formData.isLocalResident,
-            isMigrant: formData.isMigrant
+            isMigrant: formData.isMigrant,
+            formStatus: formStatus // 現在のフォーム状態を送信
           });
         }
       } catch (analyticsError) {
@@ -158,26 +216,59 @@ const AttenderApplicationFormContent: React.FC = () => {
   
   // 申請が完了した場合
   if (applicationId) {
-    return <SubmitSuccess applicationId={applicationId} onReturnHome={handleReturnHome} />;
+    // フォーム状態に応じて異なる成功画面を表示
+    return formStatus === 'required' ? (
+      <QuickRegistrationSuccess 
+        applicationId={applicationId} 
+        onReturnHome={handleReturnHome} 
+        onContinueSetup={() => {
+          // 全情報フォームに切り替え
+          setFormStatus('optional');
+          setApplicationId(null); // 申請 IDをクリアして続きから入力できるようにする
+          goToStep(4); // 最初の任意ステップ（専門分野）に移動
+        }}
+      />
+    ) : (
+      <SubmitSuccess applicationId={applicationId} onReturnHome={handleReturnHome} />
+    );
   }
   
   // 現在のステップに応じてコンポーネントを表示
   const renderStep = () => {
-    switch (currentStep) {
-      case 1:
-        return <BasicInfoStep onNext={nextStep} />;
-      case 2:
-        return <ExpertiseStep onNext={nextStep} onBack={prevStep} />;
-      case 3:
-        return <ExperienceSamplesStep onNext={nextStep} onBack={prevStep} />;
-      case 4:
-        return <AvailabilityStep onNext={nextStep} onBack={prevStep} />;
-      case 5:
-        return <IdentificationStep onNext={nextStep} onBack={prevStep} />;
-      case 6:
-        return <AgreementsStep onNext={nextStep} onBack={prevStep} />;
-      default:
-        return <div>不明なステップ</div>;
+    // 必須ステップ/任意ステップの定義に基づいてコンポーネントを表示
+    // REQUIRED_STEPS = ['BasicInfo', 'Identification', 'Agreements']
+    // OPTIONAL_STEPS = ['Expertise', 'ExperienceSamples', 'Availability']
+    
+    if (formStatus === 'required') {
+      // 必須情報フェーズ
+      switch (currentStep) {
+        case 1:
+          return <BasicInfoStep onNext={nextStep} />;
+        case 2:
+          return <IdentificationStep onNext={nextStep} onBack={prevStep} />;
+        case 3:
+          return <AgreementsStep onNext={nextStep} onBack={prevStep} />;
+        default:
+          return <div>不明なステップ</div>;
+      }
+    } else {
+      // 任意情報フェーズ（すべてのステップ）
+      switch (currentStep) {
+        case 1:
+          return <BasicInfoStep onNext={nextStep} />;
+        case 2:
+          return <IdentificationStep onNext={nextStep} onBack={prevStep} />;
+        case 3:
+          return <AgreementsStep onNext={nextStep} onBack={prevStep} />;
+        case 4:
+          return <ExpertiseStep onNext={nextStep} onBack={prevStep} />;
+        case 5:
+          return <ExperienceSamplesStep onNext={nextStep} onBack={prevStep} />;
+        case 6:
+          return <AvailabilityStep onNext={nextStep} onBack={prevStep} />;
+        default:
+          return <div>不明なステップ</div>;
+      }
     }
   };
 
@@ -256,19 +347,32 @@ const AttenderApplicationFormContent: React.FC = () => {
       <div className="mb-8">
         <div className="flex items-center justify-between mb-2">
           <h2 className="text-lg font-medium">
-            {currentStep}. {STEP_METADATA[currentStep - 1]?.title}
+            {currentStep}. 
+            {(() => {
+              // ステップキーを取得
+              const stepKey = getStepKeyByIndex(currentStep, formStatus);
+              return stepKey ? STEP_METADATA[stepKey].title : `ステップ ${currentStep}`;
+            })()}
+            {formStatus === 'required' && (
+              <span className="ml-2 bg-cyan-100 text-cyan-800 px-2 py-0.5 rounded-full text-xs">
+                基本登録
+              </span>
+            )}
           </h2>
           <span className="text-sm text-gray-500">
             ステップ {currentStep}/{maxSteps}
           </span>
         </div>
         <p className="text-sm text-gray-600 mb-4">
-          {STEP_METADATA[currentStep - 1]?.description}
+          {(() => {
+            // ステップキーを取得
+            const stepKey = getStepKeyByIndex(currentStep, formStatus);
+            return stepKey ? STEP_METADATA[stepKey].description : '';
+          })()}
         </p>
         <FormProgress 
           currentStep={currentStep} 
           maxSteps={maxSteps} 
-          stepLabels={STEP_METADATA.map(step => step.title)}
           onStepClick={(step) => {
             // 前のステップには自由に移動可能
             if (step < currentStep) {
@@ -299,19 +403,23 @@ const AttenderApplicationFormContent: React.FC = () => {
       {/* 進行状況ミニステータス */}
       <div className="mb-4 flex justify-between text-sm text-gray-500">
         <div>
-          {Array.from({ length: maxSteps }).map((_, index) => (
-            <span 
-              key={index}
-              className={`inline-block w-2 h-2 rounded-full mx-1 ${
-                index + 1 < currentStep 
-                  ? 'bg-green-500' 
-                  : index + 1 === currentStep 
-                    ? 'bg-blue-500' 
-                    : 'bg-gray-300'
-              }`}
-              title={STEP_METADATA[index]?.title}
-            />
-          ))}
+          {Array.from({ length: maxSteps }).map((_, index) => {
+            // 現在のステップキーを取得
+            const stepKey = getStepKeyByIndex(index + 1, formStatus);
+            return (
+              <span 
+                key={index}
+                className={`inline-block w-2 h-2 rounded-full mx-1 ${
+                  index + 1 < currentStep 
+                    ? 'bg-green-500' 
+                    : index + 1 === currentStep 
+                      ? 'bg-blue-500' 
+                      : 'bg-gray-300'
+                }`}
+                title={stepKey ? STEP_METADATA[stepKey].title : `ステップ ${index + 1}`}
+              />
+            );
+          })}
         </div>
         <div>
           {Object.keys(errors).length > 0 && (
@@ -359,6 +467,8 @@ const AttenderApplicationFormContent: React.FC = () => {
               次へ
               <ArrowRight className="w-4 h-4 ml-2" />
             </>
+          ) : formStatus === 'required' ? (
+            '基本登録を完了する'
           ) : (
             '申請を完了する'
           )}

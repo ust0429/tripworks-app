@@ -15,7 +15,8 @@ import {
   VerificationStatus,
   BackgroundCheckStatus,
   Attender,
-  LanguageSkill
+  LanguageSkill,
+  FormStatusType
 } from '../types/attender/index';
 import api, { logApiRequest, logApiResponse } from '../utils/apiClient';
 import { ENDPOINTS } from '../config/api';
@@ -81,7 +82,7 @@ const MOCK_ATTENDERS: Record<string, Attender> = {
         category: '伝統工芸',
         subcategories: ['陶芸'],
         yearsOfExperience: 15,
-        description: '京都の伝統工芸に精通しています',
+        description: '京都の伝統工芸に精通しています'
       }
     ]
   }
@@ -159,14 +160,15 @@ export async function getAllAttenders(filters?: {
  * アテンダー申請データのバリデーション
  * 
  * @param data 検証するアテンダー申請データ
+ * @param formStatus フォームの状態（必須情報のみか全情報か）
  * @returns 検証結果オブジェクト
  */
-function validateApplicationData(data: AttenderApplicationData): ApplicationValidationResult {
+function validateApplicationData(data: AttenderApplicationData, formStatus: FormStatusType = 'completed'): ApplicationValidationResult {
   const errors: string[] = [];
   const warnings: string[] = [];
   const fieldErrors: Record<string, string> = {};
   
-  // 必須フィールドのチェック
+  // 必須フィールドのチェック（全フォーム状態で共通）
   if (!data.name) {
     errors.push('名前は必須です');
     fieldErrors['name'] = '名前を入力してください';
@@ -223,54 +225,10 @@ function validateApplicationData(data: AttenderApplicationData): ApplicationVali
     fieldErrors['languages'] = '少なくとも1つの言語を選択してください';
   }
   
-  if (!data.expertise || data.expertise.length === 0) {
-    errors.push('専門知識は少なくとも1つ必要です');
-    fieldErrors['expertise'] = '少なくとも1つの専門知識を入力してください';
-  } else {
-    data.expertise.forEach((exp, index) => {
-      if (!exp.category) {
-        errors.push(`専門分野${index + 1}: カテゴリは必須です`);
-        fieldErrors[`expertise[${index}].category`] = 'カテゴリを選択してください';
-      }
-      if (!exp.subcategories || exp.subcategories.length === 0) {
-        errors.push(`専門分野${index + 1}: サブカテゴリーは少なくとも1つ必要です`);
-        fieldErrors[`expertise[${index}].subcategories`] = '少なくとも1つのサブカテゴリーを選択してください';
-      }
-      if (!exp.description) {
-        errors.push(`専門分野${index + 1}: 説明は必須です`);
-        fieldErrors[`expertise[${index}].description`] = '説明を入力してください';
-      }
-    });
-  }
-  
-  if (!data.availableTimes || data.availableTimes.length === 0) {
-    errors.push('利用可能時間は必須です');
-    fieldErrors['availableTimes'] = '少なくとも1つの利用可能時間を設定してください';
-  } else {
-    const hasAvailable = data.availableTimes.some(time => time.isAvailable);
-    if (!hasAvailable) {
-      errors.push('利用可能時間が設定されていません');
-      fieldErrors['availableTimes'] = '少なくとも1つの利用可能な時間帯を設定してください';
-    }
-  }
-  
-  // 身分証明書情報のチェック
-  if (!data.identificationDocument) {
-    errors.push('身分証明書情報は必須です');
-    fieldErrors['identificationDocument'] = '身分証明書情報を入力してください';
-  } else {
-    if (!data.identificationDocument.type) {
-      errors.push('身分証明書の種類は必須です');
-      fieldErrors['identificationDocument.type'] = '身分証明書の種類を選択してください';
-    }
-    if (!data.identificationDocument.number) {
-      errors.push('身分証明書番号は必須です');
-      fieldErrors['identificationDocument.number'] = '身分証明書番号を入力してください';
-    }
-    if (!data.identificationDocument.expirationDate) {
-      errors.push('身分証明書の有効期限は必須です');
-      fieldErrors['identificationDocument.expirationDate'] = '有効期限を入力してください';
-    } else {
+  // 身分証明書情報のチェック（任意）
+  if (data.identificationDocument) {
+    // 身分証明書が提出されている場合のみバリデーション
+    if (data.identificationDocument.expirationDate) {
       const expirationDate = new Date(data.identificationDocument.expirationDate);
       const today = new Date();
       if (isNaN(expirationDate.getTime())) {
@@ -281,41 +239,81 @@ function validateApplicationData(data: AttenderApplicationData): ApplicationVali
         fieldErrors['identificationDocument.expirationDate'] = '有効期限が切れています。有効期限内の身分証明書が必要です';
       }
     }
-    if (!data.identificationDocument.frontImageUrl) {
-      errors.push('身分証明書の表面画像は必須です');
+    
+    // 必要なフィールドがある場合のみチェック
+    if (data.identificationDocument.type && !data.identificationDocument.number) {
+      warnings.push('身分証明書番号が入力されていません');
+      fieldErrors['identificationDocument.number'] = '身分証明書番号を入力してください';
+    }
+    
+    if (data.identificationDocument.type && !data.identificationDocument.frontImageUrl) {
+      warnings.push('身分証明書の表面画像がアップロードされていません');
       fieldErrors['identificationDocument.frontImageUrl'] = '身分証明書の表面画像をアップロードしてください';
     }
   }
   
-  // 提供体験サンプルのバリデーション
-  if (!data.experienceSamples || data.experienceSamples.length === 0) {
-    errors.push('体験サンプルは少なくとも1つ必要です');
-    fieldErrors['experienceSamples'] = '少なくとも1つの体験サンプルを追加してください';
-  } else {
-    data.experienceSamples.forEach((sample, index) => {
-      if (!sample.title) {
-        errors.push(`体験サンプル${index + 1}: タイトルは必須です`);
-        fieldErrors[`experienceSamples[${index}].title`] = 'タイトルを入力してください';
+  // 提供体験サンプルのバリデーション（必須情報モードではチェックしない）
+  if (formStatus !== 'required') {
+    if (!data.expertise || data.expertise.length === 0) {
+      errors.push('専門知識は少なくとも1つ必要です');
+      fieldErrors['expertise'] = '少なくとも1つの専門知識を入力してください';
+    } else {
+      data.expertise.forEach((exp, index) => {
+        if (!exp.category) {
+          errors.push(`専門分野${index + 1}: カテゴリは必須です`);
+          fieldErrors[`expertise[${index}].category`] = 'カテゴリを選択してください';
+        }
+        if (!exp.subcategories || exp.subcategories.length === 0) {
+          errors.push(`専門分野${index + 1}: サブカテゴリーは少なくとも1つ必要です`);
+          fieldErrors[`expertise[${index}].subcategories`] = '少なくとも1つのサブカテゴリーを選択してください';
+        }
+        if (!exp.description) {
+          errors.push(`専門分野${index + 1}: 説明は必須です`);
+          fieldErrors[`expertise[${index}].description`] = '説明を入力してください';
+        }
+      });
+    }
+    
+    if (!data.availableTimes || data.availableTimes.length === 0) {
+      errors.push('利用可能時間は必須です');
+      fieldErrors['availableTimes'] = '少なくとも1つの利用可能時間を設定してください';
+    } else {
+      const hasAvailable = data.availableTimes.some(time => time.isAvailable);
+      if (!hasAvailable) {
+        errors.push('利用可能時間が設定されていません');
+        fieldErrors['availableTimes'] = '少なくとも1つの利用可能な時間帯を設定してください';
       }
-      
-      if (!sample.description) {
-        errors.push(`体験サンプル${index + 1}: 説明は必須です`);
-        fieldErrors[`experienceSamples[${index}].description`] = '説明を入力してください';
-      } else if (sample.description.length < 50) {
-        errors.push(`体験サンプル${index + 1}: 説明は50文字以上必要です`);
-        fieldErrors[`experienceSamples[${index}].description`] = '説明は少なくとも50文字以上で入力してください';
-      }
-      
-      if (!sample.category) {
-        errors.push(`体験サンプル${index + 1}: カテゴリは必須です`);
-        fieldErrors[`experienceSamples[${index}].category`] = 'カテゴリを選択してください';
-      }
-      
-      if (sample.estimatedDuration <= 0) {
-        errors.push(`体験サンプル${index + 1}: 所要時間は0より大きい値が必要です`);
-        fieldErrors[`experienceSamples[${index}].estimatedDuration`] = '有効な所要時間を入力してください';
-      }
-    });
+    }
+    
+    if (!data.experienceSamples || data.experienceSamples.length === 0) {
+      errors.push('体験サンプルは少なくとも1つ必要です');
+      fieldErrors['experienceSamples'] = '少なくとも1つの体験サンプルを追加してください';
+    } else {
+      data.experienceSamples.forEach((sample, index) => {
+        if (!sample.title) {
+          errors.push(`体験サンプル${index + 1}: タイトルは必須です`);
+          fieldErrors[`experienceSamples[${index}].title`] = 'タイトルを入力してください';
+        }
+        
+        if (!sample.description) {
+          errors.push(`体験サンプル${index + 1}: 説明は必須です`);
+          fieldErrors[`experienceSamples[${index}].description`] = '説明を入力してください';
+        } else if (sample.description.length < 50) {
+          errors.push(`体験サンプル${index + 1}: 説明は50文字以上必要です`);
+          fieldErrors[`experienceSamples[${index}].description`] = '説明は少なくとも50文字以上で入力してください';
+        }
+        
+        if (!sample.category) {
+          errors.push(`体験サンプル${index + 1}: カテゴリは必須です`);
+          fieldErrors[`experienceSamples[${index}].category`] = 'カテゴリを選択してください';
+        }
+        
+        if (sample.estimatedDuration <= 0) {
+          errors.push(`体験サンプル${index + 1}: 所要時間は0より大きい値が必要です`);
+          fieldErrors[`experienceSamples[${index}].estimatedDuration`] = '有効な所要時間を入力してください';
+        }
+      });
+    }
   }
   
   // 同意事項のチェック
@@ -360,8 +358,14 @@ export async function submitAttenderApplication(applicationData: AttenderApplica
     // アプリケーションデータのログ（開発用）
     console.info('アテンダー申請データを検証中...');
     
-    // バリデーション
-    const validationResult = validateApplicationData(applicationData);
+    // フォーム状態の取得
+    const formStatus = (applicationData as any).formStatus || 'completed';
+    
+    // 不要なプロパティを取り除く
+    const { formStatus: _, ...cleanedData } = applicationData as any;
+    
+    // 検証ロジックをフォーム状態によって変更
+    const validationResult = validateApplicationData(applicationData, formStatus);
     if (!validationResult.valid) {
       const errorMessage = `入力内容に問題があります: ${validationResult.errors.join('、')}`;
       console.error('バリデーションエラー:', errorMessage);
