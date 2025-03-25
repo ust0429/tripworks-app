@@ -1,0 +1,33 @@
+RewriteEngine On
+# SPAアプリケーションのための設定
+# 存在しないパスへのリクエストをindex.htmlにリダイレクト
+
+# ディレクトリやファイルが実際に存在する場合はリダイレクトしない
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+# APIなどの特定のパスは除外する（必要に応じて）
+RewriteCond %{REQUEST_URI} !^/api
+# ファイル拡張子を持つリクエストは除外する
+RewriteCond %{REQUEST_URI} !.*\.(css|js|html|jpg|jpeg|png|gif|ico|svg|woff|woff2|ttf|eot)$ [NC]
+# すべての他のリクエストをindex.htmlにリダイレクト
+RewriteRule ^ index.html [L]
+
+# CORSヘッダーを設定（必要に応じて）
+<IfModule mod_headers.c>
+  Header set Access-Control-Allow-Origin "*"
+</IfModule>
+
+# ブラウザキャッシュの設定
+<IfModule mod_expires.c>
+  ExpiresActive On
+
+  # HTMLはキャッシュしない
+  ExpiresByType text/html "access plus 0 seconds"
+  
+  # CSS、JS、画像などの静的ファイルは1週間キャッシュ
+  ExpiresByType text/css "access plus 1 week"
+  ExpiresByType application/javascript "access plus 1 week"
+  ExpiresByType image/jpeg "access plus 1 week"
+  ExpiresByType image/png "access plus 1 week"
+  ExpiresByType image/svg+xml "access plus 1 week"
+</IfModule>

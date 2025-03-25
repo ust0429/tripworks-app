@@ -297,8 +297,13 @@ const AttenderApplicationFormContent: React.FC = () => {
             onClick={(e) => {
               // イベントを処理
               e.preventDefault();
-              // マイページへ移動
-              navigateToProfile();
+              
+              // 確認ダイアログを表示
+              const confirmed = window.confirm('プロフィールページに移動しますか？ 入力中のデータは保存されません。');
+              if (confirmed) {
+                // マイページへ移動 - ルートからの絶対パスを使用
+                navigateToProfile();
+              }
             }}
           >
             <User className="w-5 h-5 mr-1" />

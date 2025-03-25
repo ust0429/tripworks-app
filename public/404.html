@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>echo | リダイレクト中...</title>
+  <script>
+    // SPAアプリケーションへのリダイレクト処理
+    // GitHubページなどでの相対パス問題に対処
+    (function() {
+      // URLからハッシュを取得
+      var l = window.location;
+      var path = l.pathname.replace(/^\/?/, '');
+      var redirectUrl = l.protocol + '//' + l.hostname + (l.port ? ':' + l.port : '') + '/' + 
+                       (path ? '?p=' + path : '') +
+                       (l.search ? '&q=' + l.search.replace(/^\?/, '') : '') +
+                       (l.hash || '');
+      
+      window.localStorage.setItem('echoRedirectPath', path + (l.search || '') + (l.hash || ''));
+      window.location.href = l.protocol + '//' + l.hostname + (l.port ? ':' + l.port : '') + '/';
+    })();
+  </script>
+</head>
+<body>
+  <p>リダイレクト中...</p>
+</body>
+</html>
