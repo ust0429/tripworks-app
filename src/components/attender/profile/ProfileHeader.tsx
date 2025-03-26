@@ -3,6 +3,8 @@ import { AttenderProfile } from '../../../types/attender/profile';
 import { Badge } from '../../ui/badge';
 import { cn } from '../../../utils/cn';
 import { Skeleton } from '../../ui/skeleton';
+import ProfileCompletionScore from './ProfileCompletionScore';
+import { calculateProfileCompletionScore } from '../../../services/attender/ProfileCompletionService';
 
 interface ProfileHeaderProps {
   profile: AttenderProfile | null;
@@ -39,9 +41,12 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
 
   if (!profile) return null;
 
+  // プロフィール完成度を計算（completionScoreがなければ計算する）
+  const profileScore = profile.completionScore || calculateProfileCompletionScore(profile);
+  
   const completionScoreBadgeVariant = 
-    profile.completionScore && profile.completionScore >= 80 ? 'success' :
-    profile.completionScore && profile.completionScore >= 50 ? 'warning' :
+    profileScore >= 80 ? 'success' :
+    profileScore >= 50 ? 'warning' :
     'danger';
 
   return (
@@ -76,11 +81,9 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
             </Badge>
           )}
           
-          {typeof profile.completionScore === 'number' && (
-            <Badge variant={completionScoreBadgeVariant} size="sm">
-              完成度 {profile.completionScore}%
-            </Badge>
-          )}
+          <Badge variant={completionScoreBadgeVariant} size="sm">
+            完成度 {profileScore}%
+          </Badge>
         </div>
         
         <div className="mb-3 text-gray-600">
@@ -93,6 +96,13 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
         </div>
         
         <p className="text-gray-700 mb-4">{profile.bio}</p>
+        
+        {/* プロフィール完成度スコア（非編集モードのみ表示） */}
+        {!isEditing && (
+          <div className="mb-4">
+            <ProfileCompletionScore profile={profile} showSuggestion={true} />
+          </div>
+        )}
         
         {/* アクションボタン */}
         <div className="flex gap-2 mt-auto">

@@ -8,24 +8,47 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { navigateToProfile } from '../../../utils/navigation';
 import { CheckCircle, Home, User, Mail, ArrowRight, Calendar, FileText, AlertTriangle, Copy, Check, Award } from 'lucide-react';
+import { updateUserProfile } from '../../../services/userService';
+import { useAuth } from '../../../AuthComponents';
 
 interface QuickRegistrationSuccessProps {
   applicationId: string;
   onReturnHome?: () => void;
-  onContinueSetup?: () => void;
 }
 
 const QuickRegistrationSuccess: React.FC<QuickRegistrationSuccessProps> = ({ 
   applicationId, 
-  onReturnHome, 
-  onContinueSetup 
+  onReturnHome
 }) => {
   const [copied, setCopied] = useState(false);
   const [countdown, setCountdown] = useState(5);
+  const { user, updateAuthUser } = useAuth();
   
   // 成功画面が表示されたことをログに記録
   useEffect(() => {
     console.info(`アテンダー基本登録が正常に完了しました。申請ID: ${applicationId}`);
+    
+    // ユーザープロフィールのisAttenderフラグを更新
+    const updateUserAttenderStatus = async () => {
+      try {
+        if (user) {
+          // ユーザープロフィールを更新してisAttenderをtrueに設定
+          await updateUserProfile({ isAttender: true });
+          
+          // 認証情報も更新（ローカルストレージなどのキャッシュも更新されるように）
+          if (updateAuthUser) {
+            updateAuthUser({ ...user, isAttender: true });
+          }
+          
+          console.info('ユーザープロフィールのisAttenderフラグを更新しました');
+        }
+      } catch (error) {
+        console.error('ユーザープロフィールの更新に失敗しました:', error);
+      }
+    };
+    
+    // プロフィール更新を実行
+    updateUserAttenderStatus();
     
     // カウントダウンタイマー
     const timer = setInterval(() => {
@@ -39,7 +62,7 @@ const QuickRegistrationSuccess: React.FC<QuickRegistrationSuccessProps> = ({
     }, 1000);
     
     return () => clearInterval(timer);
-  }, [applicationId]);
+  }, [applicationId, user, updateAuthUser]);
   
   // 申請IDをクリップボードにコピー
   const copyToClipboard = () => {
@@ -52,35 +75,6 @@ const QuickRegistrationSuccess: React.FC<QuickRegistrationSuccessProps> = ({
         console.error('クリップボードへのコピーに失敗しました:', err);
       });
   };
-  
-  // 審査完了予定日（3営業日後の日付）
-  const getExpectedReviewDate = () => {
-    const today = new Date();
-    // 簡易的な営業日計算（より厳密には祝日も考慮する必要あり）
-    let businessDays = 0;
-    let daysToAdd = 0;
-    
-    while (businessDays < 3) {
-      daysToAdd++;
-      const date = new Date(today);
-      date.setDate(today.getDate() + daysToAdd);
-      // 土日を除外
-      if (date.getDay() !== 0 && date.getDay() !== 6) {
-        businessDays++;
-      }
-    }
-    
-    const result = new Date(today);
-    result.setDate(today.getDate() + daysToAdd);
-    
-    // 日本語形式で表示
-    return result.toLocaleDateString('ja-JP', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      weekday: 'long'
-    });
-  };
 
   return (
     <div className="max-w-4xl mx-auto p-8 bg-white rounded-lg shadow-md">
@@ -90,7 +84,7 @@ const QuickRegistrationSuccess: React.FC<QuickRegistrationSuccessProps> = ({
         </div>
         <h1 className="text-3xl font-bold mt-4 mb-2">基本登録を受け付けました</h1>
         <p className="text-lg text-gray-600">
-          アテンダーの基本情報が正常に登録されました。続けて詳細情報を入力することで、アテンダーとしての活動範囲が広がります。
+          アテンダーの基本情報が正常に登録されました。マイページから当面不要な詳細情報を入力できます。
         </p>
         <div className="inline-block mt-2 rounded-full bg-cyan-100 text-cyan-800 px-3 py-1 text-sm font-medium">
           基本登録完了
@@ -110,15 +104,6 @@ const QuickRegistrationSuccess: React.FC<QuickRegistrationSuccessProps> = ({
           </button>
         </div>
         <p className="font-medium text-gray-800 text-xl break-all">{applicationId}</p>
-        
-        <div className="mt-6">
-          <div className="flex items-center mb-2">
-            <Calendar className="w-5 h-5 text-gray-500 mr-2" />
-            <p className="text-sm text-gray-500">審査完了予定日</p>
-          </div>
-          <p className="font-medium text-gray-800">{getExpectedReviewDate()}</p>
-          <p className="text-xs text-gray-500 mt-1">※土日祝日を除く営業日です。状況により前後する場合があります。</p>
-        </div>
       </div>
       
       <div className="bg-gradient-to-r from-cyan-50 to-blue-50 p-6 rounded-lg mb-8 border border-cyan-100">
@@ -168,29 +153,22 @@ const QuickRegistrationSuccess: React.FC<QuickRegistrationSuccessProps> = ({
       
       <div className="flex flex-col sm:flex-row justify-center gap-4 mb-8">
         <button
-          onClick={onContinueSetup}
-          className="px-6 py-3 bg-cyan-500 text-white rounded-md hover:bg-cyan-600 transition-colors flex items-center justify-center gap-2"
+        onClick={onReturnHome || (() => {})}
+        className="px-6 py-3 bg-cyan-500 text-white rounded-md hover:bg-cyan-600 transition-colors flex items-center justify-center gap-2"
         >
-          詳細情報を入力する
-          <ArrowRight className="w-5 h-5" />
-        </button>
-        <button
-          onClick={onReturnHome || (() => {})}
-          className="px-6 py-3 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 transition-colors flex items-center justify-center gap-2"
-        >
-          <Home className="w-5 h-5" />
-          ホームへ戻る {countdown > 0 ? `(${countdown})` : ''}
+        <Home className="w-5 h-5" />
+        ホームへ戻る {countdown > 0 ? `(${countdown})` : ''}
         </button>
         <Link
-          to="/profile"
-          className="px-6 py-3 border border-gray-300 text-gray-600 rounded-md hover:bg-gray-50 transition-colors flex items-center justify-center gap-2"
+        to="/profile"
+        className="px-6 py-3 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 transition-colors flex items-center justify-center gap-2"
           onClick={(e) => {
-            e.preventDefault();
-            navigateToProfile();
+          e.preventDefault();
+          navigateToProfile();
           }}
         >
-          <User className="w-5 h-5" />
-          マイページを表示
+        <User className="w-5 h-5" />
+        マイページを表示
         </Link>
       </div>
       

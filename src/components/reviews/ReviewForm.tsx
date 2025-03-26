@@ -221,12 +221,6 @@ const ReviewForm: React.FC = () => {
                 <FileUploader
                   onUploadComplete={handlePhotoUpload}
                   acceptedFileTypes="image/*"
-                  buttonLabel={
-                    <div className="flex flex-col items-center">
-                      <Camera className="w-6 h-6 text-gray-400 mb-1" />
-                      <span className="text-sm text-gray-500">写真を追加</span>
-                    </div>
-                  }
                 />
               </div>
             )}

@@ -18,6 +18,10 @@ import { HomeScreen } from './components/screens';
 import AttenderApplicationFormWrapper from './components/attender/application/AttenderApplicationForm';
 import AttenderInfoPage from './components/attender/info/AttenderInfoPage';
 import { AttenderType } from './types';
+import EnhancedUserProfile from './components/user/EnhancedUserProfile';
+import AttenderProfileEditPage from './components/attender/profile/AttenderProfileEditPage';
+import CreateExperienceForm from './components/attender/experience/CreateExperienceForm';
+import ExperienceListPage from './components/attender/experience/ExperienceListPage';
 
 // 完全版スクリーンのインポート
 import MarketScreen from './components/screens/MarketScreen';
@@ -89,51 +93,7 @@ const SavedScreen = () => {
 
 // プロフィール画面
 const ProfileScreen = () => {
-  const { user, logout } = useAuth();
-  const navigate = useNavigate();
-  
-  const handleBecomeAttender = () => {
-    window.location.href = '/attender/info';
-  };
-  
-  return (
-    <div className="p-4 space-y-6">
-      <h1 className="text-2xl font-bold">プロフィール</h1>
-      
-      <div className="bg-white rounded-lg shadow-sm p-6">
-        <div className="flex items-center space-x-4 mb-6">
-          <div className="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center text-gray-700 text-2xl font-medium">
-            {user?.name.charAt(0)}
-          </div>
-          <div>
-            <h2 className="text-xl font-bold">{user?.name}</h2>
-            <p className="text-gray-600">{user?.email}</p>
-          </div>
-        </div>
-        
-        <div className="mt-8 flex flex-col space-y-3">
-          <div className="flex justify-between">
-            <button className="px-4 py-2 bg-gray-100 text-black rounded-lg">
-              プロフィールを編集
-            </button>
-            <button 
-              onClick={logout}
-              className="px-4 py-2 bg-red-50 text-red-600 rounded-lg"
-            >
-              ログアウト
-            </button>
-          </div>
-          
-          <button 
-            onClick={handleBecomeAttender}
-            className="w-full py-3 mt-4 bg-black text-white rounded-lg font-medium flex justify-center items-center space-x-2"
-          >
-            <span>アテンダーになる</span>
-          </button>
-        </div>
-      </div>
-    </div>
-  );
+  return <EnhancedUserProfile />;
 };
 
 // PaymentProviderのラッパーコンポーネント
@@ -552,7 +512,11 @@ const TripworksApp = () => {
           <FraudDetectionProvider>
             <Routes>
               <Route path="/apply-to-be-attender" element={<AttenderApplicationFormWrapper />} />
-              <Route path="*" element={
+              <Route path="/profile" element={<EnhancedUserProfile />} />
+              <Route path="/attender/profile/edit" element={<AttenderProfileEditPage />} />
+            <Route path="/experiences/create" element={<CreateExperienceForm />} />
+            <Route path="/attender/experiences" element={<ExperienceListPage />} />
+            <Route path="*" element={
                 <PaymentProviderWithNavigate>
                   <AppContent />
                 </PaymentProviderWithNavigate>

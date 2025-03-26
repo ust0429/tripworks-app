@@ -11,6 +11,7 @@ interface AuthContextType {
   logout: () => void;
   openLoginModal: () => void;
   openSignupModal: () => void;
+  updateAuthUser: (userData: Partial<UserType>) => void;
 }
 
 // ユーザーの型定義
@@ -19,6 +20,7 @@ interface UserType {
   name: string;
   email: string;
   profileImage?: string;
+  isAttender?: boolean;
 }
 
 // 現在のユーザー情報の拡張型定義
@@ -156,6 +158,32 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setIsAuthenticated(false);
   };
 
+  // 認証ユーザー情報の更新
+  const updateAuthUser = (userData: Partial<UserType>) => {
+    if (!user) return;
+    
+    const updatedUser = { ...user, ...userData };
+    
+    // ローカルストレージに更新した情報を保存
+    localStorage.setItem('echo_user', JSON.stringify(updatedUser));
+    
+    // 他のユーザー情報も更新が必要な場合はここで実装
+    if (currentUser) {
+      const updatedCurrentUser = { ...currentUser };
+      
+      // isAttenderが更新された場合、typeも更新する
+      if (userData.isAttender !== undefined) {
+        updatedCurrentUser.type = userData.isAttender ? 'attender' : 'user';
+      }
+      
+      // ローカルストレージに現在のユーザー情報も更新
+      localStorage.setItem('echo_currentUser', JSON.stringify(updatedCurrentUser));
+      setCurrentUser(updatedCurrentUser);
+    }
+    
+    setUser(updatedUser);
+  };
+
   // モーダルを開く関数
   const openLoginModal = () => {
     setShowSignupModal(false);
@@ -177,7 +205,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         signup,
         logout,
         openLoginModal,
-        openSignupModal
+        openSignupModal,
+        updateAuthUser
       }}
     >
       {children}

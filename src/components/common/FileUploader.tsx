@@ -1,108 +1,132 @@
-import React, { useState, ReactNode } from 'react';
-import { Upload, CheckCircle, AlertCircle, Loader } from 'lucide-react';
+import React, { useState, useRef } from 'react';
+import { Upload, X, Loader } from 'lucide-react';
 
 interface FileUploaderProps {
   onUploadComplete: (url: string) => void;
   acceptedFileTypes?: string;
-  buttonLabel?: ReactNode;
-  maxFileSizeMB?: number;
+  buttonLabel?: string;
+  className?: string;
 }
 
 const FileUploader: React.FC<FileUploaderProps> = ({
   onUploadComplete,
-  acceptedFileTypes = '*/*',
+  acceptedFileTypes = '*',
   buttonLabel = 'ファイルを選択',
-  maxFileSizeMB = 5,
+  className = ''
 }) => {
-  const [isUploading, setIsUploading] = useState(false);
-  const [uploadError, setUploadError] = useState<string | null>(null);
-  const [uploadSuccess, setUploadSuccess] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
     if (!file) return;
 
-    // ファイルサイズチェック
-    if (file.size > maxFileSizeMB * 1024 * 1024) {
-      setUploadError(`ファイルサイズは${maxFileSizeMB}MB以下にしてください`);
-      return;
+    // ファイルタイプのチェック
+    if (acceptedFileTypes !== '*') {
+      const fileType = file.type;
+      const acceptedTypesArray = acceptedFileTypes.split(',');
+      
+      const isAccepted = acceptedTypesArray.some(type => {
+        // image/* などのワイルドカード対応
+        if (type.endsWith('*')) {
+          const category = type.split('/*')[0];
+          return fileType.startsWith(category);
+        }
+        return type === fileType;
+      });
+
+      if (!isAccepted) {
+        setError(`サポートされていないファイルタイプです。${acceptedFileTypes}のみ許可されています。`);
+        return;
+      }
     }
 
-    setIsUploading(true);
-    setUploadError(null);
-    setUploadSuccess(false);
+    uploadFile(file);
+  };
+
+  const uploadFile = async (file: File) => {
+    setUploading(true);
+    setError(null);
 
     try {
-      // 本来はここで実際のアップロードAPIを呼び出します
-      // モック用のタイムアウトとURLを使用
-      const formData = new FormData();
-      formData.append('file', file);
-
-      // 実際の実装では以下のようなAPIコールを行います
-      // const response = await axios.post(`${API_URL}/upload`, formData);
-      // const fileUrl = response.data.url;
-
-      // モック用タイムアウト
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // 開発環境ではモックアップロードを使用
+      // 本番環境では実際のAPIに置き換える
+      await mockUpload(file);
       
-      // モック用URL (実際の実装では上のAPIコール結果を使用)
+      // ファイルのURLを生成(実際はサーバーから返されるURL)
       const fileUrl = URL.createObjectURL(file);
-      
-      setUploadSuccess(true);
       onUploadComplete(fileUrl);
-    } catch (error) {
-      console.error('File upload failed:', error);
-      setUploadError('ファイルのアップロードに失敗しました');
+    } catch (err) {
+      console.error('File upload failed:', err);
+      setError('ファイルのアップロードに失敗しました。後でもう一度お試しください。');
     } finally {
-      setIsUploading(false);
+      setUploading(false);
+      // 入力フィールドをリセット
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
     }
   };
 
+  // モックアップロード処理（開発用）
+  const mockUpload = (file: File): Promise<void> => {
+    return new Promise(resolve => {
+      // アップロード処理を模倣するための遅延
+      setTimeout(() => {
+        resolve();
+      }, 1000);
+    });
+  };
+
+  const handleClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const clearError = () => {
+    setError(null);
+  };
+
   return (
-    <div>
-      <label className="relative cursor-pointer">
-        <input
-          type="file"
-          className="hidden"
-          accept={acceptedFileTypes}
-          onChange={handleFileChange}
-          disabled={isUploading}
-        />
-        
-        <div className={`inline-flex items-center px-4 py-2 rounded-lg ${
-          isUploading 
-            ? 'bg-gray-100 text-gray-500'
-            : 'bg-blue-50 text-blue-600 hover:bg-blue-100'
-        }`}>
-          {isUploading ? (
-            <>
-              <Loader className="w-4 h-4 animate-spin mr-2" />
-              アップロード中...
-            </>
-          ) : uploadSuccess ? (
-            <>
-              <CheckCircle className="w-4 h-4 mr-2" />
-              アップロード完了
-            </>
-          ) : (
-            <>
-              {typeof buttonLabel === 'string' ? (
-                <>
-                  <Upload className="w-4 h-4 mr-2" />
-                  {buttonLabel}
-                </>
-              ) : (
-                buttonLabel
-              )}
-            </>
-          )}
-        </div>
-      </label>
+    <div className={`flex flex-col ${className}`}>
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept={acceptedFileTypes}
+        onChange={handleFileSelect}
+        className="hidden"
+        disabled={uploading}
+      />
       
-      {uploadError && (
-        <div className="mt-2 text-xs text-red-600 flex items-center">
-          <AlertCircle className="w-3 h-3 mr-1" />
-          {uploadError}
+      <button
+        type="button"
+        onClick={handleClick}
+        disabled={uploading}
+        className="flex items-center px-3 py-2 border border-gray-300 rounded-md bg-white hover:bg-gray-50 text-sm"
+      >
+        {uploading ? (
+          <>
+            <Loader className="w-4 h-4 animate-spin mr-2" />
+            アップロード中...
+          </>
+        ) : (
+          <>
+            <Upload className="w-4 h-4 mr-2" />
+            {buttonLabel}
+          </>
+        )}
+      </button>
+      
+      {error && (
+        <div className="mt-2 bg-red-50 p-2 rounded text-red-700 text-sm flex items-start">
+          <span className="flex-1">{error}</span>
+          <button
+            type="button"
+            onClick={clearError}
+            className="text-red-700 hover:text-red-900"
+          >
+            <X size={14} />
+          </button>
         </div>
       )}
     </div>

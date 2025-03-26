@@ -9,4 +9,5 @@ export interface User {
   profileImage?: string;
   isAttender: boolean;
   createdAt: string;
+  name?: string; // nameプロパティを追加
 }

@@ -1,4 +1,5 @@
 import { AttenderProfile, ExperienceSample } from '../types/attender/profile';
+import { calculateProfileCompletionScore } from './attender/ProfileCompletionService';
 
 // ローカルストレージのキー
 const STORAGE_KEY = 'echo_attender_profile';
@@ -40,6 +41,9 @@ export class AttenderProfileService {
     try {
       // データの検証
       this.validateProfile(profile);
+
+      // 完成度スコアを計算して更新
+      profile.completionScore = this.calculateCompletionScore(profile);
 
       // 開発環境: ローカルストレージに保存
       localStorage.setItem(STORAGE_KEY, JSON.stringify(profile));
@@ -162,45 +166,8 @@ export class AttenderProfileService {
    * プロフィール完成度スコアを計算
    */
   static calculateCompletionScore(profile: AttenderProfile): number {
-    const fields: Array<{field: keyof AttenderProfile; weight: number}> = [
-      { field: 'name', weight: 15 },
-      { field: 'imageUrl', weight: 10 },
-      { field: 'location', weight: 10 },
-      { field: 'bio', weight: 15 },
-      { field: 'specialties', weight: 15 },
-      { field: 'background', weight: 10 },
-      { field: 'experienceSamples', weight: 15 },
-      { field: 'availability', weight: 10 },
-    ];
-
-    let score = 0;
-
-    for (const { field, weight } of fields) {
-      const value = profile[field];
-      
-      if (field === 'experienceSamples') {
-        if (Array.isArray(value) && value.length > 0) {
-          // サンプル数に応じてスコアを付与（最大3つまで）
-          score += weight * Math.min(value.length, 3) / 3;
-        }
-      } else if (field === 'availability') {
-        if (Array.isArray(value)) {
-          // 曜日ごとの設定があればスコアを付与
-          const availableDays = (value as any[]).filter(day => 
-            day && day.isAvailable && Array.isArray(day.timeSlots) && day.timeSlots.length > 0
-          );
-          score += weight * Math.min(availableDays.length, 5) / 5;
-        }
-      } else if (field === 'specialties') {
-        if (Array.isArray(value) && value.length > 0) {
-          score += weight;
-        }
-      } else if (value) {
-        score += weight;
-      }
-    }
-
-    return Math.round(score);
+    // ProfileCompletionServiceを使用して計算
+    return calculateProfileCompletionScore(profile);
   }
 
   /**

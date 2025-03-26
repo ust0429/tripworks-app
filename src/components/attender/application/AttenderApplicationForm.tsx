@@ -235,20 +235,12 @@ const AttenderApplicationFormContent: React.FC = () => {
   
   // 申請が完了した場合
   if (applicationId) {
-    // フォーム状態に応じて異なる成功画面を表示
-    return formStatus === 'required' ? (
+    // 基本登録成功画面を表示
+    return (
       <QuickRegistrationSuccess 
         applicationId={applicationId} 
-        onReturnHome={handleReturnHome} 
-        onContinueSetup={() => {
-          // 全情報フォームに切り替え
-          setFormStatus('optional');
-          setApplicationId(null); // 申請 IDをクリアして続きから入力できるようにする
-          goToStep(4); // 最初の任意ステップ（専門分野）に移動
-        }}
+        onReturnHome={handleReturnHome}
       />
-    ) : (
-      <SubmitSuccess applicationId={applicationId} onReturnHome={handleReturnHome} />
     );
   }
   
