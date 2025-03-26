@@ -44,7 +44,6 @@ import {
 // PreviewButtonはエラーが発生するため削除
 // 基本登録（第1部）は短いので下書き保存は不要
 import MobileFormWrapper from '../registration/MobileFormWrapper';
-import ProgressReportContainer from './ProgressReportContainer';
 import TutorialManager from './TutorialManager';
 import ApiErrorHandler from './ApiErrorHandler';
 
@@ -293,13 +292,13 @@ const AttenderApplicationFormContent: React.FC = () => {
       onNavigate={goToStep}
       isStepCompleted={isStepCompleted}
     >
-      <div className="max-w-4xl mx-auto p-6 bg-white rounded-lg shadow-md">
+      <div className="max-w-4xl mx-auto p-6 bg-mono-white rounded-lg shadow-md">
         <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-bold">アテンダー申請</h1>
+          <h1 className="text-2xl font-bold text-mono-black">アテンダー申請</h1>
           <div className="flex items-center space-x-3">
             <button
               onClick={() => setShowFormHelp(prev => !prev)}
-              className="text-blue-500 hover:text-blue-700 flex items-center"
+              className="text-mono-black hover:text-mono-gray-dark flex items-center"
             >
               <HelpCircle className="w-5 h-5 mr-1" />
               <span className="hidden sm:inline">ヘルプ</span>
@@ -307,7 +306,7 @@ const AttenderApplicationFormContent: React.FC = () => {
             
             <Link
               to="/profile"
-              className="text-gray-500 hover:text-gray-700 flex items-center"
+              className="text-mono-gray-medium hover:text-mono-gray-dark flex items-center"
               onClick={(e) => {
                 // イベントを処理
                 e.preventDefault();
@@ -328,12 +327,12 @@ const AttenderApplicationFormContent: React.FC = () => {
         
         {/* ヘルプ情報 */}
         {showFormHelp && (
-          <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-md text-blue-800">
-            <h3 className="font-medium mb-2 flex items-center">
+          <div className="mb-6 p-4 bg-mono-lighter border border-mono-light rounded-md text-mono-black">
+            <h3 className="font-medium mb-2 flex items-center text-mono-black">
               <Info className="w-5 h-5 mr-2" />
               申請フォームの入力ガイド
             </h3>
-            <div className="text-sm space-y-2">
+            <div className="text-sm space-y-2 text-mono-gray-dark">
               <p>
                 このフォームでは、アテンダーとして登録するために必要な情報を段階的に入力していきます。
               </p>
@@ -347,7 +346,7 @@ const AttenderApplicationFormContent: React.FC = () => {
                 身分証明書のアップロードでは、有効期限内の公的身分証明書が必要です。写真や文字が明確に見えるようにしてください。
               </p>
             </div>
-            <div className="mt-2 text-xs text-blue-600">
+            <div className="mt-2 text-xs text-mono-black">
               ご不明な点があれば、<a href="mailto:support@echo.jp" className="underline">support@echo.jp</a> までお問い合わせください。
             </div>
           </div>
@@ -355,17 +354,17 @@ const AttenderApplicationFormContent: React.FC = () => {
         
         {/* 認証警告 */}
         {showAuthWarning && !isAuthenticated && (
-          <div className="mb-6 p-4 bg-yellow-50 border-l-4 border-yellow-400 rounded-md">
+          <div className="mb-6 p-4 bg-mono-lighter border-l-4 border-mono-light rounded-md">
             <div className="flex">
-              <AlertTriangle className="w-5 h-5 text-yellow-500 mr-3 flex-shrink-0" />
+              <AlertTriangle className="w-5 h-5 text-mono-gray-dark mr-3 flex-shrink-0" />
               <div>
-                <h3 className="font-medium text-yellow-800">ログインが必要です</h3>
-                <p className="text-sm text-yellow-700 mt-1">
+                <h3 className="font-medium text-mono-black">ログインが必要です</h3>
+                <p className="text-sm text-mono-gray-dark mt-1">
                   アテンダー申請を完了するにはログインが必要です。フォームの入力は続けられますが、提出前にログインしてください。
                 </p>
                 <button
                   onClick={openLoginModal}
-                  className="mt-2 px-4 py-2 bg-yellow-500 text-white text-sm rounded-md hover:bg-yellow-600 transition-colors"
+                  className="mt-2 px-4 py-2 bg-mono-black text-mono-white text-sm rounded-md hover:bg-mono-dark transition-colors"
                 >
                   ログイン / 新規登録
                 </button>
@@ -377,7 +376,7 @@ const AttenderApplicationFormContent: React.FC = () => {
         {/* 進行状況 */}
         <div className="mb-8">
           <div className="flex items-center justify-between mb-2">
-            <h2 className="text-lg font-medium">
+            <h2 className="text-lg font-medium text-mono-black">
               {currentStep}. 
               {(() => {
                 // ステップキーを取得
@@ -385,16 +384,16 @@ const AttenderApplicationFormContent: React.FC = () => {
                 return stepKey ? STEP_METADATA[stepKey].title : `ステップ ${currentStep}`;
               })()}
               {formStatus === 'required' && (
-                <span className="ml-2 bg-cyan-100 text-cyan-800 px-2 py-0.5 rounded-full text-xs">
+                <span className="ml-2 bg-mono-lighter text-mono-dark px-2 py-0.5 rounded-full text-xs">
                   基本登録
                 </span>
               )}
             </h2>
-            <span className="text-sm text-gray-500">
+            <span className="text-sm text-mono-gray-medium">
               ステップ {currentStep}/{maxSteps}
             </span>
           </div>
-          <p className="text-sm text-gray-600 mb-4">
+          <p className="text-sm text-mono-gray-medium mb-4">
             {(() => {
               // ステップキーを取得
               const stepKey = getStepKeyByIndex(currentStep, formStatus);
@@ -414,18 +413,18 @@ const AttenderApplicationFormContent: React.FC = () => {
         </div>
         
         {/* 現在のステップのフォーム */}
-        <div className="bg-gray-50 p-5 rounded-lg border border-gray-200 mb-6">
+        <div className="bg-mono-lighter p-5 rounded-lg border border-mono-light mb-6">
           {renderStep()}
         </div>
         
         {/* エラーメッセージ - 二重表示問題を修正 */}
         {submitError && (
-          <div className="mb-6 p-4 bg-red-50 border-l-4 border-red-500 rounded-md">
+          <div className="mb-6 p-4 bg-mono-lighter border-l-4 border-mono-gray-dark rounded-md">
             <div className="flex">
-              <AlertTriangle className="w-5 h-5 text-red-500 mr-3 flex-shrink-0" />
+              <AlertTriangle className="w-5 h-5 text-mono-gray-dark mr-3 flex-shrink-0" />
               <div>
-                <h3 className="font-medium text-red-800">エラーが発生しました</h3>
-                <p className="text-sm text-red-700 mt-1">{submitError}</p>
+                <h3 className="font-medium text-mono-black">エラーが発生しました</h3>
+                <p className="text-sm text-mono-gray-dark mt-1">{submitError}</p>
               </div>
             </div>
           </div>
@@ -440,7 +439,7 @@ const AttenderApplicationFormContent: React.FC = () => {
         />}
         
         {/* 進行状況ミニステータス */}
-        <div className="mb-4 flex justify-between text-sm text-gray-500">
+        <div className="mb-4 flex justify-between text-sm text-mono-gray-medium">
           <div>
             {Array.from({ length: maxSteps }).map((_, index) => {
               // 現在のステップキーを取得
@@ -450,10 +449,10 @@ const AttenderApplicationFormContent: React.FC = () => {
                   key={index}
                   className={`inline-block w-2 h-2 rounded-full mx-1 ${
                     index + 1 < currentStep 
-                      ? 'bg-green-500' 
+                      ? 'bg-mono-black' 
                       : index + 1 === currentStep 
-                        ? 'bg-blue-500' 
-                        : 'bg-gray-300'
+                        ? 'bg-mono-dark' 
+                        : 'bg-mono-light'
                   }`}
                   title={stepKey ? STEP_METADATA[stepKey].title : `ステップ ${index + 1}`}
                 />
@@ -462,7 +461,7 @@ const AttenderApplicationFormContent: React.FC = () => {
           </div>
           <div>
             {Object.keys(errors).length > 0 && (
-              <span className="text-red-500 flex items-center">
+              <span className="text-mono-gray-dark flex items-center">
                 <AlertTriangle className="w-4 h-4 mr-1" />
                 解決が必要なエラーがあります
               </span>
@@ -480,8 +479,8 @@ const AttenderApplicationFormContent: React.FC = () => {
               disabled={currentStep === 1}
               className={`px-4 py-2 rounded-md flex items-center ${
                 currentStep === 1
-                  ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  ? 'bg-mono-light text-mono-gray-light cursor-not-allowed'
+                  : 'bg-mono-lighter text-mono-gray-dark hover:bg-mono-light'
               }`}
             >
               <ArrowLeft className="w-4 h-4 mr-2" />
@@ -495,8 +494,8 @@ const AttenderApplicationFormContent: React.FC = () => {
             disabled={!isCurrentStepCompleted || isSubmitting || (!isAuthenticated && currentStep === maxSteps)}
             className={`px-6 py-2 rounded-md flex items-center ${
               !isCurrentStepCompleted || isSubmitting || (!isAuthenticated && currentStep === maxSteps)
-                ? 'bg-blue-300 text-white cursor-not-allowed'
-                : 'bg-blue-600 text-white hover:bg-blue-700'
+                ? 'bg-mono-gray-light text-mono-white cursor-not-allowed'
+                : 'bg-mono-black text-mono-white hover:bg-mono-dark'
             }`}
           >
             {isSubmitting ? (
@@ -518,12 +517,6 @@ const AttenderApplicationFormContent: React.FC = () => {
         </div>
         
         {/* 下書きセーバー表示 - 基本登録（第1部）では不要のため削除 */}
-        
-        {/* ボタン表示の後、進捗レポートを追加 */}
-        <div className="mt-8 pt-6 border-t border-gray-200">
-          <h3 className="text-lg font-medium mb-4">申請進捗状況</h3>
-          <ProgressReportContainer />
-        </div>
       </div>
     </MobileFormWrapper>
     </>

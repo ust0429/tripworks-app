@@ -5,6 +5,17 @@ module.exports = {
   ],
   theme: {
     extend: {
+      colors: {
+        // Monochrome color palette (Uber-like)
+        'mono-black': '#000000',
+        'mono-dark': '#1f1f1f',
+        'mono-gray-dark': '#333333',
+        'mono-gray-medium': '#666666',
+        'mono-gray-light': '#999999',
+        'mono-light': '#e0e0e0',
+        'mono-lighter': '#f5f5f5',
+        'mono-white': '#ffffff',
+      },
       fontFamily: {
         sans: ['Inter', 'ui-sans-serif', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
       },

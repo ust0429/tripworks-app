@@ -17,7 +17,7 @@ const LevelIcon: React.FC<{ level: number }> = ({ level }) => {
       {Array.from({ length: 5 }).map((_, index) => (
         <svg 
           key={index} 
-          className={`w-4 h-4 ${index < level ? 'text-yellow-400' : 'text-gray-300'}`} 
+          className={`w-4 h-4 ${index < level ? 'text-mono-black' : 'text-mono-light'}`} 
           xmlns="http://www.w3.org/2000/svg" 
           viewBox="0 0 20 20" 
           fill="currentColor"
@@ -51,8 +51,8 @@ const ProfileCompletionScore: React.FC<ProfileCompletionScoreProps> = ({
   // プロファイルがnullの場合は早期リターン
   if (!profile) {
     return (
-      <div className={`bg-white rounded-lg shadow p-4 ${className}`}>
-        <p className="text-gray-600 text-center">プロフィールが読み込めません</p>
+      <div className={`bg-mono-white rounded-lg shadow p-4 ${className}`}>
+        <p className="text-mono-gray-medium text-center">プロフィールが読み込めません</p>
       </div>
     );
   }
@@ -69,7 +69,7 @@ const ProfileCompletionScore: React.FC<ProfileCompletionScoreProps> = ({
   if (compact) {
     return (
       <div className={`flex items-center ${className}`}>
-        <div className={`text-lg font-bold ${colorClass}`}>{score}%</div>
+        <div className="text-lg font-bold text-mono-black">{score}%</div>
         <LevelIcon level={level} />
       </div>
     );
@@ -77,31 +77,31 @@ const ProfileCompletionScore: React.FC<ProfileCompletionScoreProps> = ({
 
   // 通常モードでは詳細な表示
   return (
-    <div className={`bg-white rounded-lg shadow p-4 ${className}`}>
+    <div className={`bg-mono-white rounded-lg shadow p-4 ${className}`}>
       <div className="flex justify-between items-center mb-2">
-        <h3 className="text-lg font-semibold">プロフィール完成度</h3>
-        <span className={`px-2 py-1 rounded-full text-xs ${bgClass}`}>
+        <h3 className="text-lg font-semibold text-mono-black">プロフィール完成度</h3>
+        <span className="px-2 py-1 rounded-full text-xs bg-mono-lighter text-mono-dark">
           レベル {level}
         </span>
       </div>
       
       <div className="flex items-center mb-2">
-        <span className={`text-2xl font-bold mr-2 ${colorClass}`}>{score}%</span>
+        <span className="text-2xl font-bold mr-2 text-mono-black">{score}%</span>
         <LevelIcon level={level} />
       </div>
       
       {/* プログレスバー */}
-      <div className="w-full h-2 bg-gray-200 rounded-full mb-2">
+      <div className="w-full h-2 bg-mono-light rounded-full mb-2">
         <div
-          className={`h-2 rounded-full ${score < 20 ? 'bg-red-500' : score < 40 ? 'bg-orange-500' : score < 60 ? 'bg-yellow-500' : score < 80 ? 'bg-blue-500' : 'bg-green-500'}`}
+          className="h-2 rounded-full bg-mono-black"
           style={{ width: `${score}%` }}
         ></div>
       </div>
       
-      <p className="text-sm text-gray-600 mb-2">{message}</p>
+      <p className="text-sm text-mono-gray-medium mb-2">{message}</p>
       
       {suggestion && (
-        <div className="mt-2 p-2 bg-blue-50 text-blue-700 text-sm rounded">
+        <div className="mt-2 p-2 bg-mono-lighter text-mono-dark text-sm rounded">
           <span className="font-semibold">次のステップ:</span> {suggestion}
         </div>
       )}

@@ -161,21 +161,21 @@ const EnhancedUserProfile: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="max-w-3xl mx-auto px-4 py-8 flex justify-center">
-        <Loader className="w-8 h-8 animate-spin text-gray-400" />
+      <div className="max-w-3xl mx-auto px-4 py-8 flex justify-center text-mono-dark">
+        <Loader className="w-8 h-8 animate-spin text-mono-gray-light" />
       </div>
     );
   }
 
   if (!user) {
     return (
-      <div className="max-w-3xl mx-auto px-4 py-8">
-        <div className="bg-red-50 p-4 rounded-lg text-red-700">
+      <div className="max-w-3xl mx-auto px-4 py-8 text-mono-dark">
+        <div className="bg-mono-lighter p-4 rounded-lg text-mono-dark border border-mono-gray-light">
           ユーザー情報が見つかりませんでした。
         </div>
         <button
           onClick={() => navigate('/')}
-          className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg"
+          className="mt-4 px-4 py-2 bg-mono-black text-mono-white rounded-lg"
         >
           ホームに戻る
         </button>
@@ -185,7 +185,7 @@ const EnhancedUserProfile: React.FC = () => {
 
   // プロフィール情報表示コンポーネント
   const ProfileView = () => (
-    <div className="bg-white rounded-lg shadow p-6">
+    <div className="bg-mono-white rounded-lg shadow p-6">
       <div className="flex justify-between items-start mb-6">
         <div className="flex items-center">
           <div className="relative w-20 h-20 rounded-full overflow-hidden bg-gray-100 mr-4">
@@ -196,20 +196,20 @@ const EnhancedUserProfile: React.FC = () => {
                 className="w-full h-full object-cover"
               />
             ) : (
-              <div className="w-full h-full flex items-center justify-center text-gray-400">
+              <div className="w-full h-full flex items-center justify-center text-mono-gray-light">
                 <UserIcon className="w-10 h-10" />
               </div>
             )}
           </div>
           <div>
-            <h2 className="text-2xl font-bold">{user.displayName}</h2>
-            <p className="text-gray-600">{user.email}</p>
-            <p className="text-gray-500 text-sm mt-1">{user.location || 'ロケーション未設定'}</p>
+            <h2 className="text-2xl font-bold text-mono-black">{user.displayName}</h2>
+            <p className="text-mono-gray-medium">{user.email}</p>
+            <p className="text-mono-gray-light text-sm mt-1">{user.location || 'ロケーション未設定'}</p>
           </div>
         </div>
         <button
           onClick={() => setEditMode(true)}
-          className="px-4 py-2 flex items-center gap-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm"
+          className="px-4 py-2 flex items-center gap-2 bg-mono-lighter hover:bg-mono-light rounded-lg text-sm text-mono-dark"
         >
           <Edit size={16} />
           <span>編集</span>
@@ -218,8 +218,8 @@ const EnhancedUserProfile: React.FC = () => {
 
       {user.bio && (
         <div className="mb-6">
-          <h3 className="text-lg font-semibold mb-2">自己紹介</h3>
-          <p className="text-gray-700">{user.bio}</p>
+          <h3 className="text-lg font-semibold mb-2 text-mono-black">自己紹介</h3>
+          <p className="text-mono-gray-dark">{user.bio}</p>
         </div>
       )}
 
@@ -239,7 +239,7 @@ const EnhancedUserProfile: React.FC = () => {
       <div className="flex justify-end">
         <button
           onClick={() => setEditMode(true)}
-          className="text-blue-600 hover:text-blue-800 text-sm flex items-center gap-1"
+          className="text-mono-black hover:text-mono-gray-dark text-sm flex items-center gap-1"
         >
           <Edit size={14} />
           <span>プロフィールを編集</span>
@@ -252,20 +252,20 @@ const EnhancedUserProfile: React.FC = () => {
   const AttenderSection = () => {
     if (!user.isAttender) {
       return (
-        <div className="bg-white rounded-lg shadow p-6 mt-6">
+        <div className="bg-mono-white rounded-lg shadow p-6 mt-6">
           <div className="flex items-start gap-4">
-            <div className="bg-blue-100 rounded-full p-3">
-              <Star className="w-8 h-8 text-blue-600" />
+            <div className="bg-mono-lighter rounded-full p-3">
+              <Star className="w-8 h-8 text-mono-black" />
             </div>
             <div className="flex-1">
-              <h3 className="text-xl font-bold mb-2">アテンダーになる</h3>
-              <p className="text-gray-700 mb-4">
+              <h3 className="text-xl font-bold mb-2 text-mono-black">アテンダーになる</h3>
+              <p className="text-mono-gray-dark mb-4">
                 あなたの知識や経験を活かして、特別な体験を提供しませんか？
                 アテンダーになると、自分のペースで活動でき、追加収入も得られます。
               </p>
               <button
                 onClick={handleBecomeAttender}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition flex items-center gap-2"
+                className="px-4 py-2 bg-mono-black text-mono-white rounded-lg hover:bg-mono-dark transition flex items-center gap-2"
               >
                 <span>詳細を見る</span>
                 <ChevronRight size={16} />
@@ -279,7 +279,7 @@ const EnhancedUserProfile: React.FC = () => {
     return (
       <div className="mt-6">
         <Tabs defaultValue="profile" className="w-full">
-          <TabsList className="grid grid-cols-3 mb-6">
+          <TabsList className="grid grid-cols-3 mb-6 bg-mono-lighter">
             <TabsTrigger value="profile" onClick={() => setActiveTab('profile')}>
               プロフィール
             </TabsTrigger>
@@ -291,11 +291,11 @@ const EnhancedUserProfile: React.FC = () => {
             </TabsTrigger>
           </TabsList>
           
-          <TabsContent value="profile" className="space-y-6">
+          <TabsContent value="profile" className="space-y-6 bg-mono-white">
             {attenderProfile ? (
-              <div className="bg-white rounded-lg shadow p-6">
+              <div className="bg-mono-white rounded-lg shadow p-6">
                 <div className="flex justify-between items-start mb-4">
-                  <h3 className="text-xl font-bold">アテンダープロフィール</h3>
+                  <h3 className="text-xl font-bold text-mono-black">アテンダープロフィール</h3>
                   <div className="flex gap-2">
                     {attenderProfile.verified && (
                       <Badge variant="success" className="flex items-center gap-1">
@@ -335,12 +335,12 @@ const EnhancedUserProfile: React.FC = () => {
                 </div>
                 
                 {attenderProfile && attenderProfile.completionScore && attenderProfile.completionScore < 50 && (
-                  <div className="mt-4 bg-amber-50 p-4 rounded-lg border border-amber-200">
-                    <h4 className="font-semibold text-amber-800 flex items-center">
+                  <div className="mt-4 bg-mono-lighter p-4 rounded-lg border border-mono-light">
+                    <h4 className="font-semibold text-mono-black flex items-center">
                       <AlertTriangle className="w-4 h-4 mr-2" />
                       プロフィール完成度が低い状態です
                     </h4>
-                    <p className="text-sm text-amber-700 mt-1">
+                    <p className="text-sm text-mono-gray-dark mt-1">
                       プロフィールの完成度が高いアテンダーは、予約率が最大2倍になる傾向があります。下記の「アテンダープロフィールを編集」ボタンから詳細情報を入力しましょう。
                     </p>
                   </div>
@@ -349,7 +349,7 @@ const EnhancedUserProfile: React.FC = () => {
                 <div className="mt-6">
                   <button
                     onClick={handleEditAttenderProfile}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition flex items-center gap-2"
+                    className="px-4 py-2 bg-mono-black text-mono-white rounded-lg hover:bg-mono-dark transition flex items-center gap-2"
                   >
                     <Edit size={16} />
                     <span>アテンダープロフィールを編集</span>
@@ -363,12 +363,12 @@ const EnhancedUserProfile: React.FC = () => {
                     <UserIcon className="w-6 h-6 text-blue-600" />
                   </div>
                   <h3 className="text-xl font-bold mb-2">アテンダープロフィールを作成しましょう</h3>
-                  <p className="text-gray-600 mb-4">
+                  <p className="text-mono-gray-medium mb-4">
                     アテンダー登録は完了しました。アテンダープロフィールを作成して、あなたの体験を提供しましょう。
                   </p>
                   <button
                     onClick={handleEditAttenderProfile}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition flex items-center gap-2 mx-auto"
+                    className="px-4 py-2 bg-mono-black text-mono-white rounded-lg hover:bg-mono-dark transition flex items-center gap-2 mx-auto"
                   >
                     <Edit size={16} />
                     <span>プロフィールを作成する</span>

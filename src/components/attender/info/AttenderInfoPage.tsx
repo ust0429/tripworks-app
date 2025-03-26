@@ -40,32 +40,32 @@ const AttenderInfoPage: React.FC<AttenderInfoPageProps> = ({ onBack }) => {
   // アテンダーの特徴リスト
   const features = [
     {
-      icon: <MapPin className="w-6 h-6 text-teal-600" />,
+      icon: <MapPin className="w-6 h-6 text-mono-black" />,
       title: '自分の街で活躍',
       description: '自分が愛する地域の魅力を旅行者に伝え、特別な体験を提供できます。'
     },
     {
-      icon: <Clock className="w-6 h-6 text-teal-600" />,
+      icon: <Clock className="w-6 h-6 text-mono-black" />,
       title: '自分のペースで活動',
       description: '自分の都合に合わせてスケジュールを設定。空き時間を有効活用できます。'
     },
     {
-      icon: <CreditCard className="w-6 h-6 text-teal-600" />,
+      icon: <CreditCard className="w-6 h-6 text-mono-black" />,
       title: '追加収入を得る',
       description: '自分の知識や経験を活かして、観光ガイドとは違う魅力を提供し収益化できます。'
     },
     {
-      icon: <Users className="w-6 h-6 text-teal-600" />,
+      icon: <Users className="w-6 h-6 text-mono-black" />,
       title: '新しい出会い',
       description: '様々な旅行者との交流を通じて、新しい人間関係を築くことができます。'
     },
     {
-      icon: <Sparkles className="w-6 h-6 text-teal-600" />,
+      icon: <Sparkles className="w-6 h-6 text-mono-black" />,
       title: '地域の魅力を再発見',
       description: '案内をすることで、自分自身も地域の新たな魅力に気づくきっかけに。'
     },
     {
-      icon: <Zap className="w-6 h-6 text-teal-600" />,
+      icon: <Zap className="w-6 h-6 text-mono-black" />,
       title: 'スキルを磨く',
       description: 'コミュニケーション、企画力、地域の知識など様々なスキルが向上します。'
     }
@@ -96,19 +96,19 @@ const AttenderInfoPage: React.FC<AttenderInfoPageProps> = ({ onBack }) => {
   ];
 
   return (
-    <div className="bg-gray-50 min-h-screen pb-12">
+    <div className="bg-mono-lighter min-h-screen pb-12">
       {/* ヘッダー */}
-      <div className="bg-black text-white p-4">
+      <div className="bg-mono-black text-mono-white p-4">
         <div className="container mx-auto">
           <button 
             onClick={handleGoBack}
-            className="flex items-center text-white mb-4"
+            className="flex items-center text-mono-white mb-4"
           >
             <ChevronLeft size={20} />
             <span>戻る</span>
           </button>
-          <h1 className="text-3xl font-bold mb-2">アテンダーについて</h1>
-          <p className="text-xl">地域の魅力を伝え、旅をもっと特別なものに</p>
+          <h1 className="text-3xl font-bold mb-2 text-mono-white">アテンダーについて</h1>
+          <p className="text-xl text-mono-white">地域の魅力を伝え、旅をもっと特別なものに</p>
         </div>
       </div>
 
@@ -116,9 +116,9 @@ const AttenderInfoPage: React.FC<AttenderInfoPageProps> = ({ onBack }) => {
         {/* メインコンテンツ */}
         <div className="max-w-3xl mx-auto space-y-12">
           {/* イントロセクション */}
-          <section className="bg-white rounded-lg shadow-sm p-6">
-            <h2 className="text-2xl font-bold mb-4">echoアテンダーとは</h2>
-            <p className="text-gray-700 mb-4">
+          <section className="bg-mono-white rounded-lg shadow-sm p-6">
+            <h2 className="text-2xl font-bold mb-4 text-mono-black">echoアテンダーとは</h2>
+            <p className="text-mono-gray-dark mb-4">
               echoアテンダーは、従来の観光ガイドとは一線を画す、新しいスタイルの「地域の案内人」です。
               観光名所を巡る定型ツアーではなく、地域に住む人だからこそ知っている魅力や文化を伝え、
               旅行者と共に新たな体験を創り出す役割を担います。
@@ -140,8 +140,8 @@ const AttenderInfoPage: React.FC<AttenderInfoPageProps> = ({ onBack }) => {
           </section>
 
           {/* アテンダーの特徴 */}
-          <section className="bg-white rounded-lg shadow-sm p-6">
-            <h2 className="text-2xl font-bold mb-6">アテンダーの魅力</h2>
+          <section className="bg-mono-white rounded-lg shadow-sm p-6">
+            <h2 className="text-2xl font-bold mb-6 text-mono-black">アテンダーの魅力</h2>
             <div className="grid md:grid-cols-2 gap-6">
               {features.map((feature, index) => (
                 <div key={index} className="flex space-x-4">
@@ -149,8 +149,8 @@ const AttenderInfoPage: React.FC<AttenderInfoPageProps> = ({ onBack }) => {
                     {feature.icon}
                   </div>
                   <div>
-                    <h3 className="font-bold text-lg">{feature.title}</h3>
-                    <p className="text-gray-600">{feature.description}</p>
+                    <h3 className="font-bold text-lg text-mono-black">{feature.title}</h3>
+                    <p className="text-mono-gray-medium">{feature.description}</p>
                   </div>
                 </div>
               ))}
@@ -163,11 +163,11 @@ const AttenderInfoPage: React.FC<AttenderInfoPageProps> = ({ onBack }) => {
             <div className="space-y-6">
               <div className="flex">
                 <div className="flex-shrink-0 mr-4">
-                  <div className="w-8 h-8 bg-teal-600 text-white rounded-full flex items-center justify-center font-bold">1</div>
+                  <div className="w-8 h-8 bg-mono-black text-mono-white rounded-full flex items-center justify-center font-bold">1</div>
                 </div>
                 <div>
                   <h3 className="font-bold text-lg">基本情報とSNSリンクの入力</h3>
-                  <p className="text-gray-600">名前、連絡先、自己紹介、SNSリンクなどの基本情報を入力します。</p>
+                  <p className="text-mono-gray-medium">名前、連絡先、自己紹介、SNSリンクなどの基本情報を入力します。</p>
                 </div>
               </div>
               
@@ -217,25 +217,25 @@ const AttenderInfoPage: React.FC<AttenderInfoPageProps> = ({ onBack }) => {
           <section className="bg-white rounded-lg shadow-sm p-6">
             <h2 className="text-2xl font-bold mb-6">アテンダーの声</h2>
             <div className="space-y-6">
-              <div className="border-l-4 border-teal-500 pl-4 py-2">
-                <p className="italic text-gray-700 mb-2">
+              <div className="border-l-4 border-mono-black pl-4 py-2">
+                <p className="italic text-mono-gray-dark mb-2">
                   "自分が住む街の魅力を改めて発見できるようになりました。旅行者の方々の新鮮な驚きや感動に触れることで、日常が特別なものに変わりました。"
                 </p>
-                <p className="font-medium">鈴木さん（30代・京都在住、1年間活動中）</p>
+                <p className="font-medium text-mono-black">鈴木さん（30代・京都在住、1年間活動中）</p>
               </div>
               
-              <div className="border-l-4 border-teal-500 pl-4 py-2">
-                <p className="italic text-gray-700 mb-2">
+              <div className="border-l-4 border-mono-black pl-4 py-2">
+                <p className="italic text-mono-gray-dark mb-2">
                   "平日の仕事終わりや週末の空き時間を活用して活動しています。自分の好きなことで収入を得られるのが最高です。何より様々な国の方との出会いが刺激になっています。"
                 </p>
-                <p className="font-medium">田中さん（20代・東京在住、6ヶ月間活動中）</p>
+                <p className="font-medium text-mono-black">田中さん（20代・東京在住、6ヶ月間活動中）</p>
               </div>
               
-              <div className="border-l-4 border-teal-500 pl-4 py-2">
-                <p className="italic text-gray-700 mb-2">
+              <div className="border-l-4 border-mono-black pl-4 py-2">
+                <p className="italic text-mono-gray-dark mb-2">
                   "定年退職後の新しい活動として始めました。長年住んだ街の歴史や文化を伝えることで、自分の知識や経験が役立つ喜びを感じています。"
                 </p>
-                <p className="font-medium">佐藤さん（60代・福岡在住、8ヶ月間活動中）</p>
+                <p className="font-medium text-mono-black">佐藤さん（60代・福岡在住、8ヶ月間活動中）</p>
               </div>
             </div>
           </section>
@@ -245,12 +245,12 @@ const AttenderInfoPage: React.FC<AttenderInfoPageProps> = ({ onBack }) => {
             <h2 className="text-2xl font-bold mb-6">よくある質問</h2>
             <div className="space-y-6">
               {faqs.map((faq, index) => (
-                <div key={index} className="border-b border-gray-200 pb-4 last:border-0 last:pb-0">
-                  <h3 className="font-bold text-lg mb-2 flex items-start">
-                    <span className="text-teal-600 mr-2">Q.</span> 
+                <div key={index} className="border-b border-mono-light pb-4 last:border-0 last:pb-0">
+                  <h3 className="font-bold text-lg mb-2 flex items-start text-mono-black">
+                    <span className="text-mono-black mr-2">Q.</span> 
                     {faq.question}
                   </h3>
-                  <p className="text-gray-700 pl-6">
+                  <p className="text-mono-gray-dark pl-6">
                     {faq.answer}
                   </p>
                 </div>
@@ -260,37 +260,37 @@ const AttenderInfoPage: React.FC<AttenderInfoPageProps> = ({ onBack }) => {
 
           {/* 安心・安全のための取り組み */}
           <section className="bg-white rounded-lg shadow-sm p-6">
-            <h2 className="text-2xl font-bold mb-4">安心・安全のための取り組み</h2>
-            <div className="flex space-x-4 mb-4">
-              <Shield className="w-6 h-6 text-teal-600 flex-shrink-0" />
+            <h2 className="text-2xl font-bold mb-4 text-mono-black">安心・安全のための取り組み</h2>
+            <div className="flex space-x-4">
+              <Shield className="w-6 h-6 text-mono-black flex-shrink-0" />
               <div>
-                <h3 className="font-bold">利用者の身元確認</h3>
-                <p className="text-gray-600">すべてのユーザーは本人確認を完了している安心の環境です。</p>
+                <h3 className="font-bold text-mono-black">利用者の身元確認</h3>
+                <p className="text-mono-gray-medium">すべてのユーザーは本人確認を完了している安心の環境です。</p>
               </div>
             </div>
             <div className="flex space-x-4 mb-4">
-              <MessageCircle className="w-6 h-6 text-teal-600 flex-shrink-0" />
+              <MessageCircle className="w-6 h-6 text-mono-black flex-shrink-0" />
               <div>
-                <h3 className="font-bold">24時間サポート</h3>
-                <p className="text-gray-600">活動中に困ったことがあれば、いつでもサポートチームにご連絡いただけます。</p>
+                <h3 className="font-bold text-mono-black">24時間サポート</h3>
+                <p className="text-mono-gray-medium">活動中に困ったことがあれば、いつでもサポートチームにご連絡いただけます。</p>
               </div>
             </div>
             <div className="flex space-x-4">
-              <CreditCard className="w-6 h-6 text-teal-600 flex-shrink-0" />
+              <CreditCard className="w-6 h-6 text-mono-black flex-shrink-0" />
               <div>
-                <h3 className="font-bold">補償制度</h3>
-                <p className="text-gray-600">万が一のトラブルに備え、各種保険や補償制度を用意しています。</p>
+                <h3 className="font-bold text-mono-black">補償制度</h3>
+                <p className="text-mono-gray-medium">万が一のトラブルに備え、各種保険や補償制度を用意しています。</p>
               </div>
             </div>
           </section>
 
           {/* CTA */}
-          <div className="bg-gradient-to-r from-cyan-600 to-teal-600 rounded-lg p-8 text-white text-center">
+          <div className="bg-mono-black rounded-lg p-8 text-mono-white text-center">
             <h2 className="text-2xl font-bold mb-4">あなたも特別な体験を創り出す<br />アテンダーになりませんか？</h2>
-            <p className="mb-6">登録は簡単です。まずは申請フォームから始めましょう。</p>
+            <p className="mb-6 text-mono-white">登録は簡単です。まずは申請フォームから始めましょう。</p>
             <button 
               onClick={handleApplyClick}
-              className="bg-white text-teal-700 px-8 py-3 rounded-lg font-bold text-lg hover:bg-gray-100 transition duration-200 shadow-md"
+              className="bg-mono-white text-mono-black px-8 py-3 rounded-lg font-bold text-lg hover:bg-mono-lighter transition duration-200 shadow-md"
             >
               {buttonText}
             </button>
