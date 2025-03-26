@@ -1,18 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { AttenderApplicationData } from '../../../types/attender';
-import { Save, CheckCircle, AlertCircle, WifiOff, RotateCw } from 'lucide-react';
+import { Save, CheckCircle, AlertCircle, WifiOff, RotateCw, Home } from 'lucide-react';
 import { isOnline } from '../../../utils/networkUtils';
+import { navigateToHome } from '../../../utils/navigation';
 
 interface DraftSaverProps {
   formData: Partial<AttenderApplicationData>;
   onSave: () => Promise<void>;
+  withHomeButton?: boolean;
 }
 
 /**
  * 下書き保存コンポーネント
  * 定期的な自動保存と手動保存の両方をサポート
  */
-const DraftSaver: React.FC<DraftSaverProps> = ({ formData, onSave }) => {
+const DraftSaver: React.FC<DraftSaverProps> = ({ formData, onSave, withHomeButton = true }) => {
   const [isSaving, setIsSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [saveSuccess, setSaveSuccess] = useState(false);
@@ -44,7 +46,7 @@ const DraftSaver: React.FC<DraftSaverProps> = ({ formData, onSave }) => {
   }, [formData]);
 
   // 手動保存ハンドラ
-  const handleManualSave = async () => {
+  const handleManualSave = async (goToHome: boolean = false) => {
     try {
       setIsSaving(true);
       setSaveError(null);
@@ -59,6 +61,11 @@ const DraftSaver: React.FC<DraftSaverProps> = ({ formData, onSave }) => {
       setTimeout(() => {
         setSaveSuccess(false);
       }, 3000);
+      
+      // ホームに移動する場合
+      if (goToHome) {
+        navigateToHome();
+      }
     } catch (error) {
       console.error('下書き保存エラー:', error);
       setSaveError('保存に失敗しました。ネットワーク接続を確認してください。');
@@ -113,7 +120,7 @@ const DraftSaver: React.FC<DraftSaverProps> = ({ formData, onSave }) => {
         <div className="flex gap-2">
           <button
             type="button"
-            onClick={handleManualSave}
+            onClick={() => handleManualSave(false)}
             disabled={isSaving}
             className={`flex items-center px-3 py-1 rounded-md text-sm ${
               saveSuccess
@@ -150,10 +157,26 @@ const DraftSaver: React.FC<DraftSaverProps> = ({ formData, onSave }) => {
             ) : (
               <>
                 <Save className="w-4 h-4 mr-1" />
-                今すぐ保存
+                保存
               </>
             )}
           </button>
+          
+          {withHomeButton && (
+            <button
+              type="button"
+              onClick={() => handleManualSave(true)}
+              disabled={isSaving}
+              className={`flex items-center px-3 py-1 rounded-md text-sm ${
+                isSaving
+                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                  : 'bg-green-100 text-green-700 hover:bg-green-200'
+              }`}
+            >
+              <Home className="w-4 h-4 mr-1" />
+              保存してホームへ
+            </button>
+          )}
           
           {/* リトライボタン（エラー時のみ表示） */}
           {saveError && (

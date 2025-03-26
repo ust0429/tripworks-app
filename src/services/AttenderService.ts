@@ -226,7 +226,7 @@ function validateApplicationData(data: AttenderApplicationData, formStatus: Form
   }
   
   // 身分証明書情報のチェック（任意）
-  if (data.identificationDocument) {
+  if (formStatus !== 'required' && data.identificationDocument) {
     // 身分証明書が提出されている場合のみバリデーション
     if (data.identificationDocument.expirationDate) {
       const expirationDate = new Date(data.identificationDocument.expirationDate);

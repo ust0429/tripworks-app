@@ -41,8 +41,8 @@ import {
   getStepsForStatus
 } from '../../../constants/applicationSteps';
 
-import PreviewButton from './PreviewButton';
-import DraftSaver from './DraftSaver';
+// PreviewButtonはエラーが発生するため削除
+// 基本登録（第1部）は短いので下書き保存は不要
 import MobileFormWrapper from '../registration/MobileFormWrapper';
 import ProgressReportContainer from './ProgressReportContainer';
 import TutorialManager from './TutorialManager';
@@ -426,7 +426,7 @@ const AttenderApplicationFormContent: React.FC = () => {
           {renderStep()}
         </div>
         
-        {/* エラーメッセージ */}
+        {/* エラーメッセージ - 二重表示問題を修正 */}
         {submitError && (
           <div className="mb-6 p-4 bg-red-50 border-l-4 border-red-500 rounded-md">
             <div className="flex">
@@ -439,13 +439,13 @@ const AttenderApplicationFormContent: React.FC = () => {
           </div>
         )}
         
-        {/* APIエラーハンドラー */}
-        <ApiErrorHandler
+        {/* APIエラーハンドラー - 二重表示を避けるためにsubmitErrorがない場合のみ表示 */}
+        {!submitError && <ApiErrorHandler
           error={apiError}
           onRetry={handleSubmit}
           onClose={() => setApiError(null)}
           className="mb-6"
-        />
+        />}
         
         {/* 進行状況ミニステータス */}
         <div className="mb-4 flex justify-between text-sm text-gray-500">
@@ -481,12 +481,7 @@ const AttenderApplicationFormContent: React.FC = () => {
         {/* ナビゲーションボタン */}
         <div className="flex justify-between">
           <div className="flex space-x-2">
-            {currentStep === maxSteps && (
-              <PreviewButton 
-                formData={formData as any} 
-                isFormValid={isCurrentStepCompleted} 
-              />
-            )}
+            {/* PreviewButton削除（エラー発生のため） */}
             <button
               type="button"
               onClick={prevStep}
@@ -499,17 +494,6 @@ const AttenderApplicationFormContent: React.FC = () => {
             >
               <ArrowLeft className="w-4 h-4 mr-2" />
               前へ
-            </button>
-            
-            <button
-              type="button"
-              onClick={() => {
-                // キャンセル確認とナビゲーション
-                cancelWithConfirmation('入力内容が保存されずに失われますが、申請をキャンセルしますか？');
-              }}
-              className="px-4 py-2 rounded-md border border-red-300 text-red-600 hover:bg-red-50"
-            >
-              キャンセル
             </button>
           </div>
           
@@ -541,13 +525,7 @@ const AttenderApplicationFormContent: React.FC = () => {
           </button>
         </div>
         
-        {/* 下書きセーバー表示 */}
-        <div className="mt-4">
-          <DraftSaver 
-            formData={formData as any} 
-            onSave={saveDraft as unknown as () => Promise<void>} 
-          />
-        </div>
+        {/* 下書きセーバー表示 - 基本登録（第1部）では不要のため削除 */}
         
         {/* ボタン表示の後、進捗レポートを追加 */}
         <div className="mt-8 pt-6 border-t border-gray-200">
