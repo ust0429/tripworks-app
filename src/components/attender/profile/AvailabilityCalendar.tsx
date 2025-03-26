@@ -1,189 +1,217 @@
-import React, { useState } from 'react';
-// モックライブラリをインポート
-import { useTranslation } from '../../../mocks/i18nMock';
-import {
-  Box,
-  Typography,
-  Paper,
-  Grid,
-  ToggleButton,
-  ToggleButtonGroup,
-  Slider,
-  FormControlLabel,
-  Switch,
-  Divider
-} from '../../../mocks/materialMock';
+import React, { useState, useEffect } from 'react';
+import { useAttenderProfile } from '@/contexts/AttenderProfileContext';
+import { Availability } from '@/types/attender/profile';
+import { Clock, Save } from 'lucide-react';
 
 interface AvailabilityCalendarProps {
-  availability: Record<string, any>;
-  onChange: (availability: Record<string, any>) => void;
-  readOnly?: boolean;
+  availability: Availability;
+  isEditable?: boolean;
 }
 
-// 曜日の配列
-const DAYS_OF_WEEK = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+// 曜日の日本語表示用マッピング
+const DAY_LABELS: Record<string, string> = {
+  'monday': '月曜日',
+  'tuesday': '火曜日',
+  'wednesday': '水曜日',
+  'thursday': '木曜日',
+  'friday': '金曜日',
+  'saturday': '土曜日',
+  'sunday': '日曜日',
+};
 
-// 時間スロットの生成（8:00 ~ 22:00）
-const TIME_SLOTS = Array.from({ length: 15 }, (_, i) => {
-  const hour = i + 8;
-  return `${hour}:00`;
-});
+// 曜日の並び順
+const DAY_ORDER = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
 
 const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
   availability,
-  onChange,
-  readOnly = false
+  isEditable = false
 }) => {
-  const { t } = useTranslation(['attender', 'common']);
-  const [selectedDay, setSelectedDay] = useState<string>('monday');
-  
-  // 初期値の設定
-  const initialAvailability = { ...availability };
-  DAYS_OF_WEEK.forEach(day => {
-    if (!initialAvailability[day]) {
-      initialAvailability[day] = {
-        available: false,
-        timeRange: [9, 17]
+  const { updateProfile } = useAttenderProfile();
+  const [editedAvailability, setEditedAvailability] = useState<Availability>({ ...availability });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+
+  // availabilityが変更されたら編集データも更新
+  useEffect(() => {
+    if (!isEditing) {
+      setEditedAvailability({ ...availability });
+    }
+  }, [availability, isEditing]);
+
+  // 曜日の利用可能状態を切り替え
+  const toggleAvailability = (day: string) => {
+    if (!isEditing && !isEditable) return;
+
+    setEditedAvailability(prev => {
+      const currentDay = prev[day] || { available: false };
+      return {
+        ...prev,
+        [day]: {
+          ...currentDay,
+          available: !currentDay.available,
+          // 利用可能にする場合、デフォルトの時間を設定
+          startTime: !currentDay.available ? (currentDay.startTime || '10:00') : currentDay.startTime,
+          endTime: !currentDay.available ? (currentDay.endTime || '18:00') : currentDay.endTime
+        }
       };
-    }
-  });
-
-  const handleDayChange = (
-    _: React.MouseEvent<HTMLElement>,
-    newDay: string,
-  ) => {
-    if (newDay !== null) {
-      setSelectedDay(newDay);
-    }
+    });
   };
 
-  const handleAvailableToggle = (day: string) => {
-    if (readOnly) return;
-    
-    const updatedAvailability = {
-      ...initialAvailability,
+  // 時間の変更
+  const handleTimeChange = (day: string, field: 'startTime' | 'endTime', value: string) => {
+    if (!isEditing && !isEditable) return;
+
+    setEditedAvailability(prev => ({
+      ...prev,
       [day]: {
-        ...initialAvailability[day],
-        available: !initialAvailability[day].available
+        ...prev[day],
+        [field]: value
       }
-    };
-    
-    onChange(updatedAvailability);
+    }));
   };
 
-  const handleTimeRangeChange = (day: string, newValue: number | number[]) => {
-    if (readOnly) return;
-    
-    const updatedAvailability = {
-      ...initialAvailability,
-      [day]: {
-        ...initialAvailability[day],
-        timeRange: newValue as number[]
+  // 変更を保存
+  const saveChanges = async () => {
+    if (!isEditable) return;
+
+    setIsSubmitting(true);
+    setSubmitError(null);
+
+    try {
+      const success = await updateProfile({
+        availability: editedAvailability
+      });
+
+      if (success) {
+        setIsEditing(false);
+      } else {
+        setSubmitError('利用可能時間の更新に失敗しました');
       }
-    };
-    
-    onChange(updatedAvailability);
+    } catch (error) {
+      console.error('Error updating availability:', error);
+      setSubmitError('エラーが発生しました。しばらくしてからお試しください。');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
+
+  // 編集モードを開始
+  const startEditing = () => {
+    setIsEditing(true);
+    setEditedAvailability({ ...availability });
+    setSubmitError(null);
+  };
+
+  // 編集をキャンセル
+  const cancelEditing = () => {
+    setIsEditing(false);
+    setEditedAvailability({ ...availability });
+    setSubmitError(null);
+  };
+
+  const currentAvailability = isEditing ? editedAvailability : availability;
 
   return (
-    <Paper variant="outlined" sx={{ p: 2 }}>
-      <Typography variant="h6" gutterBottom>
-        {t('profile.availability.title')}
-      </Typography>
-      
-      <Typography variant="body2" color="text.secondary" mb={2}>
-        {t('profile.availability.description')}
-      </Typography>
-      
-      <Box mb={3}>
-        <ToggleButtonGroup
-          value={selectedDay}
-          exclusive
-          onChange={handleDayChange}
-          aria-label="selected day"
-          fullWidth
-          size="small"
-        >
-          {DAYS_OF_WEEK.map((day) => (
-            <ToggleButton key={day} value={day} aria-label={day}>
-              {t(`common.days.${day}.short`)}
-            </ToggleButton>
-          ))}
-        </ToggleButtonGroup>
-      </Box>
-      
-      <Divider sx={{ mb: 3 }} />
-      
-      <Grid container spacing={3}>
-        {DAYS_OF_WEEK.map((day) => (
-          <React.Fragment key={day}>
-            {selectedDay === day && (
-              <>
-                <Grid item xs={12}>
-                  <Box display="flex" justifyContent="space-between" alignItems="center">
-                    <Typography variant="subtitle1">
-                      {t(`common.days.${day}.full`)}
-                    </Typography>
-                    <FormControlLabel
-                      control={
-                        <Switch
-                          checked={initialAvailability[day]?.available || false}
-                          onChange={() => handleAvailableToggle(day)}
-                          disabled={readOnly}
-                          color="primary"
-                        />
-                      }
-                      label={
-                        initialAvailability[day]?.available
-                          ? t('profile.availability.available')
-                          : t('profile.availability.unavailable')
-                      }
+    <div className="bg-white p-6 rounded-lg shadow-sm border">
+      <div className="flex flex-row items-center justify-between mb-6">
+        <div>
+          <h2 className="text-xl font-semibold">利用可能時間</h2>
+          <p className="text-gray-500 text-sm">体験を提供できる曜日と時間帯</p>
+        </div>
+        {isEditable && !isEditing && (
+          <button 
+            className="px-4 py-2 bg-gray-100 rounded-md text-gray-700 hover:bg-gray-200 transition-colors"
+            onClick={startEditing}
+          >
+            編集
+          </button>
+        )}
+        {isEditable && isEditing && (
+          <div className="flex space-x-2">
+            <button
+              className="px-4 py-2 bg-gray-100 rounded-md text-gray-700 hover:bg-gray-200 transition-colors"
+              onClick={cancelEditing}
+              disabled={isSubmitting}
+            >
+              キャンセル
+            </button>
+            <button
+              className="px-4 py-2 bg-blue-600 rounded-md text-white hover:bg-blue-700 transition-colors flex items-center"
+              onClick={saveChanges}
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? (
+                <span>保存中...</span>
+              ) : (
+                <>
+                  <Save className="h-4 w-4 mr-2" />
+                  保存
+                </>
+              )}
+            </button>
+          </div>
+        )}
+      </div>
+      {submitError && (
+        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md text-red-700">
+          {submitError}
+        </div>
+      )}
+
+      <div className="space-y-4">
+        {DAY_ORDER.map(day => {
+          const dayAvailability = currentAvailability[day] || { available: false };
+          
+          return (
+            <div key={day} className="flex items-center flex-wrap gap-4 p-2 rounded-lg bg-gray-50">
+              <div className="flex items-center min-w-[180px]">
+                <label className="inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    className="sr-only peer"
+                    checked={dayAvailability.available}
+                    onChange={() => toggleAvailability(day)}
+                    disabled={!isEditing && !isEditable}
+                  />
+                  <div className="relative w-11 h-6 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                  <span className="ms-3">
+                    {DAY_LABELS[day]}
+                  </span>
+                </label>
+              </div>
+              
+              {dayAvailability.available && (
+                <div className="flex items-center gap-2 flex-grow">
+                  <Clock className="h-4 w-4 text-gray-500" />
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="time"
+                      value={dayAvailability.startTime || ''}
+                      onChange={(e) => handleTimeChange(day, 'startTime', e.target.value)}
+                      disabled={!isEditing && !isEditable}
+                      className="w-24 p-1 border border-gray-300 rounded-md"
                     />
-                  </Box>
-                </Grid>
-                
-                <Grid item xs={12}>
-                  <Box px={2}>
-                    <Slider
-                      value={initialAvailability[day]?.timeRange || [9, 17]}
-                      onChange={(_event: Event, newValue: number[]) => handleTimeRangeChange(day, newValue)}
-                      valueLabelDisplay="auto"
-                      valueLabelFormat={(value: number) => `${value}:00`}
-                      step={1}
-                      marks
-                      min={8}
-                      max={22}
-                      disabled={!initialAvailability[day]?.available || readOnly}
+                    <span>〜</span>
+                    <input
+                      type="time"
+                      value={dayAvailability.endTime || ''}
+                      onChange={(e) => handleTimeChange(day, 'endTime', e.target.value)}
+                      disabled={!isEditing && !isEditable}
+                      className="w-24 p-1 border border-gray-300 rounded-md"
                     />
-                    
-                    <Box display="flex" justifyContent="space-between">
-                      <Typography variant="caption" color="text.secondary">
-                        {t('profile.availability.startTime')}
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        {t('profile.availability.endTime')}
-                      </Typography>
-                    </Box>
-                    
-                    {initialAvailability[day]?.available && (
-                      <Box mt={2} p={2} bgcolor="action.hover" borderRadius={1}>
-                        <Typography variant="body2">
-                          {t('profile.availability.timeRangeDisplay', {
-                            day: t(`common.days.${day}.full`),
-                            startTime: `${initialAvailability[day]?.timeRange[0]}:00`,
-                            endTime: `${initialAvailability[day]?.timeRange[1]}:00`
-                          })}
-                        </Typography>
-                      </Box>
-                    )}
-                  </Box>
-                </Grid>
-              </>
-            )}
-          </React.Fragment>
-        ))}
-      </Grid>
-    </Paper>
+                  </div>
+                </div>
+              )}
+              
+              {!dayAvailability.available && (
+                <span className="text-gray-500">利用不可</span>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
   );
 };
 
