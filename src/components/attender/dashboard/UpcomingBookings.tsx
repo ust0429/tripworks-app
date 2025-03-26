@@ -1,9 +1,10 @@
 import React from 'react';
-// モックライブラリをインポート
 import { useTranslation } from '../../../mocks/i18nMock';
+import { BookingData } from '../../../types/dashboard';
 import {
-  Box,
+  Paper,
   Typography,
+  Box,
   List,
   ListItem,
   Card,
@@ -22,23 +23,13 @@ import {
   LocalActivity as ActivityIcon
 } from '../../../mocks/iconsMock';
 
-interface Booking {
-  id: string;
-  userId: string;
-  userName: string;
+// 互換性のため
+interface Booking extends BookingData {
   userImage: string;
-  experienceId: string;
-  experienceTitle: string;
-  date: Date;
-  startTime: string;
-  endTime: string;
-  numberOfPeople: number;
-  status: string;
-  createdAt: Date;
 }
 
 interface UpcomingBookingsProps {
-  bookings: Booking[];
+  bookings: BookingData[] | Booking[];
 }
 
 const UpcomingBookings: React.FC<UpcomingBookingsProps> = ({ bookings }) => {
@@ -46,108 +37,93 @@ const UpcomingBookings: React.FC<UpcomingBookingsProps> = ({ bookings }) => {
 
   if (bookings.length === 0) {
     return (
-      <Alert severity="info">
-        {t('dashboard.upcomingBookings.empty')}
-      </Alert>
+      <Box textAlign="center" py={3}>
+        <Alert severity="info">
+          現在予定されている体験はありません
+        </Alert>
+      </Box>
     );
   }
 
   // 日付をフォーマット
-  const formatDate = (date: Date): string => {
-    return new Intl.DateTimeFormat('ja-JP', {
+  const formatDate = (dateString: string): string => {
+    return new Date(dateString).toLocaleDateString('ja-JP', {
       year: 'numeric',
-      month: 'long',
+      month: 'short',
       day: 'numeric',
-      weekday: 'long'
-    }).format(new Date(date));
+      weekday: 'short'
+    });
   };
 
-  // 日付を比較して近い順に並べ替え
-  const sortedBookings = [...bookings].sort((a, b) => {
-    return new Date(a.date).getTime() - new Date(b.date).getTime();
-  });
-
   return (
-    <List disablePadding>
-      {sortedBookings.map((booking, index) => (
+    <List sx={{ width: '100%', bgcolor: 'background.paper', p: 0 }}>
+      {bookings.map((booking) => (
         <React.Fragment key={booking.id}>
-          {index > 0 && <Divider component="li" />}
-          <ListItem alignItems="flex-start" disablePadding>
-            <Card sx={{ width: '100%', mb: 0, boxShadow: 'none' }}>
+          <ListItem alignItems="flex-start" sx={{ px: 0 }}>
+            <Card sx={{ width: '100%' }}>
               <CardContent>
                 <Grid container spacing={2}>
-                  <Grid item xs={12} sm={8}>
-                    <Box mb={2}>
-                      <Typography variant="h6" gutterBottom>
-                        <ActivityIcon color="primary" sx={{ verticalAlign: 'middle', mr: 1 }} />
-                        {booking.experienceTitle}
+                  <Grid item xs={12} sm={2}>
+                    <Box display="flex" flexDirection="column" alignItems="center">
+                      <Avatar
+                        alt={booking.userName}
+                        src={booking.userAvatar || booking.userImage}
+                        sx={{ width: 60, height: 60, mb: 1 }}
+                      />
+                      <Typography variant="subtitle2">
+                        {booking.userName}
                       </Typography>
-                      
-                      <Box display="flex" alignItems="center" mt={2}>
-                        <Avatar 
-                          src={booking.userImage}
-                          alt={booking.userName}
-                          sx={{ mr: 2 }}
-                        >
-                          {!booking.userImage && booking.userName.charAt(0)}
-                        </Avatar>
-                        <Typography variant="body1">
-                          {booking.userName}
-                        </Typography>
-                      </Box>
+                    </Box>
+                  </Grid>
+                  <Grid item xs={12} sm={10}>
+                    <Typography variant="h6" gutterBottom>
+                      {booking.experienceTitle}
+                    </Typography>
+                    
+                    <Box display="flex" alignItems="center" mb={1}>
+                      <EventIcon sx={{ mr: 1, color: 'primary.main' }} />
+                      <Typography variant="body2">
+                        {formatDate(booking.date)}
+                      </Typography>
+                    </Box>
+                    
+                    <Box display="flex" alignItems="center" mb={1}>
+                      <TimeIcon sx={{ mr: 1, color: 'primary.main' }} />
+                      <Typography variant="body2">
+                        {booking.startTime} - {booking.endTime}
+                      </Typography>
                     </Box>
                     
                     <Box display="flex" flexWrap="wrap" gap={1} mb={2}>
-                      <Chip
-                        icon={<EventIcon />}
-                        label={formatDate(booking.date)}
-                        variant="outlined"
-                        size="small"
-                        color="primary"
-                      />
-                      <Chip
-                        icon={<TimeIcon />}
-                        label={`${booking.startTime} - ${booking.endTime}`}
-                        variant="outlined"
-                        size="small"
-                      />
                       <Chip
                         icon={<PersonIcon />}
                         label={t('dashboard.upcomingBookings.people', { count: booking.numberOfPeople })}
                         variant="outlined"
                         size="small"
                       />
+                      <Chip
+                        icon={<ActivityIcon />}
+                        label={`¥${booking.totalAmount.toLocaleString()}`}
+                        variant="outlined"
+                        size="small"
+                        color="primary"
+                      />
                     </Box>
                     
-                    <Chip
-                      label={t(`dashboard.upcomingBookings.status.${booking.status}`)}
-                      color={booking.status === 'confirmed' ? 'success' : 'default'}
-                      size="small"
-                    />
-                  </Grid>
-                  
-                  <Grid item xs={12} sm={4} display="flex" flexDirection="column" justifyContent="center">
-                    <Box 
-                      sx={{ 
-                        display: 'flex', 
-                        flexDirection: 'column', 
-                        gap: 1,
-                        mt: { xs: 2, sm: 0 }
-                      }}
-                    >
+                    <Box mt={2} display="flex" justifyContent="flex-end">
                       <Button
                         variant="outlined"
-                        color="primary"
-                        fullWidth
+                        size="small"
+                        sx={{ mr: 1 }}
                       >
-                        {t('dashboard.upcomingBookings.viewDetails')}
+                        メッセージを送る
                       </Button>
                       <Button
                         variant="outlined"
-                        color="success"
-                        fullWidth
+                        color="error"
+                        size="small"
                       >
-                        {t('dashboard.upcomingBookings.message')}
+                        キャンセル
                       </Button>
                     </Box>
                   </Grid>
@@ -155,6 +131,7 @@ const UpcomingBookings: React.FC<UpcomingBookingsProps> = ({ bookings }) => {
               </CardContent>
             </Card>
           </ListItem>
+          <Divider variant="inset" component="li" />
         </React.Fragment>
       ))}
     </List>

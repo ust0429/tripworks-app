@@ -4,9 +4,9 @@ import { useTranslation } from '../../../mocks/i18nMock';
 import { Button, TextField, Paper, Typography, Grid, Box, CircularProgress } from '../../../mocks/materialMock';
 import { IAttenderProfile } from '../../../types/attender';
 import { useApiClient } from '../../../hooks/useApiClient';
-import ProfileHeader from './ProfileHeader';
+import ProfileHeaderCompat from './ProfileHeaderCompat';
 import ExpertiseSection from './ExpertiseSection';
-import AvailabilityCalendar from './AvailabilityCalendar';
+import AvailabilityCalendarCompat from './AvailabilityCalendarCompat';
 
 interface AttenderProfileFormProps {
   initialProfile?: IAttenderProfile;
@@ -109,7 +109,7 @@ const AttenderProfileForm: React.FC<AttenderProfileFormProps> = ({
 
   return (
     <Paper elevation={3} sx={{ p: 3, mb: 4 }}>
-      <ProfileHeader 
+      <ProfileHeaderCompat 
         profile={profile} 
         onChange={handleChange} 
         readOnly={readOnly} 
@@ -161,7 +161,7 @@ const AttenderProfileForm: React.FC<AttenderProfileFormProps> = ({
         </Grid>
         
         <Grid item xs={12}>
-          <AvailabilityCalendar 
+          <AvailabilityCalendarCompat 
             availability={profile.availability} 
             onChange={handleAvailabilityChange}
             readOnly={readOnly}

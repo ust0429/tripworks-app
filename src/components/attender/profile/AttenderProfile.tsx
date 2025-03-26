@@ -1,262 +1,307 @@
-import React from 'react';
-import { useAttenderProfile } from '@/contexts/AttenderProfileContext';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Badge } from '@/components/ui/badge';
-import { 
-  User, MapPin, Mail, Phone, Calendar, Award, Edit, ExternalLink, 
-  Instagram, Twitter, Facebook, Globe, Clock, Star, AlertCircle
-} from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { useAttenderProfile } from '../../../contexts/AttenderProfileContext';
+import AttenderProfileService from '../../../services/AttenderProfileService';
 import ProfileHeader from './ProfileHeader';
+import AttenderProfileEdit from './AttenderProfileEdit';
 import ExperienceSamples from './ExperienceSamples';
 import AvailabilityCalendar from './AvailabilityCalendar';
-
-// ソーシャルメディアアイコンのマッピング
-const SOCIAL_ICONS: Record<string, React.ReactNode> = {
-  'Instagram': <Instagram className="h-4 w-4" />,
-  'Twitter': <Twitter className="h-4 w-4" />,
-  'Facebook': <Facebook className="h-4 w-4" />,
-  'default': <Globe className="h-4 w-4" />
-};
-
-// 専門分野ラベルのマッピング
-const EXPERTISE_LABELS: Record<string, string> = {
-  'local-culture': '地元文化',
-  'food': '食文化',
-  'history': '歴史',
-  'art': 'アート',
-  'nature': '自然',
-  'adventure': 'アドベンチャー',
-  'nightlife': 'ナイトライフ',
-  'photography': '写真',
-  'craft': '工芸',
-  'music': '音楽',
-};
+import { AttenderProfile as AttenderProfileType, ExperienceSample, DailyAvailability } from '../../../types/attender/profile';
 
 interface AttenderProfileProps {
-  onEdit?: () => void;
+  attenderId: string;
+  /** カスタムレンダリングを行うレンダリングプロップ */
+  renderProfile?: (profile: AttenderProfileType) => React.ReactNode;
 }
 
-const AttenderProfile: React.FC<AttenderProfileProps> = ({ onEdit }) => {
-  const { profileData, isLoading, error, setIsEditing } = useAttenderProfile();
+/**
+ * アテンダープロフィールコンポーネント
+ */
+const AttenderProfile: React.FC<AttenderProfileProps> = ({ attenderId, renderProfile }) => {
+  const {
+    profile,
+    editMode,
+    loadingState,
+    error,
+    setProfile,
+    setEditMode,
+    setLoadingState,
+    setError,
+    updateProfileField
+  } = useAttenderProfile();
+  
+  // プロフィールデータの読み込み
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        setLoadingState('loading');
+        const profileData = await AttenderProfileService.getProfile(attenderId);
+        setProfile(profileData);
+        setLoadingState('success');
+      } catch (err) {
+        console.error('Failed to fetch profile:', err);
+        setError(err instanceof Error ? err.message : '読み込みに失敗しました');
+        setLoadingState('error');
+      }
+    };
 
-  if (isLoading) {
-    return <ProfileSkeleton />;
-  }
-
-  if (error || !profileData) {
+    fetchProfile();
+  }, [attenderId, setProfile, setLoadingState, setError]);
+  
+  // 編集モードの切り替え
+  const handleEditToggle = () => {
+    setEditMode(editMode === 'view' ? 'edit' : 'view');
+  };
+  
+  // プロフィール編集の保存
+  const handleSaveProfile = async (updates: Partial<AttenderProfileType>) => {
+    if (!profile) return;
+    
+    try {
+      setLoadingState('loading');
+      
+      // 更新データの作成
+      const updatedProfile = {
+        ...profile,
+        ...updates
+      };
+      
+      // 完成度スコアの再計算
+      updatedProfile.completionScore = AttenderProfileService.calculateCompletionScore(updatedProfile);
+      updatedProfile.lastActive = new Date().toISOString();
+      
+      // プロフィールの更新
+      const result = await AttenderProfileService.updateProfile(updatedProfile);
+      setProfile(result);
+      
+      setLoadingState('success');
+      setEditMode('view');
+    } catch (err) {
+      console.error('Failed to save profile:', err);
+      setError(err instanceof Error ? err.message : '保存に失敗しました');
+      setLoadingState('error');
+    }
+  };
+  
+  // 体験サンプルの追加
+  const handleAddSample = async (sample: Omit<ExperienceSample, 'id' | 'createdAt' | 'updatedAt'>) => {
+    if (!profile) return;
+    
+    try {
+      setLoadingState('loading');
+      const newSample = await AttenderProfileService.addExperienceSample(profile.id, sample);
+      
+      const updatedProfile = { ...profile };
+      updatedProfile.experienceSamples = [...profile.experienceSamples, newSample];
+      updatedProfile.completionScore = AttenderProfileService.calculateCompletionScore(updatedProfile);
+      updatedProfile.lastActive = new Date().toISOString();
+      
+      setProfile(updatedProfile);
+      await AttenderProfileService.updateProfile(updatedProfile);
+      
+      setLoadingState('success');
+    } catch (err) {
+      console.error('Failed to add sample:', err);
+      setError(err instanceof Error ? err.message : 'サンプルの追加に失敗しました');
+      setLoadingState('error');
+    }
+  };
+  
+  // 体験サンプルの更新
+  const handleUpdateSample = async (
+    id: string,
+    updates: Partial<Omit<ExperienceSample, 'id' | 'createdAt' | 'updatedAt'>>
+  ) => {
+    if (!profile) return;
+    
+    try {
+      setLoadingState('loading');
+      const updatedSample = await AttenderProfileService.updateExperienceSample(profile.id, id, updates);
+      
+      const updatedProfile = { ...profile };
+      updatedProfile.experienceSamples = profile.experienceSamples.map(s => 
+        s.id === id ? { ...s, ...updatedSample } : s
+      );
+      updatedProfile.lastActive = new Date().toISOString();
+      
+      setProfile(updatedProfile);
+      await AttenderProfileService.updateProfile(updatedProfile);
+      
+      setLoadingState('success');
+    } catch (err) {
+      console.error('Failed to update sample:', err);
+      setError(err instanceof Error ? err.message : 'サンプルの更新に失敗しました');
+      setLoadingState('error');
+    }
+  };
+  
+  // 体験サンプルの削除
+  const handleRemoveSample = async (id: string) => {
+    if (!profile) return;
+    
+    try {
+      setLoadingState('loading');
+      await AttenderProfileService.removeExperienceSample(profile.id, id);
+      
+      const updatedProfile = { ...profile };
+      updatedProfile.experienceSamples = profile.experienceSamples.filter(s => s.id !== id);
+      updatedProfile.completionScore = AttenderProfileService.calculateCompletionScore(updatedProfile);
+      updatedProfile.lastActive = new Date().toISOString();
+      
+      setProfile(updatedProfile);
+      await AttenderProfileService.updateProfile(updatedProfile);
+      
+      setLoadingState('success');
+    } catch (err) {
+      console.error('Failed to remove sample:', err);
+      setError(err instanceof Error ? err.message : 'サンプルの削除に失敗しました');
+      setLoadingState('error');
+    }
+  };
+  
+  // 利用可能時間の更新
+  const handleUpdateAvailability = async (availability: DailyAvailability[]) => {
+    if (!profile) return;
+    
+    try {
+      setLoadingState('loading');
+      
+      const updatedProfile = { ...profile, availability };
+      updatedProfile.completionScore = AttenderProfileService.calculateCompletionScore(updatedProfile);
+      updatedProfile.lastActive = new Date().toISOString();
+      
+      await AttenderProfileService.updateProfile(updatedProfile);
+      setProfile(updatedProfile);
+      
+      setLoadingState('success');
+    } catch (err) {
+      console.error('Failed to update availability:', err);
+      setError(err instanceof Error ? err.message : '利用可能時間の更新に失敗しました');
+      setLoadingState('error');
+    }
+  };
+  
+  // エラー表示
+  if (loadingState === 'error') {
     return (
-      <div className="w-full max-w-4xl mx-auto p-4 text-center">
-        <div className="bg-red-50 p-4 rounded-lg flex items-center justify-center mb-4">
-          <AlertCircle className="h-5 w-5 text-red-500 mr-2" />
-          <p className="text-red-700">{error || 'プロフィールの読み込みに失敗しました'}</p>
-        </div>
-        <button 
-          className="px-4 py-2 bg-gray-100 rounded-md text-gray-700 hover:bg-gray-200 transition-colors"
+      <div className="bg-red-50 p-4 rounded-lg text-red-700">
+        <h3 className="font-medium">エラーが発生しました</h3>
+        <p>{error}</p>
+        <button
           onClick={() => window.location.reload()}
+          className="mt-3 px-4 py-2 text-sm text-white bg-red-600 rounded hover:bg-red-700"
         >
           再読み込み
         </button>
       </div>
     );
   }
-
-  const handleEditClick = () => {
-    setIsEditing(true);
-    if (onEdit) onEdit();
-  };
-
+  
+  // 読み込み中表示
+  if (loadingState === 'loading' && !profile) {
+    return (
+      <div className="animate-pulse space-y-6">
+        <ProfileHeader
+          profile={null}
+          isLoading={true}
+        />
+        <div className="bg-gray-100 h-64 rounded-lg"></div>
+        <div className="bg-gray-100 h-64 rounded-lg"></div>
+      </div>
+    );
+  }
+  
+  // プロフィールがない場合
+  if (!profile) {
+    return (
+      <div className="text-center py-8">
+        <h3 className="text-lg font-medium text-gray-700">プロフィールが見つかりません</h3>
+        <p className="text-gray-500">データが読み込めないか、プロフィールが存在しません</p>
+      </div>
+    );
+  }
+  
+  // カスタムレンダリング関数が与えられていれば、そちらを優先使用
+  if (profile && renderProfile) {
+    return <>{renderProfile(profile)}</>;
+  }
+  
+  // 通常のレンダリング
   return (
-    <div className="w-full max-w-4xl mx-auto pb-12">
-      <ProfileHeader 
-        name={profileData.name}
-        bio={profileData.bio}
-        profileImage={profileData.profileImage}
-        headerImage={profileData.headerImage}
-        rating={profileData.rating}
-        reviewCount={profileData.reviewCount}
-        verificationStatus={profileData.verificationStatus}
-        badges={profileData.achievementBadges}
-        onEdit={handleEditClick}
+    <div className="space-y-6">
+      {/* プロフィールヘッダー */}
+      <ProfileHeader
+        profile={profile}
+        isLoading={loadingState === 'loading'}
+        isEditing={editMode === 'edit'}
+        onEdit={handleEditToggle}
+        onSave={() => setEditMode('view')}
+        onCancel={() => setEditMode('view')}
       />
-
-      <div className="mt-8">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-          <button 
-            className="px-4 py-2 bg-white border-b-2 border-blue-600 text-blue-700 font-medium"
-            onClick={() => {
-              document.getElementById('profile-section')?.scrollIntoView({ behavior: 'smooth' });
-            }}
-          >
-            プロフィール
-          </button>
-          <button 
-            className="px-4 py-2 hover:bg-gray-50"
-            onClick={() => {
-              document.getElementById('experiences-section')?.scrollIntoView({ behavior: 'smooth' });
-            }}
-          >
-            体験サンプル
-          </button>
-          <button 
-            className="px-4 py-2 hover:bg-gray-50"
-            onClick={() => {
-              document.getElementById('availability-section')?.scrollIntoView({ behavior: 'smooth' });
-            }}
-          >
-            利用可能時間
-          </button>
-        </div>
-
-        <div id="profile-section" className="mb-8">
-          <div className="bg-white p-6 rounded-lg shadow-sm border">
-            <h2 className="text-xl font-semibold mb-6">基本情報</h2>
-            <div className="grid gap-6">
-              {/* 基本情報 */}
-              <div className="space-y-3">
-                <div className="flex items-center gap-2">
-                  <User className="h-4 w-4 text-gray-500" />
-                  <span>{profileData.name}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Mail className="h-4 w-4 text-gray-500" />
-                  <span>{profileData.email}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Phone className="h-4 w-4 text-gray-500" />
-                  <span>{profileData.phoneNumber}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <MapPin className="h-4 w-4 text-gray-500" />
-                  <span>{profileData.address}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Calendar className="h-4 w-4 text-gray-500" />
-                  <span>登録日: {new Date(profileData.joinedDate).toLocaleDateString()}</span>
-                </div>
-              </div>
-
-              <div className="pt-4 border-t">
-                <h3 className="text-lg font-medium mb-3">専門分野</h3>
-                <div className="flex flex-wrap gap-2">
-                  {profileData.expertise.map(skill => (
-                    <Badge key={skill} variant="secondary" className="bg-blue-100 text-blue-800 hover:bg-blue-200">
-                      {EXPERTISE_LABELS[skill] || skill}
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-
-              {/* 言語 */}
-              {profileData.languages && profileData.languages.length > 0 && (
-                <div className="pt-4 border-t">
-                  <h3 className="text-lg font-medium mb-3">対応言語</h3>
-                  <div className="flex flex-wrap gap-2">
-                    {profileData.languages.map(language => (
-                      <Badge key={language} variant="outline" className="border-gray-300 hover:bg-gray-100">
-                        {language}
-                      </Badge>
-                    ))}
+      
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2 space-y-6">
+          {/* プロフィール編集フォーム */}
+          {editMode === 'edit' ? (
+            <AttenderProfileEdit
+              profile={profile}
+              onSave={handleSaveProfile}
+              onCancel={() => setEditMode('view')}
+            />
+          ) : (
+            <div className="bg-white rounded-lg shadow-sm p-6">
+              <h2 className="text-xl font-semibold mb-4">プロフィール情報</h2>
+              
+              <div className="space-y-4">
+                {profile.location && (
+                  <div>
+                    <h3 className="text-sm font-medium text-gray-500">居住地</h3>
+                    <p>{profile.location}</p>
                   </div>
+                )}
+                
+                <div>
+                  <h3 className="text-sm font-medium text-gray-500">自己紹介</h3>
+                  <p className="whitespace-pre-line">{profile.bio}</p>
                 </div>
-              )}
-
-              {/* ソーシャルメディアリンク */}
-              {profileData.socialMediaLinks && profileData.socialMediaLinks.length > 0 && (
-                <div className="pt-4 border-t">
-                  <h3 className="text-lg font-medium mb-3">SNSリンク</h3>
-                  <div className="flex flex-wrap gap-3">
-                    {profileData.socialMediaLinks.map((link, index) => (
-                      <a 
-                        key={index}
-                        href={link.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-800"
-                      >
-                        {SOCIAL_ICONS[link.platform] || SOCIAL_ICONS.default}
-                        <span>{link.platform}</span>
-                        <ExternalLink className="h-3 w-3" />
-                      </a>
-                    ))}
+                
+                {profile.specialties && profile.specialties.length > 0 && (
+                  <div>
+                    <h3 className="text-sm font-medium text-gray-500">専門分野</h3>
+                    <p>{profile.specialties.join('、')}</p>
                   </div>
-                </div>
-              )}
-
-              {/* 編集ボタン */}
-              <div className="flex justify-end mt-4">
-                <button 
-                  className="px-4 py-2 bg-gray-100 rounded-md text-gray-700 hover:bg-gray-200 transition-colors flex items-center"
-                  onClick={handleEditClick}
-                >
-                  <Edit className="h-4 w-4 mr-2" />
-                  プロフィールを編集
-                </button>
+                )}
+                
+                {profile.background && (
+                  <div>
+                    <h3 className="text-sm font-medium text-gray-500">経歴・バックグラウンド</h3>
+                    <p className="whitespace-pre-line">{profile.background}</p>
+                  </div>
+                )}
               </div>
             </div>
-          </div>
-        </div>
-
-        <div id="experiences-section" className="mb-8">
-          <ExperienceSamples 
-            experiences={profileData.experienceSamples} 
-            isEditable={false}
+          )}
+          
+          {/* 体験サンプル */}
+          <ExperienceSamples
+            samples={profile.experienceSamples}
+            isEditing={editMode === 'edit'}
+            onAdd={handleAddSample}
+            onUpdate={handleUpdateSample}
+            onRemove={handleRemoveSample}
           />
         </div>
-
-        <div id="availability-section">
-          <AvailabilityCalendar 
-            availability={profileData.availability} 
-            isEditable={false}
+        
+        <div>
+          {/* 利用可能時間 */}
+          <AvailabilityCalendar
+            availability={profile.availability}
+            isEditing={editMode === 'edit'}
+            onChange={handleUpdateAvailability}
           />
         </div>
       </div>
     </div>
   );
 };
-
-// ローディング中に表示するスケルトン
-const ProfileSkeleton: React.FC = () => (
-  <div className="w-full max-w-4xl mx-auto pb-12">
-    <div className="relative">
-      <Skeleton className="w-full h-48 rounded-t-lg" />
-      <div className="absolute -bottom-16 left-8">
-        <Skeleton className="w-32 h-32 rounded-full border-4 border-white" />
-      </div>
-    </div>
-    
-    <div className="mt-20 px-8">
-      <Skeleton className="h-8 w-64 mb-2" />
-      <Skeleton className="h-4 w-full max-w-md mb-6" />
-      
-      <div className="flex gap-2 mb-8">
-        <Skeleton className="h-6 w-24" />
-        <Skeleton className="h-6 w-24" />
-      </div>
-      
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-        <Skeleton className="h-10 w-full" />
-        <Skeleton className="h-10 w-full" />
-        <Skeleton className="h-10 w-full" />
-      </div>
-      
-      <div className="space-y-4 mb-8">
-        <Skeleton className="h-6 w-32 mb-2" />
-        <div className="space-y-2">
-          <Skeleton className="h-4 w-full" />
-          <Skeleton className="h-4 w-full" />
-          <Skeleton className="h-4 w-3/4" />
-        </div>
-      </div>
-      
-      <div className="space-y-4 mb-8">
-        <Skeleton className="h-6 w-32 mb-2" />
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Skeleton className="h-48 w-full" />
-          <Skeleton className="h-48 w-full" />
-        </div>
-      </div>
-    </div>
-  </div>
-);
 
 export default AttenderProfile;

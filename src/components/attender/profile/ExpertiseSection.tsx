@@ -1,86 +1,62 @@
 import React, { useState } from 'react';
 // モックライブラリをインポート
-import { useTranslation } from '../../../mocks/i18nMock';
-import {
-  Box,
-  Typography,
-  Chip,
-  TextField,
-  Button,
-  Autocomplete,
-  Paper
+import { 
+  Paper, 
+  Typography, 
+  Box, 
+  Chip, 
+  TextField, 
+  Button 
 } from '../../../mocks/materialMock';
-import { Add as AddIcon } from '../../../mocks/iconsMock';
+import { useTranslation } from '../../../mocks/i18nMock';
 
 interface ExpertiseSectionProps {
   expertise: string[];
-  onChange: (expertise: string[]) => void;
+  onChange?: (expertise: string[]) => void;
   readOnly?: boolean;
 }
 
-// 仮の専門分野選択肢（実際の実装ではAPIから取得するか、定数から読み込む）
-const EXPERTISE_OPTIONS = [
-  'アート',
-  '歴史',
-  '伝統工芸',
-  '食文化',
-  '屋台巡り',
-  '地元のアンダーグラウンド',
-  '音楽',
-  'クラフトビール',
-  '写真撮影',
-  '建築',
-  '自然探索',
-  '地域コミュニティ',
-  '都市探検',
-  '路地裏巡り',
-  '古書店',
-  'ヴィンテージショップ',
-  'ストリートアート',
-  'ナイトライフ',
-  'ローカルフェスティバル',
-  '地元市場',
-];
-
+/**
+ * 専門分野セクションコンポーネント
+ */
 const ExpertiseSection: React.FC<ExpertiseSectionProps> = ({
   expertise,
   onChange,
   readOnly = false
 }) => {
-  const { t } = useTranslation(['attender', 'common']);
+  const { t } = useTranslation('attender');
   const [newExpertise, setNewExpertise] = useState<string>('');
-  const [customInput, setCustomInput] = useState<string>('');
 
-  const handleDelete = (expertiseToDelete: string) => {
-    if (readOnly) return;
-    const updatedExpertise = expertise.filter(item => item !== expertiseToDelete);
-    onChange(updatedExpertise);
-  };
-
-  const handleAdd = () => {
-    if (readOnly || !newExpertise || expertise.includes(newExpertise)) return;
+  // 専門分野を追加
+  const handleAddExpertise = () => {
+    if (!newExpertise.trim() || readOnly || !onChange) return;
     
-    const updatedExpertise = [...expertise, newExpertise];
+    const updatedExpertise = [...expertise, newExpertise.trim()];
     onChange(updatedExpertise);
     setNewExpertise('');
   };
 
-  const handleCustomAdd = () => {
-    if (readOnly || !customInput || expertise.includes(customInput)) return;
+  // 専門分野を削除
+  const handleDeleteExpertise = (index: number) => {
+    if (readOnly || !onChange) return;
     
-    const updatedExpertise = [...expertise, customInput];
+    const updatedExpertise = [...expertise];
+    updatedExpertise.splice(index, 1);
     onChange(updatedExpertise);
-    setCustomInput('');
+  };
+
+  // Enterキーでの追加対応
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleAddExpertise();
+    }
   };
 
   return (
-    <Paper variant="outlined" sx={{ p: 2 }}>
+    <Paper sx={{ p: 3 }}>
       <Typography variant="h6" gutterBottom>
-        {t('profile.expertise.title')}
-      </Typography>
-      
-      <Typography variant="body2" color="text.secondary" mb={2}>
-        {t('profile.expertise.description')}
+        {t('profile.expertise')}
       </Typography>
       
       <Box display="flex" flexWrap="wrap" gap={1} mb={3}>
@@ -89,75 +65,36 @@ const ExpertiseSection: React.FC<ExpertiseSectionProps> = ({
             <Chip
               key={index}
               label={item}
-              onDelete={readOnly ? undefined : () => handleDelete(item)}
+              onDelete={readOnly ? undefined : () => handleDeleteExpertise(index)}
               color="primary"
               variant="outlined"
             />
           ))
         ) : (
-          <Typography variant="body2" color="text.secondary" fontStyle="italic">
-            {t('profile.expertise.none')}
+          <Typography variant="body2" color="text.secondary">
+            {t('profile.noExpertise')}
           </Typography>
         )}
       </Box>
       
       {!readOnly && (
-        <>
-          <Box mb={2}>
-            <Typography variant="subtitle2" gutterBottom>
-              {t('profile.expertise.selectFromOptions')}
-            </Typography>
-            <Box display="flex" gap={1}>
-              <Autocomplete
-                value={newExpertise}
-                onChange={(_event: React.SyntheticEvent, value: string | null) => setNewExpertise(value || '')}
-                options={EXPERTISE_OPTIONS.filter(option => !expertise.includes(option))}
-                renderInput={(params: React.ComponentProps<typeof TextField>) => (
-                  <TextField
-                    {...params}
-                    variant="outlined"
-                    size="small"
-                    placeholder={t('profile.expertise.select')}
-                    fullWidth
-                  />
-                )}
-                sx={{ flexGrow: 1 }}
-              />
-              <Button
-                variant="outlined"
-                startIcon={<AddIcon />}
-                onClick={handleAdd}
-                disabled={!newExpertise}
-              >
-                {t('common.add')}
-              </Button>
-            </Box>
-          </Box>
-          
-          <Box>
-            <Typography variant="subtitle2" gutterBottom>
-              {t('profile.expertise.addCustom')}
-            </Typography>
-            <Box display="flex" gap={1}>
-              <TextField
-                value={customInput}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setCustomInput(e.target.value)}
-                variant="outlined"
-                size="small"
-                placeholder={t('profile.expertise.customPlaceholder')}
-                fullWidth
-              />
-              <Button
-                variant="outlined"
-                startIcon={<AddIcon />}
-                onClick={handleCustomAdd}
-                disabled={!customInput}
-              >
-                {t('common.add')}
-              </Button>
-            </Box>
-          </Box>
-        </>
+        <Box display="flex" gap={2}>
+          <TextField
+            value={newExpertise}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewExpertise(e.target.value)}
+            onKeyPress={handleKeyPress}
+            placeholder={t('profile.addExpertise')}
+            size="small"
+            fullWidth
+          />
+          <Button 
+            variant="outlined" 
+            onClick={handleAddExpertise}
+            disabled={!newExpertise.trim()}
+          >
+            {t('common.add')}
+          </Button>
+        </Box>
       )}
     </Paper>
   );

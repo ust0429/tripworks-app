@@ -1,262 +1,287 @@
-import { AttenderProfileData, ExperienceSample } from '@/types/attender/profile';
-import { userService } from './userService';
-import { convertApplicationToProfile } from '@/types/attender/profile';
+import { AttenderProfile, ExperienceSample } from '../types/attender/profile';
 
 // ローカルストレージのキー
-const STORAGE_KEY = 'attender_profile_data';
-
-// デモ用モックデータ（開発環境用）
-const MOCK_PROFILE: AttenderProfileData = {
-  id: 'att-123456',
-  name: '山田 太郎',
-  email: 'yamada@example.com',
-  phoneNumber: '090-1234-5678',
-  address: '東京都渋谷区代々木1-2-3',
-  bio: '東京で10年以上暮らしている地元ガイドです。特に渋谷・原宿のカルチャーに詳しく、アートやファッションの視点から街を案内します。また、都内の隠れた名店や、観光客があまり行かない地元の人たちに人気のスポットをご紹介します。',
-  profileImage: '/images/profile-placeholder.jpg',
-  headerImage: '/images/header-placeholder.jpg',
-  expertise: ['local-culture', 'art', 'food', 'photography'],
-  languages: ['日本語', '英語'],
-  experienceSamples: [
-    {
-      id: 'exp-001',
-      title: '裏原宿アートスポット巡り',
-      description: '観光客には知られていない原宿の裏通りにあるギャラリーや、若手アーティストの活動拠点を巡ります。',
-      imageUrl: '/images/experience-1.jpg',
-      duration: '3時間',
-      price: 5000
-    },
-    {
-      id: 'exp-002',
-      title: '夜の渋谷フードツアー',
-      description: '地元の人だけが知る美味しい居酒屋や深夜営業の名店を巡り、東京の食文化を体験します。',
-      imageUrl: '/images/experience-2.jpg',
-      duration: '4時間',
-      price: 8000
-    }
-  ],
-  socialMediaLinks: [
-    { platform: 'Instagram', url: 'https://instagram.com/yamada_taro' },
-    { platform: 'Twitter', url: 'https://twitter.com/yamada_taro' }
-  ],
-  availability: {
-    'monday': { available: true, startTime: '18:00', endTime: '22:00' },
-    'tuesday': { available: false },
-    'wednesday': { available: true, startTime: '18:00', endTime: '22:00' },
-    'thursday': { available: true, startTime: '18:00', endTime: '22:00' },
-    'friday': { available: true, startTime: '18:00', endTime: '22:00' },
-    'saturday': { available: true, startTime: '10:00', endTime: '22:00' },
-    'sunday': { available: true, startTime: '10:00', endTime: '18:00' }
-  },
-  rating: 4.8,
-  reviewCount: 23,
-  status: 'active',
-  joinedDate: '2023-05-15T00:00:00Z',
-  verificationStatus: 'verified',
-  achievementBadges: ['top-rated', 'quick-responder', 'experienced-host']
-};
+const STORAGE_KEY = 'echo_attender_profile';
 
 /**
- * アテンダープロフィールを取得
- * 本番環境ではAPIエンドポイントから取得する想定
+ * アテンダープロフィールサービス
+ * 注: 開発環境ではローカルストレージを使用
+ * 本番環境ではAPIリクエストに置き換える
  */
-export const getAttenderProfile = async (profileId?: string): Promise<AttenderProfileData> => {
-  try {
-    // 開発環境はローカルストレージをチェック
-    if (process.env.NODE_ENV === 'development' && typeof window !== 'undefined') {
-      const storedData = localStorage.getItem(STORAGE_KEY);
-      if (storedData) {
-        return JSON.parse(storedData) as AttenderProfileData;
+export class AttenderProfileService {
+  /**
+   * プロフィールを取得
+   */
+  static async getProfile(attenderId: string): Promise<AttenderProfile> {
+    try {
+      // 開発環境: ローカルストレージから取得
+      const storedProfile = localStorage.getItem(STORAGE_KEY);
+      if (storedProfile) {
+        return JSON.parse(storedProfile) as AttenderProfile;
       }
+
+      // 本番環境: APIリクエスト
+      // const response = await fetch(`/api/attender/${attenderId}/profile`);
+      // if (!response.ok) throw new Error('Failed to fetch profile');
+      // return await response.json();
+
+      // データがない場合はサンプルデータを返す
+      return this.createSampleProfile(attenderId);
+    } catch (error) {
+      console.error('Failed to get profile:', error);
+      throw error;
     }
-    
-    // プロフィールIDが指定されていない場合は現在のユーザーのプロフィールを取得
-    if (!profileId && typeof window !== 'undefined') {
-      try {
-        // 現在のユーザーIDの取得を試みる
-        const currentUser = await userService.getCurrentUser();
-        if (currentUser?.id) {
-          profileId = currentUser.id;
+  }
+
+  /**
+   * プロフィールを更新
+   */
+  static async updateProfile(profile: AttenderProfile): Promise<AttenderProfile> {
+    try {
+      // データの検証
+      this.validateProfile(profile);
+
+      // 開発環境: ローカルストレージに保存
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(profile));
+
+      // 本番環境: APIリクエスト
+      // const response = await fetch(`/api/attender/${profile.id}/profile`, {
+      //   method: 'PUT',
+      //   headers: {
+      //     'Content-Type': 'application/json',
+      //   },
+      //   body: JSON.stringify(profile),
+      // });
+      // if (!response.ok) throw new Error('Failed to update profile');
+      // return await response.json();
+
+      return profile;
+    } catch (error) {
+      console.error('Failed to update profile:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * 体験サンプルを追加
+   */
+  static async addExperienceSample(
+    attenderId: string, 
+    sample: Omit<ExperienceSample, 'id' | 'createdAt' | 'updatedAt'>
+  ): Promise<ExperienceSample> {
+    try {
+      // 現在のプロフィールを取得
+      const profile = await this.getProfile(attenderId);
+
+      // 新しいサンプルを作成
+      const newSample: ExperienceSample = {
+        ...sample,
+        id: `sample_${Date.now()}`,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+
+      // サンプルを追加
+      profile.experienceSamples.push(newSample);
+
+      // プロフィールを更新
+      await this.updateProfile(profile);
+
+      return newSample;
+    } catch (error) {
+      console.error('Failed to add experience sample:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * 体験サンプルを更新
+   */
+  static async updateExperienceSample(
+    attenderId: string,
+    sampleId: string,
+    updates: Partial<Omit<ExperienceSample, 'id' | 'createdAt' | 'updatedAt'>>
+  ): Promise<ExperienceSample> {
+    try {
+      // 現在のプロフィールを取得
+      const profile = await this.getProfile(attenderId);
+
+      // サンプルを検索
+      const sampleIndex = profile.experienceSamples.findIndex(s => s.id === sampleId);
+      if (sampleIndex === -1) {
+        throw new Error(`Experience sample with id ${sampleId} not found`);
+      }
+
+      // サンプルを更新
+      const updatedSample: ExperienceSample = {
+        ...profile.experienceSamples[sampleIndex],
+        ...updates,
+        updatedAt: new Date().toISOString(),
+      };
+
+      profile.experienceSamples[sampleIndex] = updatedSample;
+
+      // プロフィールを更新
+      await this.updateProfile(profile);
+
+      return updatedSample;
+    } catch (error) {
+      console.error('Failed to update experience sample:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * 体験サンプルを削除
+   */
+  static async removeExperienceSample(attenderId: string, sampleId: string): Promise<boolean> {
+    try {
+      // 現在のプロフィールを取得
+      const profile = await this.getProfile(attenderId);
+
+      // サンプルを検索
+      const sampleIndex = profile.experienceSamples.findIndex(s => s.id === sampleId);
+      if (sampleIndex === -1) {
+        throw new Error(`Experience sample with id ${sampleId} not found`);
+      }
+
+      // サンプルを削除
+      profile.experienceSamples.splice(sampleIndex, 1);
+
+      // プロフィールを更新
+      await this.updateProfile(profile);
+
+      return true;
+    } catch (error) {
+      console.error('Failed to remove experience sample:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * プロフィール完成度スコアを計算
+   */
+  static calculateCompletionScore(profile: AttenderProfile): number {
+    const fields: Array<{field: keyof AttenderProfile; weight: number}> = [
+      { field: 'name', weight: 15 },
+      { field: 'imageUrl', weight: 10 },
+      { field: 'location', weight: 10 },
+      { field: 'bio', weight: 15 },
+      { field: 'specialties', weight: 15 },
+      { field: 'background', weight: 10 },
+      { field: 'experienceSamples', weight: 15 },
+      { field: 'availability', weight: 10 },
+    ];
+
+    let score = 0;
+
+    for (const { field, weight } of fields) {
+      const value = profile[field];
+      
+      if (field === 'experienceSamples') {
+        if (Array.isArray(value) && value.length > 0) {
+          // サンプル数に応じてスコアを付与（最大3つまで）
+          score += weight * Math.min(value.length, 3) / 3;
         }
-      } catch (error) {
-        console.warn('現在のユーザー情報の取得に失敗しました', error);
+      } else if (field === 'availability') {
+        if (Array.isArray(value)) {
+          // 曜日ごとの設定があればスコアを付与
+          const availableDays = (value as any[]).filter(day => 
+            day && day.isAvailable && Array.isArray(day.timeSlots) && day.timeSlots.length > 0
+          );
+          score += weight * Math.min(availableDays.length, 5) / 5;
+        }
+      } else if (field === 'specialties') {
+        if (Array.isArray(value) && value.length > 0) {
+          score += weight;
+        }
+      } else if (value) {
+        score += weight;
       }
     }
+
+    return Math.round(score);
+  }
+
+  /**
+   * プロフィールを検証
+   */
+  private static validateProfile(profile: AttenderProfile): void {
+    // 必須フィールドの検証
+    if (!profile.id) throw new Error('Profile ID is required');
+    if (!profile.name) throw new Error('Name is required');
+    if (!profile.email) throw new Error('Email is required');
     
-    // 本番環境ではAPIに接続
-    // TODO: 本番環境では以下のコメントを解除
-    /*
-    const response = await fetch(`/api/attenders/${profileId || 'me'}/profile`, {
-      headers: {
-        'Authorization': `Bearer ${localStorage.getItem('token')}`,
-      },
-    });
-    
-    if (!response.ok) {
-      throw new Error(`プロフィール取得エラー: ${response.status}`);
+    // 配列フィールドの検証
+    if (!Array.isArray(profile.experienceSamples)) {
+      throw new Error('Experience samples must be an array');
     }
     
-    const data = await response.json();
-    return data;
-    */
+    if (!Array.isArray(profile.availability)) {
+      throw new Error('Availability must be an array');
+    }
     
-    // 開発用：APIリクエストの模擬 (1秒待機)
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    // 日時フィールドの検証
+    try {
+      new Date(profile.joinedAt);
+    } catch (e) {
+      throw new Error('Invalid joined date');
+    }
     
-    // 開発環境ではモックデータを返す
-    return MOCK_PROFILE;
-  } catch (error) {
-    console.error('プロフィール取得エラー:', error);
-    throw error;
+    if (profile.lastActive) {
+      try {
+        new Date(profile.lastActive);
+      } catch (e) {
+        throw new Error('Invalid last active date');
+      }
+    }
   }
-};
 
-/**
- * アテンダープロフィールを更新
- * 本番環境ではAPIエンドポイントに送信する想定
- */
-export const updateAttenderProfile = async (profileData: Partial<AttenderProfileData>): Promise<boolean> => {
-  try {
-    // 現在のプロフィールを取得
-    const currentProfile = await getAttenderProfile();
+  /**
+   * サンプルプロフィールを作成（開発用）
+   */
+  private static createSampleProfile(attenderId: string): AttenderProfile {
+    const now = new Date().toISOString();
     
-    // 更新されたプロフィール
-    const updatedProfile = {
-      ...currentProfile,
-      ...profileData,
-      // 更新日時を自動的に設定
-      updatedAt: new Date().toISOString()
+    return {
+      id: attenderId,
+      name: 'サンプルアテンダー',
+      email: 'sample@example.com',
+      imageUrl: 'https://randomuser.me/api/portraits/men/32.jpg',
+      location: '東京',
+      bio: 'アートと文化が好きな地元ガイドです。東京の隠れた名所や、地元の人しか知らない場所をご案内します。',
+      specialties: ['アート', '伝統文化', '食べ歩き'],
+      background: '東京出身。アートギャラリーで3年間働いた経験があり、芸術分野に知見があります。',
+      experienceSamples: [
+        {
+          id: 'sample_1',
+          title: '下町アートギャラリー巡り',
+          description: '東京の下町にある小さなギャラリーを巡るツアーです。地元アーティストの作品を見ながら、文化的背景も解説します。',
+          imageUrl: 'https://source.unsplash.com/random/800x600/?gallery',
+          duration: 180,
+          price: 5000,
+          categories: ['アート', '文化'],
+          createdAt: now,
+          updatedAt: now
+        }
+      ],
+      availability: [
+        { dayOfWeek: 0, isAvailable: false, timeSlots: [] },
+        { dayOfWeek: 1, isAvailable: true, timeSlots: [{ startTime: '10:00', endTime: '16:00' }] },
+        { dayOfWeek: 2, isAvailable: true, timeSlots: [{ startTime: '10:00', endTime: '16:00' }] },
+        { dayOfWeek: 3, isAvailable: true, timeSlots: [{ startTime: '10:00', endTime: '16:00' }] },
+        { dayOfWeek: 4, isAvailable: true, timeSlots: [{ startTime: '10:00', endTime: '16:00' }] },
+        { dayOfWeek: 5, isAvailable: true, timeSlots: [{ startTime: '10:00', endTime: '18:00' }] },
+        { dayOfWeek: 6, isAvailable: true, timeSlots: [{ startTime: '10:00', endTime: '18:00' }] },
+      ],
+      rating: 4.8,
+      reviewCount: 12,
+      verified: true,
+      joinedAt: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString(), // 90日前
+      lastActive: now,
+      completionScore: 85
     };
-    
-    // 本番環境ではAPIに接続
-    // TODO: 本番環境では以下のコメントを解除
-    /*
-    const response = await fetch(`/api/attenders/${updatedProfile.id || 'me'}/profile`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${localStorage.getItem('token')}`,
-      },
-      body: JSON.stringify(updatedProfile),
-    });
-    
-    if (!response.ok) {
-      throw new Error(`プロフィール更新エラー: ${response.status}`);
-    }
-    
-    return true;
-    */
-    
-    // APIリクエストの模擬 (1秒待機)
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    // 開発環境ではローカルストレージに保存
-    if (typeof window !== 'undefined') {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedProfile));
-    }
-    
-    return true;
-  } catch (error) {
-    console.error('プロフィール更新エラー:', error);
-    throw error;
   }
-};
+}
 
-/**
- * 体験サンプルを追加
- */
-export const addExperienceSample = async (
-  profileId: string,
-  sample: Omit<ExperienceSample, 'id'>
-): Promise<ExperienceSample> => {
-  try {
-    const currentProfile = await getAttenderProfile(profileId);
-    
-    // 新しいIDを生成
-    const newId = `exp-${Date.now()}`;
-    
-    // 新しいサンプルを作成
-    const newSample: ExperienceSample = {
-      ...sample,
-      id: newId
-    };
-    
-    // プロフィールを更新
-    const updatedSamples = [...currentProfile.experienceSamples, newSample];
-    await updateAttenderProfile({ experienceSamples: updatedSamples });
-    
-    return newSample;
-  } catch (error) {
-    console.error('体験サンプル追加エラー:', error);
-    throw error;
-  }
-};
-
-/**
- * 体験サンプルを削除
- */
-export const removeExperienceSample = async (
-  profileId: string,
-  sampleId: string
-): Promise<boolean> => {
-  try {
-    const currentProfile = await getAttenderProfile(profileId);
-    
-    // サンプルをフィルタリング
-    const updatedSamples = currentProfile.experienceSamples.filter(
-      sample => sample.id !== sampleId
-    );
-    
-    // サンプル数が変わらなければ該当するサンプルがない
-    if (updatedSamples.length === currentProfile.experienceSamples.length) {
-      return false;
-    }
-    
-    // プロフィールを更新
-    await updateAttenderProfile({ experienceSamples: updatedSamples });
-    
-    return true;
-  } catch (error) {
-    console.error('体験サンプル削除エラー:', error);
-    throw error;
-  }
-};
-
-/**
- * 体験サンプルを更新
- */
-export const updateExperienceSample = async (
-  profileId: string,
-  sampleId: string,
-  updates: Partial<ExperienceSample>
-): Promise<ExperienceSample | null> => {
-  try {
-    const currentProfile = await getAttenderProfile(profileId);
-    
-    // 更新対象のサンプルを検索
-    const sampleIndex = currentProfile.experienceSamples.findIndex(
-      sample => sample.id === sampleId
-    );
-    
-    // サンプルが見つからなければnullを返す
-    if (sampleIndex === -1) {
-      return null;
-    }
-    
-    // サンプルを更新
-    const updatedSample = {
-      ...currentProfile.experienceSamples[sampleIndex],
-      ...updates
-    };
-    
-    // プロフィールを更新
-    const updatedSamples = [...currentProfile.experienceSamples];
-    updatedSamples[sampleIndex] = updatedSample;
-    await updateAttenderProfile({ experienceSamples: updatedSamples });
-    
-    return updatedSample;
-  } catch (error) {
-    console.error('体験サンプル更新エラー:', error);
-    throw error;
-  }
-};
+export default AttenderProfileService;

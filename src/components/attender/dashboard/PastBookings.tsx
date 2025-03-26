@@ -1,9 +1,10 @@
 import React from 'react';
-// モックライブラリをインポート
 import { useTranslation } from '../../../mocks/i18nMock';
+import { BookingData } from '../../../types/dashboard';
 import {
-  Box,
+  Paper,
   Typography,
+  Box,
   List,
   ListItem,
   Card,
@@ -24,25 +25,13 @@ import {
   Comment as CommentIcon
 } from '../../../mocks/iconsMock';
 
-interface Booking {
-  id: string;
-  userId: string;
-  userName: string;
+// 互換性のため
+interface Booking extends BookingData {
   userImage: string;
-  experienceId: string;
-  experienceTitle: string;
-  date: Date;
-  startTime: string;
-  endTime: string;
-  numberOfPeople: number;
-  status: string;
-  rating?: number;
-  review?: string;
-  createdAt: Date;
 }
 
 interface PastBookingsProps {
-  bookings: Booking[];
+  bookings: BookingData[] | Booking[];
 }
 
 const PastBookings: React.FC<PastBookingsProps> = ({ bookings }) => {
@@ -50,150 +39,110 @@ const PastBookings: React.FC<PastBookingsProps> = ({ bookings }) => {
 
   if (bookings.length === 0) {
     return (
-      <Alert severity="info">
-        {t('dashboard.pastBookings.empty')}
-      </Alert>
+      <Box textAlign="center" py={3}>
+        <Alert severity="info">
+          過去の体験はまだありません
+        </Alert>
+      </Box>
     );
   }
 
   // 日付をフォーマット
-  const formatDate = (date: Date): string => {
-    return new Intl.DateTimeFormat('ja-JP', {
+  const formatDate = (dateString: string): string => {
+    return new Date(dateString).toLocaleDateString('ja-JP', {
       year: 'numeric',
-      month: 'long',
+      month: 'short',
       day: 'numeric',
-      weekday: 'long'
-    }).format(new Date(date));
+      weekday: 'short'
+    });
   };
 
-  // 日付を比較して新しい順に並べ替え
-  const sortedBookings = [...bookings].sort((a, b) => {
-    return new Date(b.date).getTime() - new Date(a.date).getTime();
-  });
-
   return (
-    <List disablePadding>
-      {sortedBookings.map((booking, index) => (
+    <List sx={{ width: '100%', bgcolor: 'background.paper', p: 0 }}>
+      {bookings.map((booking) => (
         <React.Fragment key={booking.id}>
-          {index > 0 && <Divider component="li" />}
-          <ListItem alignItems="flex-start" disablePadding>
-            <Card sx={{ width: '100%', mb: 0, boxShadow: 'none' }}>
+          <ListItem alignItems="flex-start" sx={{ px: 0 }}>
+            <Card sx={{ width: '100%' }}>
               <CardContent>
                 <Grid container spacing={2}>
-                  <Grid item xs={12} sm={8}>
-                    <Box mb={2}>
-                      <Typography variant="h6" gutterBottom>
-                        <ActivityIcon color="primary" sx={{ verticalAlign: 'middle', mr: 1 }} />
-                        {booking.experienceTitle}
+                  <Grid item xs={12} sm={2}>
+                    <Box display="flex" flexDirection="column" alignItems="center">
+                      <Avatar
+                        alt={booking.userName}
+                        src={booking.userAvatar || booking.userImage}
+                        sx={{ width: 60, height: 60, mb: 1 }}
+                      />
+                      <Typography variant="subtitle2">
+                        {booking.userName}
                       </Typography>
-                      
-                      <Box display="flex" alignItems="center" mt={2}>
-                        <Avatar 
-                          src={booking.userImage}
-                          alt={booking.userName}
-                          sx={{ mr: 2 }}
-                        >
-                          {!booking.userImage && booking.userName.charAt(0)}
-                        </Avatar>
-                        <Typography variant="body1">
-                          {booking.userName}
-                        </Typography>
-                      </Box>
+                    </Box>
+                  </Grid>
+                  <Grid item xs={12} sm={10}>
+                    <Typography variant="h6" gutterBottom>
+                      {booking.experienceTitle}
+                    </Typography>
+                    
+                    <Box display="flex" alignItems="center" mb={1}>
+                      <EventIcon sx={{ mr: 1, color: 'primary.main' }} />
+                      <Typography variant="body2">
+                        {formatDate(booking.date)}
+                      </Typography>
+                    </Box>
+                    
+                    <Box display="flex" alignItems="center" mb={1}>
+                      <TimeIcon sx={{ mr: 1, color: 'primary.main' }} />
+                      <Typography variant="body2">
+                        {booking.startTime} - {booking.endTime}
+                      </Typography>
                     </Box>
                     
                     <Box display="flex" flexWrap="wrap" gap={1} mb={2}>
-                      <Chip
-                        icon={<EventIcon />}
-                        label={formatDate(booking.date)}
-                        variant="outlined"
-                        size="small"
-                      />
-                      <Chip
-                        icon={<TimeIcon />}
-                        label={`${booking.startTime} - ${booking.endTime}`}
-                        variant="outlined"
-                        size="small"
-                      />
                       <Chip
                         icon={<PersonIcon />}
                         label={t('dashboard.pastBookings.people', { count: booking.numberOfPeople })}
                         variant="outlined"
                         size="small"
                       />
+                      <Chip
+                        icon={<ActivityIcon />}
+                        label={`¥${booking.totalAmount.toLocaleString()}`}
+                        variant="outlined"
+                        size="small"
+                        color="primary"
+                      />
                     </Box>
-                    
-                    <Chip
-                      label={t(`dashboard.pastBookings.status.${booking.status}`)}
-                      color={booking.status === 'completed' ? 'success' : 'default'}
-                      size="small"
-                    />
                     
                     {booking.rating && (
-                      <Box mt={2}>
-                        <Box display="flex" alignItems="center" mb={1}>
-                          <Rating value={booking.rating} precision={0.5} readOnly size="small" />
-                          <Typography variant="body2" sx={{ ml: 1 }}>
-                            ({booking.rating})
+                      <Box mb={2}>
+                        <Typography variant="body2" fontWeight="medium">
+                          ユーザー評価:
+                        </Typography>
+                        <Box display="flex" alignItems="center">
+                          <Rating value={booking.rating} precision={0.5} readOnly />
+                          <Typography variant="body2" ml={1}>
+                            {booking.rating}
                           </Typography>
                         </Box>
-                        
-                        {booking.review && (
-                          <Box
-                            sx={{
-                              p: 1.5,
-                              bgcolor: 'action.hover',
-                              borderRadius: 1,
-                              position: 'relative'
-                            }}
-                          >
-                            <CommentIcon
-                              fontSize="small"
-                              sx={{
-                                position: 'absolute',
-                                top: -10,
-                                left: 10,
-                                color: 'text.secondary',
-                                transform: 'rotate(180deg)'
-                              }}
-                            />
-                            <Typography variant="body2">{booking.review}</Typography>
-                          </Box>
-                        )}
                       </Box>
                     )}
-                  </Grid>
-                  
-                  <Grid item xs={12} sm={4} display="flex" flexDirection="column" justifyContent="center">
-                    <Box 
-                      sx={{ 
-                        display: 'flex', 
-                        flexDirection: 'column', 
-                        gap: 1,
-                        mt: { xs: 2, sm: 0 }
-                      }}
-                    >
-                      <Button
-                        variant="outlined"
-                        color="primary"
-                        fullWidth
-                      >
-                        {t('dashboard.pastBookings.viewDetails')}
-                      </Button>
-                      {booking.status === 'completed' && !booking.review && (
-                        <Button
-                          variant="outlined"
-                          color="warning"
-                          fullWidth
-                        >
-                          {t('dashboard.pastBookings.reminderForReview')}
-                        </Button>
-                      )}
-                    </Box>
+                    
+                    {booking.review && (
+                      <Box mb={2}>
+                        <Typography variant="body2" fontWeight="medium" display="flex" alignItems="center">
+                          <CommentIcon fontSize="small" sx={{ mr: 0.5 }} />
+                          レビュー:
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary" mt={0.5}>
+                          {booking.review}
+                        </Typography>
+                      </Box>
+                    )}
                   </Grid>
                 </Grid>
               </CardContent>
             </Card>
           </ListItem>
+          <Divider variant="inset" component="li" />
         </React.Fragment>
       ))}
     </List>

@@ -1,5 +1,6 @@
-// プロフィール関連コンポーネントのエクスポート
-
+/**
+ * アテンダープロフィール関連コンポーネントのエクスポート
+ */
 export { default as AttenderProfile } from './AttenderProfile';
 export { default as AttenderProfileEdit } from './AttenderProfileEdit';
 export { default as ProfileHeader } from './ProfileHeader';

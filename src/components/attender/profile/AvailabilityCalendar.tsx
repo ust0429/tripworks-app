@@ -1,215 +1,213 @@
 import React, { useState, useEffect } from 'react';
-import { useAttenderProfile } from '@/contexts/AttenderProfileContext';
-import { Availability } from '@/types/attender/profile';
-import { Clock, Save } from 'lucide-react';
+import { DailyAvailability, AvailabilityTimeSlot } from '../../../types/attender/profile';
+import { cn } from '../../../utils/cn';
 
 interface AvailabilityCalendarProps {
-  availability: Availability;
-  isEditable?: boolean;
+  availability: DailyAvailability[];
+  isEditing: boolean;
+  onChange?: (availability: DailyAvailability[]) => void;
 }
 
-// 曜日の日本語表示用マッピング
-const DAY_LABELS: Record<string, string> = {
-  'monday': '月曜日',
-  'tuesday': '火曜日',
-  'wednesday': '水曜日',
-  'thursday': '木曜日',
-  'friday': '金曜日',
-  'saturday': '土曜日',
-  'sunday': '日曜日',
-};
+const DAYS_OF_WEEK = ['日', '月', '火', '水', '木', '金', '土'];
 
-// 曜日の並び順
-const DAY_ORDER = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
-
+/**
+ * 利用可能時間設定カレンダーコンポーネント
+ */
 const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
   availability,
-  isEditable = false
+  isEditing,
+  onChange,
 }) => {
-  const { updateProfile } = useAttenderProfile();
-  const [editedAvailability, setEditedAvailability] = useState<Availability>({ ...availability });
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
-  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [localAvailability, setLocalAvailability] = useState<DailyAvailability[]>(availability);
 
-  // availabilityが変更されたら編集データも更新
   useEffect(() => {
-    if (!isEditing) {
-      setEditedAvailability({ ...availability });
-    }
-  }, [availability, isEditing]);
+    setLocalAvailability(availability);
+  }, [availability]);
 
-  // 曜日の利用可能状態を切り替え
-  const toggleAvailability = (day: string) => {
-    if (!isEditing && !isEditable) return;
+  // 曜日の有効/無効を切り替え
+  const toggleDayAvailability = (dayOfWeek: number) => {
+    if (!isEditing) return;
 
-    setEditedAvailability(prev => {
-      const currentDay = prev[day] || { available: false };
-      return {
-        ...prev,
-        [day]: {
-          ...currentDay,
-          available: !currentDay.available,
-          // 利用可能にする場合、デフォルトの時間を設定
-          startTime: !currentDay.available ? (currentDay.startTime || '10:00') : currentDay.startTime,
-          endTime: !currentDay.available ? (currentDay.endTime || '18:00') : currentDay.endTime
-        }
-      };
+    const updatedAvailability = localAvailability.map(day => {
+      if (day.dayOfWeek === dayOfWeek) {
+        // 無効化する場合は時間枠もクリア
+        return {
+          ...day,
+          isAvailable: !day.isAvailable,
+          timeSlots: !day.isAvailable ? day.timeSlots : []
+        };
+      }
+      return day;
     });
+
+    setLocalAvailability(updatedAvailability);
+    onChange?.(updatedAvailability);
   };
 
-  // 時間の変更
-  const handleTimeChange = (day: string, field: 'startTime' | 'endTime', value: string) => {
-    if (!isEditing && !isEditable) return;
+  // 時間枠を追加
+  const addTimeSlot = (dayOfWeek: number) => {
+    if (!isEditing) return;
 
-    setEditedAvailability(prev => ({
-      ...prev,
-      [day]: {
-        ...prev[day],
-        [field]: value
+    const defaultSlot: AvailabilityTimeSlot = {
+      startTime: '10:00',
+      endTime: '18:00'
+    };
+
+    const updatedAvailability = localAvailability.map(day => {
+      if (day.dayOfWeek === dayOfWeek) {
+        return {
+          ...day,
+          timeSlots: [...day.timeSlots, defaultSlot]
+        };
       }
-    }));
+      return day;
+    });
+
+    setLocalAvailability(updatedAvailability);
+    onChange?.(updatedAvailability);
   };
 
-  // 変更を保存
-  const saveChanges = async () => {
-    if (!isEditable) return;
+  // 時間枠を更新
+  const updateTimeSlot = (dayOfWeek: number, index: number, field: keyof AvailabilityTimeSlot, value: string) => {
+    if (!isEditing) return;
 
-    setIsSubmitting(true);
-    setSubmitError(null);
-
-    try {
-      const success = await updateProfile({
-        availability: editedAvailability
-      });
-
-      if (success) {
-        setIsEditing(false);
-      } else {
-        setSubmitError('利用可能時間の更新に失敗しました');
+    const updatedAvailability = localAvailability.map(day => {
+      if (day.dayOfWeek === dayOfWeek) {
+        const updatedSlots = [...day.timeSlots];
+        updatedSlots[index] = {
+          ...updatedSlots[index],
+          [field]: value
+        };
+        return {
+          ...day,
+          timeSlots: updatedSlots
+        };
       }
-    } catch (error) {
-      console.error('Error updating availability:', error);
-      setSubmitError('エラーが発生しました。しばらくしてからお試しください。');
-    } finally {
-      setIsSubmitting(false);
-    }
+      return day;
+    });
+
+    setLocalAvailability(updatedAvailability);
+    onChange?.(updatedAvailability);
   };
 
-  // 編集モードを開始
-  const startEditing = () => {
-    setIsEditing(true);
-    setEditedAvailability({ ...availability });
-    setSubmitError(null);
+  // 時間枠を削除
+  const removeTimeSlot = (dayOfWeek: number, index: number) => {
+    if (!isEditing) return;
+
+    const updatedAvailability = localAvailability.map(day => {
+      if (day.dayOfWeek === dayOfWeek) {
+        const updatedSlots = [...day.timeSlots];
+        updatedSlots.splice(index, 1);
+        return {
+          ...day,
+          timeSlots: updatedSlots
+        };
+      }
+      return day;
+    });
+
+    setLocalAvailability(updatedAvailability);
+    onChange?.(updatedAvailability);
   };
 
-  // 編集をキャンセル
-  const cancelEditing = () => {
-    setIsEditing(false);
-    setEditedAvailability({ ...availability });
-    setSubmitError(null);
-  };
-
-  const currentAvailability = isEditing ? editedAvailability : availability;
+  // 時間は30分単位で選択可能
+  const timeOptions = [
+    '00:00', '00:30', '01:00', '01:30', '02:00', '02:30', '03:00', '03:30',
+    '04:00', '04:30', '05:00', '05:30', '06:00', '06:30', '07:00', '07:30',
+    '08:00', '08:30', '09:00', '09:30', '10:00', '10:30', '11:00', '11:30',
+    '12:00', '12:30', '13:00', '13:30', '14:00', '14:30', '15:00', '15:30',
+    '16:00', '16:30', '17:00', '17:30', '18:00', '18:30', '19:00', '19:30',
+    '20:00', '20:30', '21:00', '21:30', '22:00', '22:30', '23:00', '23:30'
+  ];
 
   return (
-    <div className="bg-white p-6 rounded-lg shadow-sm border">
-      <div className="flex flex-row items-center justify-between mb-6">
-        <div>
-          <h2 className="text-xl font-semibold">利用可能時間</h2>
-          <p className="text-gray-500 text-sm">体験を提供できる曜日と時間帯</p>
-        </div>
-        {isEditable && !isEditing && (
-          <button 
-            className="px-4 py-2 bg-gray-100 rounded-md text-gray-700 hover:bg-gray-200 transition-colors"
-            onClick={startEditing}
-          >
-            編集
-          </button>
-        )}
-        {isEditable && isEditing && (
-          <div className="flex space-x-2">
-            <button
-              className="px-4 py-2 bg-gray-100 rounded-md text-gray-700 hover:bg-gray-200 transition-colors"
-              onClick={cancelEditing}
-              disabled={isSubmitting}
-            >
-              キャンセル
-            </button>
-            <button
-              className="px-4 py-2 bg-blue-600 rounded-md text-white hover:bg-blue-700 transition-colors flex items-center"
-              onClick={saveChanges}
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? (
-                <span>保存中...</span>
-              ) : (
-                <>
-                  <Save className="h-4 w-4 mr-2" />
-                  保存
-                </>
-              )}
-            </button>
-          </div>
-        )}
-      </div>
-      {submitError && (
-        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md text-red-700">
-          {submitError}
-        </div>
-      )}
-
+    <div className="bg-white rounded-lg shadow-sm p-6">
+      <h2 className="text-xl font-semibold mb-4">利用可能時間</h2>
+      
       <div className="space-y-4">
-        {DAY_ORDER.map(day => {
-          const dayAvailability = currentAvailability[day] || { available: false };
-          
-          return (
-            <div key={day} className="flex items-center flex-wrap gap-4 p-2 rounded-lg bg-gray-50">
-              <div className="flex items-center min-w-[180px]">
-                <label className="inline-flex items-center cursor-pointer">
-                  <input
-                    type="checkbox"
-                    className="sr-only peer"
-                    checked={dayAvailability.available}
-                    onChange={() => toggleAvailability(day)}
-                    disabled={!isEditing && !isEditable}
-                  />
-                  <div className="relative w-11 h-6 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                  <span className="ms-3">
-                    {DAY_LABELS[day]}
-                  </span>
+        {localAvailability.map(day => (
+          <div key={day.dayOfWeek} className="border-b pb-4">
+            <div className="flex items-center mb-2">
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  id={`day-${day.dayOfWeek}`}
+                  checked={day.isAvailable}
+                  onChange={() => toggleDayAvailability(day.dayOfWeek)}
+                  disabled={!isEditing}
+                  className="h-4 w-4 text-blue-600 rounded"
+                />
+                <label htmlFor={`day-${day.dayOfWeek}`} className="ml-2 font-medium">
+                  {DAYS_OF_WEEK[day.dayOfWeek]}曜日
                 </label>
               </div>
               
-              {dayAvailability.available && (
-                <div className="flex items-center gap-2 flex-grow">
-                  <Clock className="h-4 w-4 text-gray-500" />
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="time"
-                      value={dayAvailability.startTime || ''}
-                      onChange={(e) => handleTimeChange(day, 'startTime', e.target.value)}
-                      disabled={!isEditing && !isEditable}
-                      className="w-24 p-1 border border-gray-300 rounded-md"
-                    />
-                    <span>〜</span>
-                    <input
-                      type="time"
-                      value={dayAvailability.endTime || ''}
-                      onChange={(e) => handleTimeChange(day, 'endTime', e.target.value)}
-                      disabled={!isEditing && !isEditable}
-                      className="w-24 p-1 border border-gray-300 rounded-md"
-                    />
-                  </div>
-                </div>
-              )}
-              
-              {!dayAvailability.available && (
-                <span className="text-gray-500">利用不可</span>
+              {isEditing && day.isAvailable && (
+                <button
+                  type="button"
+                  onClick={() => addTimeSlot(day.dayOfWeek)}
+                  className="ml-auto text-sm text-blue-600 hover:text-blue-800"
+                >
+                  時間枠を追加
+                </button>
               )}
             </div>
-          );
-        })}
+            
+            {day.isAvailable && (
+              <div className="pl-6 space-y-2">
+                {day.timeSlots.length === 0 ? (
+                  <p className="text-gray-500 text-sm italic">
+                    {isEditing 
+                      ? '「時間枠を追加」ボタンをクリックして時間を設定してください'
+                      : '時間枠が設定されていません'}
+                  </p>
+                ) : (
+                  day.timeSlots.map((slot, index) => (
+                    <div key={index} className="flex items-center gap-2">
+                      {isEditing ? (
+                        <>
+                          <select
+                            value={slot.startTime}
+                            onChange={(e) => updateTimeSlot(day.dayOfWeek, index, 'startTime', e.target.value)}
+                            className="p-1 text-sm border rounded"
+                          >
+                            {timeOptions.map(time => (
+                              <option key={`start-${time}`} value={time}>{time}</option>
+                            ))}
+                          </select>
+                          <span>〜</span>
+                          <select
+                            value={slot.endTime}
+                            onChange={(e) => updateTimeSlot(day.dayOfWeek, index, 'endTime', e.target.value)}
+                            className="p-1 text-sm border rounded"
+                          >
+                            {timeOptions.map(time => (
+                              <option key={`end-${time}`} value={time}>{time}</option>
+                            ))}
+                          </select>
+                          
+                          <button
+                            type="button"
+                            onClick={() => removeTimeSlot(day.dayOfWeek, index)}
+                            className="ml-2 text-red-500 hover:text-red-700"
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                          </button>
+                        </>
+                      ) : (
+                        <span className="text-gray-700">
+                          {slot.startTime} 〜 {slot.endTime}
+                        </span>
+                      )}
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
+          </div>
+        ))}
       </div>
     </div>
   );

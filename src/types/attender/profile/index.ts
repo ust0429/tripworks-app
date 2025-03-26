@@ -2,96 +2,71 @@
  * アテンダープロフィール関連の型定義
  */
 
-// SNSリンク
-export interface SocialMediaLink {
-  platform: string;
-  url: string;
+// 基本的なプロフィール情報の型
+export interface AttenderProfileBasic {
+  id: string;
+  name: string;
+  email: string;
+  imageUrl?: string;
+  location?: string;
+  bio?: string;
+  specialties?: string[];
+  background?: string;
 }
 
-// 利用可能時間
-export interface Availability {
-  [day: string]: {
-    available: boolean;
-    startTime?: string;
-    endTime?: string;
-  };
-}
-
-// 体験サンプル
+// 体験サンプルの型
 export interface ExperienceSample {
   id: string;
   title: string;
   description: string;
   imageUrl?: string;
-  duration: string;
+  duration?: number; // 分単位
   price?: number;
+  categories?: string[];
+  createdAt: string;
+  updatedAt?: string;
 }
 
-// アテンダープロフィールデータ
-export interface AttenderProfileData {
-  id: string;
-  name: string;
-  email: string;
-  phoneNumber: string;
-  address: string;
-  bio: string;
-  profileImage?: string;
-  headerImage?: string;
-  expertise: string[];
-  languages: string[];
+// 利用可能時間設定の型
+export interface AvailabilityTimeSlot {
+  startTime: string; // HH:MM 形式
+  endTime: string;   // HH:MM 形式
+}
+
+export interface DailyAvailability {
+  dayOfWeek: 0 | 1 | 2 | 3 | 4 | 5 | 6; // 0: 日曜日, 1: 月曜日, ...
+  isAvailable: boolean;
+  timeSlots: AvailabilityTimeSlot[];
+}
+
+// 完全なアテンダープロフィールの型
+export interface AttenderProfile extends AttenderProfileBasic {
   experienceSamples: ExperienceSample[];
-  socialMediaLinks: SocialMediaLink[];
-  availability: Availability;
+  availability: DailyAvailability[];
   rating?: number;
   reviewCount?: number;
-  status: 'active' | 'pending' | 'inactive';
-  joinedDate: string;
-  verificationStatus: 'verified' | 'pending' | 'unverified';
-  achievementBadges?: string[];
+  verified?: boolean;
+  joinedAt: string;
+  lastActive?: string;
+  completionScore?: number; // プロフィール完成度を示すスコア (0-100)
 }
 
-// 既存のAttenderApplicationDataを拡張して互換性を持たせる
-import { AttenderApplicationData } from '../index';
+// プロフィール更新オペレーションの型
+export type ProfileUpdateOperation = {
+  field: keyof AttenderProfile;
+  value: any;
+};
 
-// アプリケーションデータからプロフィールデータへの変換ヘルパー
-export function convertApplicationToProfile(data: AttenderApplicationData): Partial<AttenderProfileData> {
-  return {
-    name: data.name,
-    email: data.email,
-    phoneNumber: data.phoneNumber,
-    address: data.location ? `${data.location.city}, ${data.location.region}, ${data.location.country}` : '',
-    bio: data.biography || '',
-    expertise: data.specialties || [],
-    // socialMediaLinksをSocialMediaLink[]型に変換
-    socialMediaLinks: data.socialMediaLinks ? 
-      Object.entries(data.socialMediaLinks).map(([platform, url]) => ({
-        platform,
-        url: url || ''
-      })).filter(link => link.url) : [],
-    // experienceSamplesを新しい形式に変換
-    experienceSamples: (data.experienceSamples || []).map(sample => ({
-      id: `exp-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
-      title: sample.title,
-      description: sample.description,
-      imageUrl: sample.imageUrls && sample.imageUrls.length > 0 ? sample.imageUrls[0] : undefined,
-      duration: `${sample.estimatedDuration} 分`,
-      price: sample.pricePerPerson
-    })),
-    // availableTimesをAvailability形式に変換
-    availability: (data.availableTimes || []).reduce((acc, slot) => {
-      const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-      const day = dayNames[slot.dayOfWeek];
-      
-      acc[day] = {
-        available: slot.isAvailable,
-        startTime: slot.startTime,
-        endTime: slot.endTime
-      };
-      
-      return acc;
-    }, {} as Availability),
-    status: 'pending',
-    verificationStatus: 'pending',
-    joinedDate: new Date().toISOString(),
-  };
+// プロフィール編集状態の型
+export type ProfileEditMode = 'view' | 'edit';
+
+// プロフィール読み込み状態の型
+export type ProfileLoadingState = 'idle' | 'loading' | 'success' | 'error';
+
+// プロフィールコンテキスト状態の型
+export interface ProfileContextState {
+  profile: AttenderProfile | null;
+  editMode: ProfileEditMode;
+  loadingState: ProfileLoadingState;
+  error: string | null;
 }

@@ -1,148 +1,139 @@
-import { useCallback } from 'react';
-// モックライブラリをインポート
-import axiosMock from '../mocks/axiosMock';
-import { AxiosResponse, AxiosRequestConfig, AxiosInstance } from '../mocks/axiosMock';
-import { useAuth } from './useAuth';
+/**
+ * APIクライアントのモックフック
+ * 実際のプロジェクトではaxiosなどを使用したAPIクライアントを実装してください
+ */
 
-// APIクライアントのインターフェース
+interface ApiResponse<T> {
+  data: T;
+  status: number;
+  statusText: string;
+  headers: Record<string, string>;
+}
+
 interface ApiClient {
-  get: <T = any>(url: string, config?: AxiosRequestConfig) => Promise<AxiosResponse<T>>;
-  post: <T = any>(url: string, data?: any, config?: AxiosRequestConfig) => Promise<AxiosResponse<T>>;
-  put: <T = any>(url: string, data?: any, config?: AxiosRequestConfig) => Promise<AxiosResponse<T>>;
-  delete: <T = any>(url: string, config?: AxiosRequestConfig) => Promise<AxiosResponse<T>>;
-  patch: <T = any>(url: string, data?: any, config?: AxiosRequestConfig) => Promise<AxiosResponse<T>>;
+  get: <T = any>(url: string, config?: any) => Promise<ApiResponse<T>>;
+  post: <T = any>(url: string, data?: any, config?: any) => Promise<ApiResponse<T>>;
+  put: <T = any>(url: string, data?: any, config?: any) => Promise<ApiResponse<T>>;
+  delete: <T = any>(url: string, config?: any) => Promise<ApiResponse<T>>;
 }
 
 /**
- * API通信を行うためのカスタムフック
- * - 認証トークンを自動的にリクエストヘッダーに付与
- * - エラーハンドリングの共通化
- * - リクエスト/レスポンスのインターセプト
+ * モックのAPIクライアントを提供するフック
  */
 export const useApiClient = (): ApiClient => {
-  // 認証情報を取得するフックを使用（実際の実装ではここで認証情報を取得）
-  const { getToken } = useAuth();
+  const defaultHeaders = {
+    'Content-Type': 'application/json'
+  };
   
-  // Axiosインスタンスの作成
-  const apiClient: AxiosInstance = axiosMock.create({
-    baseURL: process.env.REACT_APP_API_BASE_URL || 'https://api.echo-app.example',
-    timeout: 10000,
-    headers: {
-      'Content-Type': 'application/json',
-    }
-  });
-
-  // リクエストインターセプター
-  // typescriptのエラーを回避するためanyにキャスト
-  const apiClientAny = apiClient as any;
-  if (apiClientAny.interceptors) {
-    apiClientAny.interceptors.request.use(
-      async (config: any) => {
-        // 認証トークンを取得してヘッダーに追加
-        const token = await getToken();
-        if (token && config.headers) {
-          config.headers['Authorization'] = `Bearer ${token}`;
-        }
-        return config;
-      },
-      (error: any) => {
-        return Promise.reject(error);
-      }
-    );
-  }
-
-  // レスポンスインターセプター
-  if (apiClientAny.interceptors) {
-    apiClientAny.interceptors.response.use(
-      (response: any) => {
-        return response;
-      },
-      (error: any) => {
-        // エラーハンドリング
-        if (error.response) {
-          // サーバーからのレスポンスがある場合
-          switch (error.response.status) {
-            case 401:
-              // 認証エラー処理
-              console.error('Authentication error:', error.response.data);
-              // 認証情報のリセットやログイン画面へのリダイレクトなどを行う
-              break;
-            case 403:
-              // 権限エラー処理
-              console.error('Permission denied:', error.response.data);
-              break;
-            case 404:
-              // リソース不存在エラー処理
-              console.error('Resource not found:', error.response.data);
-              break;
-            case 500:
-              // サーバーエラー処理
-              console.error('Server error:', error.response.data);
-              break;
-            default:
-              // その他のエラー処理
-              console.error('API error:', error.response.data);
+  // GETリクエスト
+  const get = async <T = any>(url: string, config?: any): Promise<ApiResponse<T>> => {
+    console.log(`[API Mock] GET ${url}`, config);
+    
+    // モックデータを返す（実際はAPIからのレスポンス）
+    const mockData: any = {
+      // プロフィール取得のモックレスポンス
+      '/attender/profile': {
+        id: 'mock-attender-id',
+        userId: 'mock-user-id',
+        displayName: 'モックアテンダー',
+        bio: 'モック用のテストプロフィールです。',
+        location: '東京',
+        languages: ['日本語', '英語'],
+        expertise: ['アート', '文化体験', '食べ歩き'],
+        experiences: [
+          {
+            id: 'exp-1',
+            title: '下町散策ツアー',
+            description: '東京の下町を巡るツアーです。',
+            imageUrl: 'https://via.placeholder.com/300',
+            duration: 120,
+            price: 5000
           }
-        } else if (error.request) {
-          // リクエストは送信されたがレスポンスがない場合（ネットワークエラーなど）
-          console.error('Network error:', error.request);
-        } else {
-          // リクエスト設定中にエラーが発生した場合
-          console.error('Request error:', error.message);
-        }
-        
-        // エラーを上位コンポーネントに伝播
-        return Promise.reject(error);
+        ],
+        availability: {
+          mon: { available: true, timeRange: [9, 17] },
+          tue: { available: true, timeRange: [9, 17] },
+          wed: { available: true, timeRange: [9, 17] },
+          thu: { available: true, timeRange: [9, 17] },
+          fri: { available: true, timeRange: [9, 17] },
+          sat: { available: false, timeRange: [10, 15] },
+          sun: { available: false, timeRange: [10, 15] }
+        },
+        profileImage: 'https://via.placeholder.com/150',
+        rating: 4.8,
+        reviewCount: 12,
+        verified: true,
+        createdAt: new Date('2023-01-01'),
+        updatedAt: new Date('2023-03-15')
       }
-    );
-  }
-
-  // APIメソッドの実装
-  const get = useCallback(
-    <T = any>(url: string, config?: AxiosRequestConfig): Promise<AxiosResponse<T>> => {
-      // @ts-ignore - タイプ応用のための無視
-      return apiClient.get(url, config);
-    },
-    []
-  );
-
-  const post = useCallback(
-    <T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<AxiosResponse<T>> => {
-      // @ts-ignore - タイプ応用のための無視
-      return apiClient.post(url, data, config);
-    },
-    []
-  );
-
-  const put = useCallback(
-    <T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<AxiosResponse<T>> => {
-      // @ts-ignore - タイプ応用のための無視
-      return apiClient.put(url, data, config);
-    },
-    []
-  );
-
-  const del = useCallback(
-    <T = any>(url: string, config?: AxiosRequestConfig): Promise<AxiosResponse<T>> => {
-      // @ts-ignore - タイプ応用のための無視
-      return apiClient.delete(url, config);
-    },
-    []
-  );
-
-  const patch = useCallback(
-    <T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<AxiosResponse<T>> => {
-      // @ts-ignore - タイプ応用のための無視
-      return apiClient.patch(url, data, config);
-    },
-    []
-  );
-
+    };
+    
+    // URLに対応するモックデータがあれば返す
+    if (mockData[url]) {
+      return {
+        data: mockData[url] as T,
+        status: 200,
+        statusText: 'OK',
+        headers: defaultHeaders
+      };
+    }
+    
+    // モックデータがない場合は404エラー
+    throw {
+      response: {
+        data: { message: 'Not found' },
+        status: 404,
+        statusText: 'Not Found',
+        headers: defaultHeaders
+      }
+    };
+  };
+  
+  // POSTリクエスト
+  const post = async <T = any>(url: string, data?: any, config?: any): Promise<ApiResponse<T>> => {
+    console.log(`[API Mock] POST ${url}`, data, config);
+    
+    // 成功レスポンスを返す
+    return {
+      data: data as T,
+      status: 201,
+      statusText: 'Created',
+      headers: defaultHeaders
+    };
+  };
+  
+  // PUTリクエスト
+  const put = async <T = any>(url: string, data?: any, config?: any): Promise<ApiResponse<T>> => {
+    console.log(`[API Mock] PUT ${url}`, data, config);
+    
+    // 成功レスポンスを返す
+    return {
+      data: data as T,
+      status: 200,
+      statusText: 'OK',
+      headers: defaultHeaders
+    };
+  };
+  
+  // DELETEリクエスト
+  const delete_ = async <T = any>(url: string, config?: any): Promise<ApiResponse<T>> => {
+    console.log(`[API Mock] DELETE ${url}`, config);
+    
+    // 成功レスポンスを返す
+    return {
+      data: { success: true } as T,
+      status: 200,
+      statusText: 'OK',
+      headers: defaultHeaders
+    };
+  };
+  
   return {
     get,
     post,
     put,
-    delete: del,
-    patch
+    delete: delete_
   };
 };
+
+export default useApiClient;

@@ -1,9 +1,10 @@
 import React from 'react';
-// モックライブラリをインポート
 import { useTranslation } from '../../../mocks/i18nMock';
+import { RequestData } from '../../../types/dashboard';
 import {
-  Box,
+  Paper,
   Typography,
+  Box,
   List,
   ListItem,
   Card,
@@ -22,25 +23,19 @@ import {
   AccessTime as TimeIcon
 } from '../../../mocks/iconsMock';
 
-interface Request {
-  id: string;
-  userId: string;
-  userName: string;
+// 互換性のため
+interface Request extends RequestData {
   userImage: string;
-  date: Date;
-  numberOfPeople: number;
   message: string;
-  status: string;
-  createdAt: Date;
 }
 
 interface RequestsListProps {
-  requests: Request[];
+  requests: RequestData[] | Request[];
   onAccept: (requestId: string) => void;
   onDecline: (requestId: string) => void;
 }
 
-const RequestsList: React.FC<RequestsListProps> = ({ 
+const RequestsList: React.FC<RequestsListProps> = ({
   requests,
   onAccept,
   onDecline
@@ -49,29 +44,24 @@ const RequestsList: React.FC<RequestsListProps> = ({
 
   if (requests.length === 0) {
     return (
-      <Alert severity="info">
-        {t('dashboard.requests.empty')}
-      </Alert>
+      <Box textAlign="center" py={3}>
+        <Alert severity="info">
+          現在保留中のリクエストはありません
+        </Alert>
+      </Box>
     );
   }
 
-  // 日付をフォーマット
-  const formatDate = (date: Date): string => {
-    return new Intl.DateTimeFormat('ja-JP', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    }).format(new Date(date));
-  };
-
-  // 時間経過の表示
-  const getTimeAgo = (date: Date): string => {
+  // 時間表示を整形
+  const getTimeAgo = (dateString: string): string => {
     const now = new Date();
-    const diffInMs = now.getTime() - new Date(date).getTime();
+    const date = new Date(dateString);
+    const diffInMs = now.getTime() - date.getTime();
+    
     const diffInMinutes = Math.floor(diffInMs / (1000 * 60));
-    const diffInHours = Math.floor(diffInMinutes / 60);
-    const diffInDays = Math.floor(diffInHours / 24);
-
+    const diffInHours = Math.floor(diffInMs / (1000 * 60 * 60));
+    const diffInDays = Math.floor(diffInMs / (1000 * 60 * 60 * 24));
+    
     if (diffInMinutes < 60) {
       return t('common.timeAgo.minutes', { count: diffInMinutes });
     } else if (diffInHours < 24) {
@@ -81,46 +71,59 @@ const RequestsList: React.FC<RequestsListProps> = ({
     }
   };
 
+  // 日付をフォーマット
+  const formatDate = (dateString: string): string => {
+    return new Date(dateString).toLocaleDateString('ja-JP', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      weekday: 'short'
+    });
+  };
+
   return (
-    <List disablePadding>
-      {requests.map((request, index) => (
+    <List sx={{ width: '100%', bgcolor: 'background.paper', p: 0 }}>
+      {requests.map((request) => (
         <React.Fragment key={request.id}>
-          {index > 0 && <Divider component="li" />}
-          <ListItem alignItems="flex-start" disablePadding>
-            <Card sx={{ width: '100%', mb: 0, boxShadow: 'none' }}>
+          <ListItem alignItems="flex-start" sx={{ px: 0 }}>
+            <Card sx={{ width: '100%' }}>
               <CardContent>
                 <Grid container spacing={2}>
-                  <Grid item xs={12} sm={8}>
-                    <Box display="flex" alignItems="center" mb={2}>
-                      <Avatar 
-                        src={request.userImage}
+                  <Grid item xs={12} sm={2}>
+                    <Box display="flex" flexDirection="column" alignItems="center">
+                      <Avatar
                         alt={request.userName}
-                        sx={{ mr: 2 }}
-                      >
-                        {!request.userImage && request.userName.charAt(0)}
-                      </Avatar>
-                      <Box>
-                        <Typography variant="h6">
-                          {request.userName}
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary">
-                          <TimeIcon fontSize="inherit" sx={{ verticalAlign: 'middle', mr: 0.5 }} />
-                          {getTimeAgo(request.createdAt)}
-                        </Typography>
-                      </Box>
+                        src={request.userAvatar || request.userImage}
+                        sx={{ width: 60, height: 60, mb: 1 }}
+                      />
+                      <Typography variant="subtitle2">
+                        {request.userName}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {getTimeAgo(request.createdAt)}
+                      </Typography>
                     </Box>
-                    
-                    <Typography variant="body1" sx={{ mb: 2 }}>
-                      {request.message}
+                  </Grid>
+                  <Grid item xs={12} sm={10}>
+                    <Typography variant="h6" gutterBottom>
+                      {request.experienceTitle}
                     </Typography>
                     
-                    <Box display="flex" flexWrap="wrap" gap={1}>
-                      <Chip
-                        icon={<EventIcon />}
-                        label={formatDate(request.date)}
-                        variant="outlined"
-                        size="small"
-                      />
+                    <Box display="flex" alignItems="center" mb={1}>
+                      <EventIcon sx={{ mr: 1, color: 'primary.main' }} />
+                      <Typography variant="body2">
+                        {formatDate(request.date)}
+                      </Typography>
+                    </Box>
+                    
+                    <Box display="flex" alignItems="center" mb={1}>
+                      <TimeIcon sx={{ mr: 1, color: 'primary.main' }} />
+                      <Typography variant="body2">
+                        リクエスト日時: {new Date(request.createdAt).toLocaleString('ja-JP')}
+                      </Typography>
+                    </Box>
+                    
+                    <Box display="flex" alignItems="center" mb={2}>
                       <Chip
                         icon={<PersonIcon />}
                         label={t('dashboard.requests.people', { count: request.numberOfPeople })}
@@ -128,39 +131,42 @@ const RequestsList: React.FC<RequestsListProps> = ({
                         size="small"
                       />
                     </Box>
-                  </Grid>
-                  
-                  <Grid item xs={12} sm={4} display="flex" flexDirection="column" justifyContent="center">
-                    <Box 
-                      sx={{ 
-                        display: 'flex', 
-                        flexDirection: { xs: 'row', sm: 'column' }, 
-                        gap: 1,
-                        mt: { xs: 2, sm: 0 }
-                      }}
-                    >
-                      <Button
-                        variant="contained"
-                        color="primary"
-                        fullWidth
-                        onClick={() => onAccept(request.id)}
-                      >
-                        {t('dashboard.requests.accept')}
-                      </Button>
-                      <Button
-                        variant="outlined"
-                        color="inherit"
-                        fullWidth
-                        onClick={() => onDecline(request.id)}
-                      >
-                        {t('dashboard.requests.decline')}
-                      </Button>
-                    </Box>
+                    
+                    {request.specialRequests && (
+                      <Box mb={2}>
+                        <Typography variant="body2" fontWeight="medium">
+                          特別リクエスト:
+                        </Typography>
+                        <Typography variant="body2">
+                          {request.specialRequests || request.message}
+                        </Typography>
+                      </Box>
+                    )}
                   </Grid>
                 </Grid>
               </CardContent>
+              <Divider />
+              <CardActions>
+                <Button
+                  onClick={() => onAccept(request.id)}
+                  variant="contained"
+                  color="primary"
+                  size="small"
+                >
+                  承認する
+                </Button>
+                <Button
+                  onClick={() => onDecline(request.id)}
+                  variant="outlined"
+                  color="error"
+                  size="small"
+                >
+                  断る
+                </Button>
+              </CardActions>
             </Card>
           </ListItem>
+          <Divider variant="inset" component="li" />
         </React.Fragment>
       ))}
     </List>

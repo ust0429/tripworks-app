@@ -1,440 +1,341 @@
 import React, { useState } from 'react';
-import { useAttenderProfile } from '@/contexts/AttenderProfileContext';
-import { ExperienceSample } from '@/types/attender/profile';
-import { Clock, DollarSign, Edit, Plus, Trash } from 'lucide-react';
-import { addExperienceSample, removeExperienceSample, updateExperienceSample } from '@/services/AttenderProfileService';
+import { ExperienceSample } from '../../../types/attender/profile';
+import { Badge } from '../../ui/badge';
+import { cn } from '../../../utils/cn';
 
 interface ExperienceSamplesProps {
-  experiences: ExperienceSample[];
-  isEditable?: boolean;
+  samples: ExperienceSample[];
+  isEditing: boolean;
+  onAdd?: (sample: Omit<ExperienceSample, 'id' | 'createdAt' | 'updatedAt'>) => void;
+  onUpdate?: (id: string, updates: Partial<Omit<ExperienceSample, 'id' | 'createdAt' | 'updatedAt'>>) => void;
+  onRemove?: (id: string) => void;
 }
 
-type ExperienceFormData = Omit<ExperienceSample, 'id'>;
+type EditingSample = Omit<ExperienceSample, 'id' | 'createdAt' | 'updatedAt'> & { id?: string };
 
-const DEFAULT_EXPERIENCE: ExperienceFormData = {
-  title: '',
-  description: '',
-  imageUrl: '',
-  duration: '',
-  price: 0
-};
-
+/**
+ * 体験サンプル管理コンポーネント
+ */
 const ExperienceSamples: React.FC<ExperienceSamplesProps> = ({
-  experiences,
-  isEditable = false
+  samples,
+  isEditing,
+  onAdd,
+  onUpdate,
+  onRemove,
 }) => {
-  const { refreshProfile } = useAttenderProfile();
-  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [selectedExperience, setSelectedExperience] = useState<ExperienceSample | null>(null);
-  const [formData, setFormData] = useState<ExperienceFormData>(DEFAULT_EXPERIENCE);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [formError, setFormError] = useState<string | null>(null);
-
-  // フォームの入力ハンドラ
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({
+  const [isAddingNew, setIsAddingNew] = useState(false);
+  const [editingSampleId, setEditingSampleId] = useState<string | null>(null);
+  const [editingSample, setEditingSample] = useState<EditingSample>({
+    title: '',
+    description: '',
+    imageUrl: '',
+    duration: 60,
+    price: 0,
+    categories: [],
+  });
+  
+  // 入力値の変更ハンドラ
+  const handleChange = (field: keyof EditingSample, value: any) => {
+    setEditingSample(prev => ({
       ...prev,
-      [name]: name === 'price' ? Number(value) : value
+      [field]: value
     }));
   };
-
-  // 新規体験追加ダイアログを開く
-  const openAddDialog = () => {
-    setFormData(DEFAULT_EXPERIENCE);
-    setFormError(null);
-    setIsAddDialogOpen(true);
+  
+  // カテゴリー入力の変更ハンドラ
+  const handleCategoriesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const categories = e.target.value.split(',').map(cat => cat.trim()).filter(Boolean);
+    handleChange('categories', categories);
   };
-
-  // 編集ダイアログを開く
-  const openEditDialog = (experience: ExperienceSample) => {
-    setSelectedExperience(experience);
-    setFormData({
-      title: experience.title,
-      description: experience.description,
-      imageUrl: experience.imageUrl || '',
-      duration: experience.duration,
-      price: experience.price || 0
+  
+  // 編集フォームの保存
+  const handleSave = () => {
+    if (isAddingNew) {
+      onAdd?.(editingSample);
+      setIsAddingNew(false);
+    } else if (editingSampleId) {
+      onUpdate?.(editingSampleId, editingSample);
+      setEditingSampleId(null);
+    }
+    
+    // フォームをリセット
+    setEditingSample({
+      title: '',
+      description: '',
+      imageUrl: '',
+      duration: 60,
+      price: 0,
+      categories: [],
     });
-    setFormError(null);
-    setIsEditDialogOpen(true);
   };
-
-  // 削除確認ダイアログを開く
-  const openDeleteDialog = (experience: ExperienceSample) => {
-    setSelectedExperience(experience);
-    setIsDeleteDialogOpen(true);
+  
+  // 編集キャンセル
+  const handleCancel = () => {
+    setIsAddingNew(false);
+    setEditingSampleId(null);
+    setEditingSample({
+      title: '',
+      description: '',
+      imageUrl: '',
+      duration: 60,
+      price: 0,
+      categories: [],
+    });
   };
-
-  // 体験追加処理
-  const handleAddExperience = async () => {
-    if (!formData.title || !formData.description || !formData.duration) {
-      setFormError('タイトル、説明、所要時間は必須項目です');
-      return;
-    }
-
-    setIsSubmitting(true);
-    setFormError(null);
-
-    try {
-      await addExperienceSample('current', formData);
-      await refreshProfile();
-      setIsAddDialogOpen(false);
-      setFormData(DEFAULT_EXPERIENCE);
-    } catch (error) {
-      console.error('Error adding experience:', error);
-      setFormError('体験サンプルの追加中にエラーが発生しました');
-    } finally {
-      setIsSubmitting(false);
-    }
+  
+  // 体験サンプルの編集を開始
+  const startEdit = (sample: ExperienceSample) => {
+    setEditingSampleId(sample.id);
+    setEditingSample({
+      title: sample.title,
+      description: sample.description,
+      imageUrl: sample.imageUrl || '',
+      duration: sample.duration || 60,
+      price: sample.price || 0,
+      categories: sample.categories || [],
+    });
   };
-
-  // 体験更新処理
-  const handleUpdateExperience = async () => {
-    if (!selectedExperience) return;
-    
-    if (!formData.title || !formData.description || !formData.duration) {
-      setFormError('タイトル、説明、所要時間は必須項目です');
-      return;
-    }
-
-    setIsSubmitting(true);
-    setFormError(null);
-
-    try {
-      await updateExperienceSample('current', selectedExperience.id, formData);
-      await refreshProfile();
-      setIsEditDialogOpen(false);
-    } catch (error) {
-      console.error('Error updating experience:', error);
-      setFormError('体験サンプルの更新中にエラーが発生しました');
-    } finally {
-      setIsSubmitting(false);
+  
+  // 新規作成フォームの表示
+  const startAddNew = () => {
+    setIsAddingNew(true);
+    setEditingSampleId(null);
+    setEditingSample({
+      title: '',
+      description: '',
+      imageUrl: '',
+      duration: 60,
+      price: 0,
+      categories: [],
+    });
+  };
+  
+  // サンプルの削除
+  const handleRemove = (id: string) => {
+    if (window.confirm('この体験サンプルを削除してもよろしいですか？')) {
+      onRemove?.(id);
     }
   };
-
-  // 体験削除処理
-  const handleDeleteExperience = async () => {
-    if (!selectedExperience) return;
-
-    setIsSubmitting(true);
-
-    try {
-      await removeExperienceSample('current', selectedExperience.id);
-      await refreshProfile();
-      setIsDeleteDialogOpen(false);
-    } catch (error) {
-      console.error('Error deleting experience:', error);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  // ダイアログのモーダル表示
-  const renderModal = (isOpen: boolean, onClose: () => void, title: string, content: React.ReactNode) => {
-    if (!isOpen) return null;
-    
-    return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div className="bg-white rounded-lg shadow-lg w-full max-w-md mx-4">
-          <div className="flex justify-between items-center p-4 border-b">
-            <h3 className="text-lg font-semibold">{title}</h3>
-            <button 
-              className="text-gray-500 hover:text-gray-700"
-              onClick={onClose}
-              disabled={isSubmitting}
-            >
-              ✕
-            </button>
+  
+  // サンプル編集フォーム
+  const SampleForm = () => (
+    <div className="bg-gray-50 p-4 rounded-lg mt-4 border">
+      <h3 className="text-lg font-medium mb-3">
+        {isAddingNew ? '新しい体験サンプルを追加' : '体験サンプルを編集'}
+      </h3>
+      
+      <div className="space-y-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            タイトル*
+          </label>
+          <input
+            type="text"
+            value={editingSample.title}
+            onChange={(e) => handleChange('title', e.target.value)}
+            className="w-full p-2 border rounded"
+            required
+          />
+        </div>
+        
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            説明*
+          </label>
+          <textarea
+            value={editingSample.description}
+            onChange={(e) => handleChange('description', e.target.value)}
+            className="w-full p-2 border rounded"
+            rows={3}
+            required
+          />
+        </div>
+        
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            画像URL
+          </label>
+          <input
+            type="text"
+            value={editingSample.imageUrl}
+            onChange={(e) => handleChange('imageUrl', e.target.value)}
+            className="w-full p-2 border rounded"
+            placeholder="https://example.com/image.jpg"
+          />
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              所要時間（分）
+            </label>
+            <input
+              type="number"
+              value={editingSample.duration}
+              onChange={(e) => handleChange('duration', parseInt(e.target.value) || 0)}
+              className="w-full p-2 border rounded"
+              min="0"
+            />
           </div>
-          <div className="p-4">
-            {content}
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              料金（円）
+            </label>
+            <input
+              type="number"
+              value={editingSample.price}
+              onChange={(e) => handleChange('price', parseInt(e.target.value) || 0)}
+              className="w-full p-2 border rounded"
+              min="0"
+            />
           </div>
         </div>
-      </div>
-    );
-  };
-
-  return (
-    <div>
-      <div className="mb-6 flex justify-between items-center">
-        <h2 className="text-xl font-semibold">体験サンプル</h2>
-        {isEditable && (
-          <button 
-            className="px-4 py-2 bg-blue-600 rounded-md text-white hover:bg-blue-700 transition-colors flex items-center"
-            onClick={openAddDialog}
+        
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            カテゴリー（カンマ区切り）
+          </label>
+          <input
+            type="text"
+            value={editingSample.categories?.join(', ') || ''}
+            onChange={handleCategoriesChange}
+            className="w-full p-2 border rounded"
+            placeholder="アート, 文化, 食べ歩き"
+          />
+        </div>
+        
+        <div className="flex justify-end gap-2 mt-4">
+          <button
+            type="button"
+            onClick={handleCancel}
+            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
           >
-            <Plus className="h-4 w-4 mr-2" />
-            新規体験を追加
+            キャンセル
+          </button>
+          <button
+            type="button"
+            onClick={handleSave}
+            disabled={!editingSample.title || !editingSample.description}
+            className={cn(
+              "px-4 py-2 text-sm font-medium text-white rounded-md",
+              (!editingSample.title || !editingSample.description)
+                ? "bg-blue-300"
+                : "bg-blue-600 hover:bg-blue-700"
+            )}
+          >
+            保存
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+  
+  return (
+    <div className="bg-white rounded-lg shadow-sm p-6">
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-xl font-semibold">体験サンプル</h2>
+        
+        {isEditing && !isAddingNew && !editingSampleId && (
+          <button
+            type="button"
+            onClick={startAddNew}
+            className="px-3 py-1 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700"
+          >
+            サンプルを追加
           </button>
         )}
       </div>
-
-      {experiences.length === 0 ? (
-        <div className="bg-white p-12 rounded-lg shadow-sm border flex flex-col items-center justify-center">
-          <p className="text-gray-500 mb-4">まだ体験サンプルはありません</p>
-          {isEditable && (
-            <button 
-              className="px-4 py-2 bg-gray-100 rounded-md text-gray-700 hover:bg-gray-200 transition-colors flex items-center"
-              onClick={openAddDialog}
+      
+      {samples.length === 0 && !isAddingNew ? (
+        <div className="text-center py-8 text-gray-500">
+          <p>体験サンプルがまだ登録されていません</p>
+          {isEditing && (
+            <button
+              type="button"
+              onClick={startAddNew}
+              className="mt-3 px-4 py-2 text-sm font-medium text-blue-600 border border-blue-600 rounded-md hover:bg-blue-50"
             >
-              <Plus className="h-4 w-4 mr-2" />
-              体験を追加する
+              サンプルを追加
             </button>
           )}
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          {experiences.map((experience) => (
-            <div key={experience.id} className="bg-white rounded-lg shadow-sm border overflow-hidden">
-              {experience.imageUrl && (
-                <div className="h-40 overflow-hidden">
-                  <img
-                    src={experience.imageUrl}
-                    alt={experience.title}
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-              )}
-              <div className="p-4">
-                <h3 className="text-lg font-semibold">{experience.title}</h3>
-                <div className="flex items-center text-sm text-gray-500 mt-1">
-                  <Clock className="h-4 w-4 mr-1" />
-                  <span>{experience.duration}</span>
-                  {experience.price !== undefined && (
-                    <>
-                      <span className="mx-2">•</span>
-                      <DollarSign className="h-4 w-4 mr-1" />
-                      <span>{experience.price.toLocaleString()}円</span>
-                    </>
+        <div className="space-y-6">
+          {samples.map(sample => (
+            editingSampleId === sample.id ? (
+              <SampleForm key={sample.id} />
+            ) : (
+              <div key={sample.id} className="border rounded-lg overflow-hidden">
+                <div className="relative">
+                  {sample.imageUrl ? (
+                    <img
+                      src={sample.imageUrl}
+                      alt={sample.title}
+                      className="w-full h-48 object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-48 bg-gray-200 flex items-center justify-center text-gray-400">
+                      画像なし
+                    </div>
+                  )}
+                  
+                  {/* 料金表示 */}
+                  {sample.price !== undefined && sample.price > 0 && (
+                    <div className="absolute top-3 right-3 bg-white px-3 py-1 rounded-full shadow-md text-gray-800 font-medium">
+                      ¥{sample.price.toLocaleString()}
+                    </div>
                   )}
                 </div>
-                <p className="mt-2 text-gray-600 line-clamp-3">
-                  {experience.description}
-                </p>
-                {isEditable && (
-                  <div className="flex justify-end gap-2 mt-4">
-                    <button
-                      className="px-3 py-1 bg-gray-100 rounded text-gray-700 hover:bg-gray-200 transition-colors flex items-center text-sm"
-                      onClick={() => openEditDialog(experience)}
-                    >
-                      <Edit className="h-4 w-4 mr-1" />
-                      編集
-                    </button>
-                    <button
-                      className="px-3 py-1 bg-red-50 rounded text-red-600 hover:bg-red-100 transition-colors flex items-center text-sm"
-                      onClick={() => openDeleteDialog(experience)}
-                    >
-                      <Trash className="h-4 w-4 mr-1" />
-                      削除
-                    </button>
+                
+                <div className="p-4">
+                  <h3 className="text-lg font-medium mb-2">{sample.title}</h3>
+                  
+                  <div className="flex flex-wrap gap-1 mb-3">
+                    {sample.categories?.map(category => (
+                      <Badge key={category} variant="default" size="sm">
+                        {category}
+                      </Badge>
+                    ))}
                   </div>
-                )}
+                  
+                  <p className="text-gray-600 mb-3">{sample.description}</p>
+                  
+                  <div className="flex items-center text-sm text-gray-500">
+                    {sample.duration && (
+                      <div className="flex items-center mr-4">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4 mr-1">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        {sample.duration}分
+                      </div>
+                    )}
+                  </div>
+                  
+                  {isEditing && (
+                    <div className="mt-3 flex justify-end gap-2">
+                      <button
+                        type="button"
+                        onClick={() => startEdit(sample)}
+                        className="px-3 py-1 text-sm text-blue-600 hover:text-blue-800"
+                      >
+                        編集
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleRemove(sample.id)}
+                        className="px-3 py-1 text-sm text-red-600 hover:text-red-800"
+                      >
+                        削除
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
+            )
           ))}
-        </div>
-      )}
-
-      {/* 新規追加ダイアログ */}
-      {renderModal(
-        isAddDialogOpen, 
-        () => setIsAddDialogOpen(false), 
-        "新規体験サンプルを追加",
-        <div>
-          <p className="mb-4 text-sm text-gray-600">
-            あなたが提供できる体験の詳細を入力してください。これらは申請時に確認されます。
-          </p>
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">タイトル *</label>
-              <input
-                name="title"
-                value={formData.title}
-                onChange={handleInputChange}
-                placeholder="例: 隠れた名店を巡るフードツアー"
-                className="w-full p-2 border border-gray-300 rounded-md"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">説明 *</label>
-              <textarea
-                name="description"
-                value={formData.description}
-                onChange={handleInputChange}
-                placeholder="体験の詳細を説明してください"
-                rows={4}
-                className="w-full p-2 border border-gray-300 rounded-md"
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">所要時間 *</label>
-                <input
-                  name="duration"
-                  value={formData.duration}
-                  onChange={handleInputChange}
-                  placeholder="例: 2時間"
-                  className="w-full p-2 border border-gray-300 rounded-md"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">料金（円）</label>
-                <input
-                  name="price"
-                  type="number"
-                  value={formData.price || ''}
-                  onChange={handleInputChange}
-                  placeholder="例: 5000"
-                  className="w-full p-2 border border-gray-300 rounded-md"
-                />
-              </div>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">画像URL（任意）</label>
-              <input
-                name="imageUrl"
-                value={formData.imageUrl}
-                onChange={handleInputChange}
-                placeholder="体験の画像URL"
-                className="w-full p-2 border border-gray-300 rounded-md"
-              />
-            </div>
-            {formError && (
-              <p className="text-sm text-red-500">{formError}</p>
-            )}
-          </div>
-          <div className="flex justify-end gap-2 mt-6">
-            <button
-              className="px-4 py-2 bg-gray-100 rounded-md text-gray-700 hover:bg-gray-200 transition-colors"
-              onClick={() => setIsAddDialogOpen(false)}
-              disabled={isSubmitting}
-            >
-              キャンセル
-            </button>
-            <button 
-              className="px-4 py-2 bg-blue-600 rounded-md text-white hover:bg-blue-700 transition-colors"
-              onClick={handleAddExperience} 
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? '追加中...' : '追加'}
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* 編集ダイアログ */}
-      {renderModal(
-        isEditDialogOpen,
-        () => setIsEditDialogOpen(false),
-        "体験サンプルを編集",
-        <div>
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">タイトル *</label>
-              <input
-                name="title"
-                value={formData.title}
-                onChange={handleInputChange}
-                className="w-full p-2 border border-gray-300 rounded-md"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">説明 *</label>
-              <textarea
-                name="description"
-                value={formData.description}
-                onChange={handleInputChange}
-                rows={4}
-                className="w-full p-2 border border-gray-300 rounded-md"
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">所要時間 *</label>
-                <input
-                  name="duration"
-                  value={formData.duration}
-                  onChange={handleInputChange}
-                  className="w-full p-2 border border-gray-300 rounded-md"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">料金（円）</label>
-                <input
-                  name="price"
-                  type="number"
-                  value={formData.price || ''}
-                  onChange={handleInputChange}
-                  className="w-full p-2 border border-gray-300 rounded-md"
-                />
-              </div>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">画像URL（任意）</label>
-              <input
-                name="imageUrl"
-                value={formData.imageUrl}
-                onChange={handleInputChange}
-                className="w-full p-2 border border-gray-300 rounded-md"
-              />
-            </div>
-            {formError && (
-              <p className="text-sm text-red-500">{formError}</p>
-            )}
-          </div>
-          <div className="flex justify-end gap-2 mt-6">
-            <button
-              className="px-4 py-2 bg-gray-100 rounded-md text-gray-700 hover:bg-gray-200 transition-colors"
-              onClick={() => setIsEditDialogOpen(false)}
-              disabled={isSubmitting}
-            >
-              キャンセル
-            </button>
-            <button 
-              className="px-4 py-2 bg-blue-600 rounded-md text-white hover:bg-blue-700 transition-colors"
-              onClick={handleUpdateExperience} 
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? '更新中...' : '更新'}
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* 削除確認ダイアログ */}
-      {renderModal(
-        isDeleteDialogOpen,
-        () => setIsDeleteDialogOpen(false),
-        "体験サンプルを削除",
-        <div>
-          <p className="mb-2">本当にこの体験サンプルを削除しますか？この操作は元に戻せません。</p>
-          {selectedExperience && (
-            <div className="p-3 bg-gray-50 rounded-md mb-4">
-              <p className="font-medium">{selectedExperience.title}</p>
-              <p className="text-sm text-gray-600 mt-1 line-clamp-2">
-                {selectedExperience.description}
-              </p>
-            </div>
-          )}
-          <div className="flex justify-end gap-2 mt-6">
-            <button
-              className="px-4 py-2 bg-gray-100 rounded-md text-gray-700 hover:bg-gray-200 transition-colors"
-              onClick={() => setIsDeleteDialogOpen(false)}
-              disabled={isSubmitting}
-            >
-              キャンセル
-            </button>
-            <button
-              className="px-4 py-2 bg-red-600 rounded-md text-white hover:bg-red-700 transition-colors"
-              onClick={handleDeleteExperience}
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? '削除中...' : '削除'}
-            </button>
-          </div>
+          
+          {isAddingNew && <SampleForm />}
         </div>
       )}
     </div>

@@ -1,55 +1,129 @@
 /**
- * Material-UI Iconsのモックコンポーネント
- * 実際のコンポーネントがないときにビルドを通すためのモック
+ * Material-UI Icons のモックコンポーネント
+ * 実際のプロジェクトでは @mui/icons-material パッケージをインストールして使用してください
  */
+import React from 'react';
 
-// ダミーのアイコンコンポーネント関数
-const createDummyIcon = (name: string) => {
-  return (props: any) => {
-    console.log(`Rendering mock ${name} icon`, props);
-    return null;
+// シンプルなアイコンファクトリ関数
+const createIcon = (name: string) => {
+  return ({ ...props }: any) => {
+    return React.createElement('span', { 
+      'data-icon': name, 
+      style: { 
+        display: 'inline-flex', 
+        width: '1em', 
+        height: '1em',
+        fontSize: 'inherit',
+        ...props.style 
+      },
+      ...props 
+    }, '□');
   };
 };
 
-// 頻繁に使用されるアイコン
-export const Add = createDummyIcon('Add');
-export const Delete = createDummyIcon('Delete');
-export const Edit = createDummyIcon('Edit');
-export const Close = createDummyIcon('Close');
-export const Check = createDummyIcon('Check');
-export const Send = createDummyIcon('Send');
-export const Search = createDummyIcon('Search');
-export const Event = createDummyIcon('Event');
-export const AccessTime = createDummyIcon('AccessTime');
-export const PersonOutline = createDummyIcon('PersonOutline');
-export const LocalActivity = createDummyIcon('LocalActivity');
-export const Comment = createDummyIcon('Comment');
-export const CalendarMonth = createDummyIcon('CalendarMonth');
-export const MonetizationOn = createDummyIcon('MonetizationOn');
-export const CheckCircle = createDummyIcon('CheckCircle');
-export const Group = createDummyIcon('Group');
-export const Place = createDummyIcon('Place');
-export const Money = createDummyIcon('Money');
-export const Info = createDummyIcon('Info');
-export const AddPhotoAlternate = createDummyIcon('AddPhotoAlternate');
-export const Visibility = createDummyIcon('Visibility');
-export const VisibilityOff = createDummyIcon('VisibilityOff');
-export const PhotoCamera = createDummyIcon('PhotoCamera');
-export const Verified = createDummyIcon('Verified');
+// アイコンの定義
+export const Add = createIcon('Add');
+export const Edit = createIcon('Edit');
+export const Delete = createIcon('Delete');
+export const MoreVert = createIcon('MoreVert');
+export const AccessTime = createIcon('AccessTime');
+export const CalendarMonth = createIcon('CalendarMonth');
+export const CalendarToday = createIcon('CalendarToday');
+export const Event = createIcon('Event');
+export const Person = createIcon('Person');
+export const People = createIcon('People');
+export const Place = createIcon('Place');
+export const Money = createIcon('Money');
+export const AccountBalance = createIcon('AccountBalance');
+export const AccountBalanceWallet = createIcon('AccountBalanceWallet');
+export const ShoppingCart = createIcon('ShoppingCart');
+export const Star = createIcon('Star');
+export const StarBorder = createIcon('StarBorder');
+export const DateRange = createIcon('DateRange');
+export const KeyboardArrowRight = createIcon('KeyboardArrowRight');
+export const ChevronLeft = createIcon('ChevronLeft');
+export const ChevronRight = createIcon('ChevronRight');
+export const Check = createIcon('Check');
+export const Close = createIcon('Close');
+export const Info = createIcon('Info');
+export const Warning = createIcon('Warning');
+export const Error = createIcon('Error');
+export const Help = createIcon('Help');
+export const Settings = createIcon('Settings');
+export const ExpandMore = createIcon('ExpandMore');
+export const Notifications = createIcon('Notifications');
+export const Search = createIcon('Search');
+export const Home = createIcon('Home');
+export const Dashboard = createIcon('Dashboard');
+export const Visibility = createIcon('Visibility');
+export const VisibilityOff = createIcon('VisibilityOff');
+export const LocalOffer = createIcon('LocalOffer');
+export const Public = createIcon('Public');
+export const EmojiEvents = createIcon('EmojiEvents');
+export const Category = createIcon('Category');
+// 追加アイコン
+export const FileDownload = createIcon('FileDownload');
+export const TrendingUp = createIcon('TrendingUp');
+export const PersonOutline = createIcon('PersonOutline');
+export const LocalActivity = createIcon('LocalActivity');
+export const Comment = createIcon('Comment');
+export const Assignment = createIcon('Assignment');
+export const MonetizationOn = createIcon('MonetizationOn');
+export const CheckCircle = createIcon('CheckCircle');
+export const Explore = createIcon('Explore');
+export const Group = createIcon('Group');
+export const AddPhotoAlternate = createIcon('AddPhotoAlternate');
 
-// 追加必要なアイコン
-export const Star = createDummyIcon('Star');
-export const Assignment = createDummyIcon('Assignment');
-export const MoreVert = createDummyIcon('MoreVert');
-export const LocationOn = createDummyIcon('LocationOn');
-export const NotInterested = createDummyIcon('NotInterested');
-export const DateRange = createDummyIcon('DateRange');
-export const FileDownload = createDummyIcon('FileDownload');
-export const AccountBalanceWallet = createDummyIcon('AccountBalanceWallet');
-export const TrendingUp = createDummyIcon('TrendingUp');
-export const Explore = createDummyIcon('Explore');
-
-// 特定のパスからインポートされるアイコン
+// エクスポート
 export default {
-  Add: createDummyIcon('Add')
+  Add,
+  Edit,
+  Delete,
+  MoreVert,
+  AccessTime,
+  CalendarMonth,
+  CalendarToday,
+  Event,
+  Person,
+  People,
+  Place,
+  Money,
+  AccountBalance,
+  AccountBalanceWallet,
+  ShoppingCart,
+  Star,
+  StarBorder,
+  DateRange,
+  KeyboardArrowRight,
+  ChevronLeft,
+  ChevronRight,
+  Check,
+  Close,
+  Info,
+  Warning,
+  Error,
+  Help,
+  Settings,
+  ExpandMore,
+  Notifications,
+  Search,
+  Home,
+  Dashboard,
+  Visibility,
+  VisibilityOff,
+  LocalOffer,
+  Public,
+  EmojiEvents,
+  Category,
+  FileDownload,
+  TrendingUp,
+  PersonOutline,
+  LocalActivity,
+  Comment,
+  Assignment,
+  MonetizationOn,
+  CheckCircle,
+  Explore,
+  Group,
+  AddPhotoAlternate
 };

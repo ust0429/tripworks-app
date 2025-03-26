@@ -1,10 +1,10 @@
 import React from 'react';
-// モックライブラリをインポート
 import { useTranslation } from '../../../mocks/i18nMock';
+import { PerformanceMetricsData } from '../../../types/dashboard';
 import {
-  Grid,
   Paper,
   Typography,
+  Grid,
   Box,
   Rating,
   LinearProgress,
@@ -21,170 +21,178 @@ import {
 } from '../../../mocks/iconsMock';
 
 interface MetricsProps {
-  metrics: {
-    totalBookings: number;
-    upcomingBookings: number;
-    pendingRequests: number;
-    totalReviews: number;
-    averageRating: number;
-    monthlyEarnings: number;
-    completionRate: number;
-    totalExperiences?: number;
-    activeExperiences?: number;
-  };
+  metrics: PerformanceMetricsData;
 }
 
-const MetricCard: React.FC<{
-  title: string;
-  value: React.ReactNode;
-  icon: React.ReactNode;
-  trend?: {
-    value: number;
-    isPositive: boolean;
-  };
-}> = ({ title, value, icon, trend }) => {
-  return (
-    <Paper elevation={2} sx={{ p: 2, height: '100%' }}>
-      <Box display="flex" alignItems="center" mb={1}>
-        <Box mr={1} display="flex" color="primary.main">
-          {icon}
-        </Box>
-        <Typography variant="body2" color="text.secondary">
-          {title}
-        </Typography>
-      </Box>
-      
-      <Typography variant="h5" component="div" gutterBottom>
-        {value}
-      </Typography>
-      
-      {trend && (
-        <Typography 
-          variant="caption" 
-          color={trend.isPositive ? 'success.main' : 'error.main'}
-        >
-          {trend.isPositive ? '+' : ''}{trend.value}% {trend.isPositive ? '↑' : '↓'}
-        </Typography>
-      )}
-    </Paper>
-  );
-};
-
+/**
+ * パフォーマンスメトリクスコンポーネント
+ * アテンダーのパフォーマンス指標を表示
+ */
 const PerformanceMetrics: React.FC<MetricsProps> = ({ metrics }) => {
   const { t } = useTranslation(['attender', 'common']);
   
   // 表示用にフォーマット
   const formattedEarnings = new Intl.NumberFormat('ja-JP', {
     style: 'currency',
-    currency: 'JPY'
+    currency: 'JPY',
+    maximumFractionDigits: 0
   }).format(metrics.monthlyEarnings);
-
+  
   return (
-    <Grid container spacing={2}>
-      <Grid item xs={12} sm={6} md={4}>
-        <MetricCard
-          title={t('dashboard.metrics.totalBookings')}
-          value={metrics.totalBookings}
-          icon={<BookingIcon />}
-          trend={{ value: 12, isPositive: true }}
-        />
-      </Grid>
-      
-      <Grid item xs={12} sm={6} md={4}>
-        <MetricCard
-          title={t('dashboard.metrics.upcomingBookings')}
-          value={metrics.upcomingBookings}
-          icon={<CalendarIcon />}
-        />
-      </Grid>
-      
-      <Grid item xs={12} sm={6} md={4}>
-        <MetricCard
-          title={t('dashboard.metrics.pendingRequests')}
-          value={metrics.pendingRequests}
-          icon={<PendingIcon />}
-        />
-      </Grid>
-      
-      <Grid item xs={12} sm={6} md={4}>
-        <Paper elevation={2} sx={{ p: 2, height: '100%' }}>
-          <Box display="flex" alignItems="center" mb={1}>
-            <Box mr={1} display="flex" color="primary.main">
-              <RatingIcon />
+    <Paper sx={{ p: 3 }}>
+      <Grid container spacing={3}>
+        {/* 総予約数 */}
+        <Grid item xs={12} sm={6} md={3}>
+          <Paper sx={{ p: 2, height: '100%' }}>
+            <Box display="flex" alignItems="center" mb={1}>
+              <BookingIcon color="primary" sx={{ mr: 1 }} />
+              <Typography variant="h6" fontWeight="bold">
+                {metrics.totalBookings}
+              </Typography>
             </Box>
+            
             <Typography variant="body2" color="text.secondary">
-              {t('dashboard.metrics.rating')}
+              総予約数
             </Typography>
-          </Box>
-          
-          <Box display="flex" alignItems="center">
-            <Typography variant="h5" component="div" mr={1}>
-              {metrics.averageRating.toFixed(1)}
-            </Typography>
-            <Rating value={metrics.averageRating} precision={0.5} readOnly size="small" />
-          </Box>
-          
-          <Typography variant="caption" color="text.secondary">
-            {t('dashboard.metrics.totalReviews', { count: metrics.totalReviews })}
-          </Typography>
-        </Paper>
-      </Grid>
-      
-      <Grid item xs={12} sm={6} md={4}>
-        <MetricCard
-          title={t('dashboard.metrics.monthlyEarnings')}
-          value={formattedEarnings}
-          icon={<EarningsIcon />}
-          trend={{ value: 8.5, isPositive: true }}
-        />
-      </Grid>
-      
-      <Grid item xs={12} sm={6} md={4}>
-        <Paper elevation={2} sx={{ p: 2, height: '100%' }}>
-          <Box display="flex" alignItems="center" mb={1}>
-            <Box mr={1} display="flex" color="primary.main">
-              <CompletionIcon />
+          </Paper>
+        </Grid>
+        
+        {/* 予定の予約 */}
+        <Grid item xs={12} sm={6} md={3}>
+          <Paper sx={{ p: 2, height: '100%' }}>
+            <Box display="flex" alignItems="center" mb={1}>
+              <CalendarIcon color="primary" sx={{ mr: 1 }} />
+              <Typography variant="h6" fontWeight="bold">
+                {metrics.upcomingBookings}
+              </Typography>
             </Box>
+            
             <Typography variant="body2" color="text.secondary">
-              {t('dashboard.metrics.completionRate')}
+              予定の予約
             </Typography>
-          </Box>
-          
-          <Typography variant="h5" component="div" gutterBottom>
-            {metrics.completionRate}%
-          </Typography>
-          
-          <LinearProgress 
-            variant="determinate" 
-            value={metrics.completionRate} 
-            color={metrics.completionRate > 90 ? "success" : metrics.completionRate > 70 ? "primary" : "warning"}
-            sx={{ height: 8, borderRadius: 4 }}
-          />
-        </Paper>
-      </Grid>
-      
-      <Grid item xs={12} sm={6} md={4}>
-        <Paper elevation={2} sx={{ p: 2, height: '100%' }}>
-          <Box display="flex" alignItems="center" mb={1}>
-            <Box mr={1} display="flex" color="primary.main">
-              <ExperienceIcon />
+          </Paper>
+        </Grid>
+        
+        {/* 保留中のリクエスト */}
+        <Grid item xs={12} sm={6} md={3}>
+          <Paper sx={{ p: 2, height: '100%' }}>
+            <Box display="flex" alignItems="center" mb={1}>
+              <PendingIcon color="primary" sx={{ mr: 1 }} />
+              <Typography variant="h6" fontWeight="bold">
+                {metrics.pendingRequests}
+              </Typography>
             </Box>
+            
             <Typography variant="body2" color="text.secondary">
-              体験プラン
+              保留中のリクエスト
             </Typography>
-          </Box>
-          
-          <Box display="flex" alignItems="baseline">
-            <Typography variant="h5" component="div" mr={1}>
-              {metrics.totalExperiences || 0}
-            </Typography>
+          </Paper>
+        </Grid>
+        
+        {/* 月間収益 */}
+        <Grid item xs={12} sm={6} md={3}>
+          <Paper sx={{ p: 2, height: '100%' }}>
+            <Box display="flex" alignItems="center" mb={1}>
+              <EarningsIcon color="primary" sx={{ mr: 1 }} />
+              <Typography variant="h6" fontWeight="bold">
+                {formattedEarnings}
+              </Typography>
+            </Box>
+            
             <Typography variant="body2" color="text.secondary">
-              公開中: {metrics.activeExperiences || 0}
+              今月の収益
             </Typography>
-          </Box>
-        </Paper>
+          </Paper>
+        </Grid>
+        
+        <Grid item xs={12}>
+          <Divider sx={{ my: 2 }} />
+        </Grid>
+        
+        {/* 評価 */}
+        <Grid item xs={12} sm={6} md={4}>
+          <Paper sx={{ p: 2, height: '100%' }}>
+            <Box display="flex" alignItems="center" mb={1}>
+              <RatingIcon color="primary" sx={{ mr: 1 }} />
+              <Typography variant="body1" fontWeight="medium">
+                評価
+              </Typography>
+            </Box>
+            
+            <Box display="flex" alignItems="center" mt={2}>
+              <Rating 
+                value={metrics.averageRating} 
+                precision={0.1} 
+                readOnly 
+                size="large"
+              />
+              <Typography variant="h6" ml={1}>
+                {metrics.averageRating.toFixed(1)}
+              </Typography>
+            </Box>
+            
+            <Typography variant="caption" color="text.secondary">
+              {t('dashboard.metrics.totalReviews', { count: metrics.totalReviews })}
+            </Typography>
+          </Paper>
+        </Grid>
+        
+        {/* 完了率 */}
+        <Grid item xs={12} sm={6} md={4}>
+          <Paper sx={{ p: 2, height: '100%' }}>
+            <Box display="flex" alignItems="center" mb={1}>
+              <CompletionIcon color="primary" sx={{ mr: 1 }} />
+              <Typography variant="body1" fontWeight="medium">
+                完了率
+              </Typography>
+            </Box>
+            
+            <Box mt={2}>
+              <LinearProgress 
+                variant="determinate" 
+                value={metrics.completionRate} 
+                sx={{ height: 10, borderRadius: 5 }}
+              />
+              <Typography variant="h6" mt={1}>
+                {metrics.completionRate}%
+              </Typography>
+            </Box>
+          </Paper>
+        </Grid>
+        
+        {/* 体験数 */}
+        <Grid item xs={12} sm={6} md={4}>
+          <Paper sx={{ p: 2, height: '100%' }}>
+            <Box display="flex" alignItems="center" mb={1}>
+              <ExperienceIcon color="primary" sx={{ mr: 1 }} />
+              <Typography variant="body1" fontWeight="medium">
+                体験数
+              </Typography>
+            </Box>
+            
+            <Box display="flex" justifyContent="space-between" mt={2}>
+              <Box>
+                <Typography variant="h6">
+                  {metrics.activeExperiences}
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  公開中
+                </Typography>
+              </Box>
+              
+              <Box>
+                <Typography variant="h6">
+                  {metrics.totalExperiences}
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  合計
+                </Typography>
+              </Box>
+            </Box>
+          </Paper>
+        </Grid>
       </Grid>
-    </Grid>
+    </Paper>
   );
 };
 

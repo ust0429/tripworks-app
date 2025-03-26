@@ -1,149 +1,127 @@
 import React from 'react';
-import { Badge } from '@/components/ui/badge';
-import { Edit, Star, Award, Check, AlertCircle, Clock } from 'lucide-react';
+import { AttenderProfile } from '../../../types/attender/profile';
+import { Badge } from '../../ui/badge';
+import { cn } from '../../../utils/cn';
+import { Skeleton } from '../../ui/skeleton';
 
 interface ProfileHeaderProps {
-  name: string;
-  bio: string;
-  profileImage?: string;
-  headerImage?: string;
-  rating?: number;
-  reviewCount?: number;
-  verificationStatus: 'verified' | 'pending' | 'unverified';
-  badges?: string[];
+  profile: AttenderProfile | null;
+  isLoading?: boolean;
+  isEditing?: boolean;
   onEdit?: () => void;
+  onSave?: () => void;
+  onCancel?: () => void;
 }
 
+/**
+ * アテンダープロフィールのヘッダーコンポーネント
+ */
 const ProfileHeader: React.FC<ProfileHeaderProps> = ({
-  name,
-  bio,
-  profileImage,
-  headerImage,
-  rating,
-  reviewCount,
-  verificationStatus,
-  badges = [],
-  onEdit
+  profile,
+  isLoading = false,
+  isEditing = false,
+  onEdit,
+  onSave,
+  onCancel,
 }) => {
-  // ベリフィケーションステータスに応じたコンポーネント
-  const VerificationBadge = () => {
-    switch (verificationStatus) {
-      case 'verified':
-        return (
-          <Badge variant="success" className="flex items-center">
-            <Check className="h-3 w-3 mr-1" />
-            認証済み
-          </Badge>
-        );
-      case 'pending':
-        return (
-          <Badge variant="warning" className="flex items-center">
-            <Clock className="h-3 w-3 mr-1" />
-            認証待ち
-          </Badge>
-        );
-      case 'unverified':
-        return (
-          <Badge variant="destructive" className="flex items-center">
-            <AlertCircle className="h-3 w-3 mr-1" />
-            未認証
-          </Badge>
-        );
-      default:
-        return null;
-    }
-  };
-
-  // バッジ表示用のマッピング
-  const badgeLabels: Record<string, string> = {
-    'top-rated': '高評価',
-    'quick-responder': '迅速な返信',
-    'experienced-host': '経験豊富',
-    'popular': '人気',
-    'new': '新規'
-  };
-
-  return (
-    <div className="w-full">
-      {/* ヘッダー画像 */}
-      <div className="relative w-full h-48 bg-gradient-to-r from-blue-100 to-indigo-100 rounded-t-lg overflow-hidden">
-        {headerImage && (
-          <img 
-            src={headerImage} 
-            alt={`${name}のヘッダー画像`} 
-            className="w-full h-full object-cover"
-          />
-        )}
-        
-        {/* 編集ボタン */}
-        {onEdit && (
-          <button 
-            className="absolute top-4 right-4 bg-white bg-opacity-80 px-3 py-1 rounded-md text-sm flex items-center gap-1 hover:bg-opacity-100 transition-colors"
-            onClick={onEdit}
-          >
-            <Edit className="h-4 w-4 mr-1" />
-            編集
-          </button>
-        )}
-        
-        {/* プロフィール画像 */}
-        <div className="absolute -bottom-16 left-8">
-          <div className="w-32 h-32 rounded-full bg-gray-200 border-4 border-white overflow-hidden">
-            {profileImage ? (
-              <img 
-                src={profileImage} 
-                alt={`${name}のプロフィール画像`} 
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center bg-gray-300">
-                <span className="text-2xl font-bold text-gray-500">
-                  {name?.charAt(0)}
-                </span>
-              </div>
-            )}
-          </div>
+  if (isLoading) {
+    return (
+      <div className="flex flex-col md:flex-row gap-6 p-6 bg-white rounded-lg shadow-sm">
+        <Skeleton className="w-24 h-24 rounded-full" />
+        <div className="flex-1">
+          <Skeleton className="h-8 w-48 mb-2" />
+          <Skeleton className="h-4 w-32 mb-4" />
+          <Skeleton className="h-20 w-full" />
         </div>
       </div>
-      
-      {/* プロフィール情報 */}
-      <div className="mt-20 px-8">
-        <div className="flex flex-wrap justify-between items-start gap-4">
-          <div>
-            <h1 className="text-2xl font-bold flex items-center gap-2">
-              {name}
-              <VerificationBadge />
-            </h1>
-            
-            <p className="text-gray-600 mt-1 max-w-2xl">
-              {bio}
-            </p>
+    );
+  }
+
+  if (!profile) return null;
+
+  const completionScoreBadgeVariant = 
+    profile.completionScore && profile.completionScore >= 80 ? 'success' :
+    profile.completionScore && profile.completionScore >= 50 ? 'warning' :
+    'danger';
+
+  return (
+    <div className={cn(
+      "flex flex-col md:flex-row gap-6 p-6 rounded-lg shadow-sm",
+      isEditing ? "bg-gray-50" : "bg-white"
+    )}>
+      {/* プロフィール画像 */}
+      <div className="relative">
+        <img
+          src={profile.imageUrl || 'https://via.placeholder.com/96'}
+          alt={profile.name}
+          className="w-24 h-24 rounded-full object-cover border-2 border-gray-200"
+        />
+        {profile.verified && (
+          <div className="absolute bottom-0 right-0 bg-blue-500 text-white rounded-full p-1">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+            </svg>
           </div>
+        )}
+      </div>
+
+      {/* プロフィール情報 */}
+      <div className="flex-1">
+        <div className="flex flex-wrap items-center gap-2 mb-2">
+          <h1 className="text-2xl font-bold">{profile.name}</h1>
           
-          {/* 評価情報 */}
-          {(rating !== undefined && reviewCount !== undefined) && (
-            <div className="flex items-center">
-              <div className="flex items-center">
-                <Star className="h-5 w-5 text-yellow-500 fill-yellow-500" />
-                <span className="ml-1 font-semibold">{rating.toFixed(1)}</span>
-              </div>
-              <span className="mx-1 text-gray-500">•</span>
-              <span className="text-gray-500">{reviewCount} レビュー</span>
-            </div>
+          {profile.verified && (
+            <Badge variant="secondary" size="sm">
+              認証済み
+            </Badge>
+          )}
+          
+          {typeof profile.completionScore === 'number' && (
+            <Badge variant={completionScoreBadgeVariant} size="sm">
+              完成度 {profile.completionScore}%
+            </Badge>
           )}
         </div>
         
-        {/* 実績バッジ */}
-        {badges && badges.length > 0 && (
-          <div className="flex flex-wrap gap-2 mt-4">
-            {badges.map((badge) => (
-              <Badge key={badge} variant="outline" className="flex items-center gap-1">
-                <Award className="h-3 w-3" />
-                {badgeLabels[badge] || badge}
-              </Badge>
-            ))}
-          </div>
-        )}
+        <div className="mb-3 text-gray-600">
+          {profile.location && <span className="mr-4">{profile.location}</span>}
+          {profile.specialties && profile.specialties.length > 0 && (
+            <span className="text-sm">
+              専門: {profile.specialties.join('・')}
+            </span>
+          )}
+        </div>
+        
+        <p className="text-gray-700 mb-4">{profile.bio}</p>
+        
+        {/* アクションボタン */}
+        <div className="flex gap-2 mt-auto">
+          {!isEditing && onEdit && (
+            <button
+              onClick={onEdit}
+              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+            >
+              プロフィールを編集
+            </button>
+          )}
+          
+          {isEditing && (
+            <>
+              <button
+                onClick={onSave}
+                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700"
+              >
+                保存
+              </button>
+              <button
+                onClick={onCancel}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+              >
+                キャンセル
+              </button>
+            </>
+          )}
+        </div>
       </div>
     </div>
   );
