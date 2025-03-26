@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Eye } from 'lucide-react';
 import { AttenderApplicationData } from '../../../types/attender';
-import ProfilePreview from '../../../../components/attender/registration/ProfilePreview';
+import ProfilePreview from '../registration/ProfilePreview';
 
 interface PreviewButtonProps {
   formData: Partial<AttenderApplicationData>;

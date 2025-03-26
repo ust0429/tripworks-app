@@ -43,7 +43,7 @@ import {
 
 import PreviewButton from './PreviewButton';
 import DraftSaver from './DraftSaver';
-import MobileFormWrapper from '../../../../components/attender/registration/MobileFormWrapper';
+import MobileFormWrapper from '../registration/MobileFormWrapper';
 import ProgressReportContainer from './ProgressReportContainer';
 import TutorialManager from './TutorialManager';
 import ApiErrorHandler from './ApiErrorHandler';
@@ -483,7 +483,7 @@ const AttenderApplicationFormContent: React.FC = () => {
           <div className="flex space-x-2">
             {currentStep === maxSteps && (
               <PreviewButton 
-                formData={formData} 
+                formData={formData as any} 
                 isFormValid={isCurrentStepCompleted} 
               />
             )}
@@ -544,8 +544,8 @@ const AttenderApplicationFormContent: React.FC = () => {
         {/* 下書きセーバー表示 */}
         <div className="mt-4">
           <DraftSaver 
-            formData={formData} 
-            onSave={saveDraft} 
+            formData={formData as any} 
+            onSave={saveDraft as unknown as () => Promise<void>} 
           />
         </div>
         

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import TutorialOverlay from '../../../../components/attender/registration/TutorialOverlay';
+import TutorialOverlay from '../registration/TutorialOverlay';
 
 /**
  * チュートリアルの表示管理コンポーネント
@@ -82,8 +82,10 @@ const TutorialManager: React.FC = () => {
   return (
     <TutorialOverlay
       isVisible={showTutorial}
+      formStatus="required"
       onClose={handleClose}
       onComplete={handleComplete}
+      onSkipAll={handleComplete}
     />
   );
 };

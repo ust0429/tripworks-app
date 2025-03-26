@@ -707,7 +707,7 @@ export const AttenderApplicationProvider: React.FC<{ children: ReactNode }> = ({
     try {
       setIsSavingDraft(true);
       // 必要なユーザーIDを取得（実際にはAuthコンテキストから取得するか、より安全な方法を使用する必要があります）
-      const userId = formData.userId || 'temp_user';
+      const userId = 'temp_user';
       
       // 下書きを保存
       const draftId = await saveDraftApplication(userId, formData);

@@ -1,6 +1,6 @@
 import React from 'react';
 import { useAttenderApplication } from '../../../contexts/AttenderApplicationContext';
-import ProgressReport from '../../../../components/attender/registration/ProgressReport';
+import ProgressReport from '../registration/ProgressReport';
 
 /**
  * 進捗状況レポートコンテナ
@@ -11,7 +11,9 @@ const ProgressReportContainer: React.FC = () => {
     formData, 
     formStatus, 
     errors, 
-    goToStep 
+    goToStep,
+    currentStep,
+    maxSteps
   } = useAttenderApplication();
   
   return (
@@ -20,6 +22,9 @@ const ProgressReportContainer: React.FC = () => {
       formStatus={formStatus}
       errors={errors}
       onNavigateToStep={goToStep}
+      currentStep={currentStep}
+      maxSteps={maxSteps}
+      completedSteps={[]}
     />
   );
 };

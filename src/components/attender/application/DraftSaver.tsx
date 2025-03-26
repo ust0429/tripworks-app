@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { AttenderApplicationData } from '../../../types/attender';
-import { Save, CheckCircle } from 'lucide-react';
+import { Save, CheckCircle, AlertCircle, WifiOff, RotateCw } from 'lucide-react';
+import { isOnline } from '../../../utils/networkUtils';
 
 interface DraftSaverProps {
   formData: Partial<AttenderApplicationData>;
@@ -16,6 +17,22 @@ const DraftSaver: React.FC<DraftSaverProps> = ({ formData, onSave }) => {
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [saveCount, setSaveCount] = useState(0);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [isOffline, setIsOffline] = useState(!isOnline());
+
+  // ネットワーク状態の監視
+  useEffect(() => {
+    const handleOnline = () => setIsOffline(false);
+    const handleOffline = () => setIsOffline(true);
+    
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
 
   // 自動保存（60秒ごと）
   useEffect(() => {
@@ -30,7 +47,10 @@ const DraftSaver: React.FC<DraftSaverProps> = ({ formData, onSave }) => {
   const handleManualSave = async () => {
     try {
       setIsSaving(true);
+      setSaveError(null);
+      
       await onSave();
+      
       setLastSaved(new Date());
       setSaveSuccess(true);
       setSaveCount(prev => prev + 1);
@@ -41,7 +61,7 @@ const DraftSaver: React.FC<DraftSaverProps> = ({ formData, onSave }) => {
       }, 3000);
     } catch (error) {
       console.error('下書き保存エラー:', error);
-      alert('下書きの保存中にエラーが発生しました。');
+      setSaveError('保存に失敗しました。ネットワーク接続を確認してください。');
     } finally {
       setIsSaving(false);
     }
@@ -49,6 +69,9 @@ const DraftSaver: React.FC<DraftSaverProps> = ({ formData, onSave }) => {
 
   // 自動保存ハンドラ
   const handleAutoSave = async () => {
+    // オフライン時は自動保存をスキップ
+    if (isOffline || isSaving) return;
+    
     try {
       // フォームデータが空の場合は保存しない
       if (Object.keys(formData).length === 0) return;
@@ -63,6 +86,12 @@ const DraftSaver: React.FC<DraftSaverProps> = ({ formData, onSave }) => {
     } finally {
       setIsSaving(false);
     }
+  };
+
+  // リトライハンドラ
+  const handleRetry = () => {
+    setSaveError(null);
+    handleManualSave();
   };
 
   // フォーマット済みの最終保存時間
@@ -81,41 +110,79 @@ const DraftSaver: React.FC<DraftSaverProps> = ({ formData, onSave }) => {
           </p>
         </div>
         
-        <button
-          type="button"
-          onClick={handleManualSave}
-          disabled={isSaving}
-          className={`flex items-center px-3 py-1 rounded-md text-sm ${
-            saveSuccess
-              ? 'bg-green-100 text-green-700'
-              : isSaving
-                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
-          }`}
-        >
-          {saveSuccess ? (
-            <>
-              <CheckCircle className="w-4 h-4 mr-1" />
-              保存完了
-            </>
-          ) : isSaving ? (
-            <>
-              <Save className="w-4 h-4 mr-1 animate-pulse" />
-              保存中...
-            </>
-          ) : (
-            <>
-              <Save className="w-4 h-4 mr-1" />
-              今すぐ保存
-            </>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={handleManualSave}
+            disabled={isSaving}
+            className={`flex items-center px-3 py-1 rounded-md text-sm ${
+              saveSuccess
+                ? 'bg-green-100 text-green-700'
+                : saveError
+                  ? 'bg-red-100 text-red-700'
+                  : isOffline
+                    ? 'bg-amber-100 text-amber-700'
+                    : isSaving
+                      ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                      : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+            }`}
+          >
+            {saveSuccess ? (
+              <>
+                <CheckCircle className="w-4 h-4 mr-1" />
+                保存完了
+              </>
+            ) : saveError ? (
+              <>
+                <AlertCircle className="w-4 h-4 mr-1" />
+                保存失敗
+              </>
+            ) : isOffline ? (
+              <>
+                <WifiOff className="w-4 h-4 mr-1" />
+                オフライン
+              </>
+            ) : isSaving ? (
+              <>
+                <Save className="w-4 h-4 mr-1 animate-pulse" />
+                保存中...
+              </>
+            ) : (
+              <>
+                <Save className="w-4 h-4 mr-1" />
+                今すぐ保存
+              </>
+            )}
+          </button>
+          
+          {/* リトライボタン（エラー時のみ表示） */}
+          {saveError && (
+            <button
+              type="button"
+              onClick={handleRetry}
+              className="flex items-center px-2 py-1 rounded-md text-sm bg-blue-100 text-blue-700 hover:bg-blue-200"
+            >
+              <RotateCw className="w-4 h-4" />
+            </button>
           )}
-        </button>
+        </div>
       </div>
       
+      {/* 説明とステータス */}
       <div className="mt-2">
-        <p className="text-xs text-gray-500">
-          1分ごとに自動保存されますが、いつでも手動で保存できます。
-        </p>
+        {saveError ? (
+          <p className="text-xs text-red-600">
+            {saveError}
+          </p>
+        ) : isOffline ? (
+          <p className="text-xs text-amber-600">
+            オフライン状態です。データはローカルに保存され、オンラインに復帰したときに送信されます。
+          </p>
+        ) : (
+          <p className="text-xs text-gray-500">
+            1分ごとに自動保存されますが、いつでも手動で保存できます。
+          </p>
+        )}
       </div>
     </div>
   );

@@ -578,6 +578,275 @@ export async function addPortfolioItem(attenderId: string, portfolioItem: Omit<P
  * @param experienceId 追加する体験ID
  * @throws Error アテンダーが見つからないエラーまたはAPI通信エラー
  */
+/**
+ * アテンダーのドラフト申請を保存する
+ * 
+ * @param userId ユーザーID
+ * @param draftData ドラフト申請データ
+ * @returns ドラフト申請ID
+ */
+export async function saveDraftApplication(userId: string, draftData: Partial<AttenderApplicationData>): Promise<string> {
+  try {
+    console.info('アテンダードラフト申請データを保存中...');
+
+    // ローカルストレージにも保存（バックアップ）
+    const storageKey = `attender_draft_${userId}`;
+    try {
+      localStorage.setItem(storageKey, JSON.stringify({
+        timestamp: new Date().toISOString(),
+        data: draftData
+      }));
+    } catch (storageError) {
+      console.warn('ローカルストレージ保存エラー:', storageError);
+      // 保存に失敗してもAPI送信は続行
+    }
+    
+    // 開発環境ではモックデータを使用
+    if (isDevelopment()) {
+      console.info('開発環境でアテンダードラフト申請を処理中...');
+      
+      // 申請処理を模擬するために遅延
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // ドラフトIDを生成（または既存のIDを使用）
+      const draftId = (draftData as any).draftId || `draft_${uuidv4()}`;
+      
+      // モックデータを更新
+      const storedDraft = PENDING_APPLICATIONS[draftId];
+      if (storedDraft) {
+        // 既存のドラフトを更新
+        // draftIdを除外して変数を準備
+        const { draftId: _, ...cleanedData } = draftData as any;
+        
+        PENDING_APPLICATIONS[draftId] = {
+          ...storedDraft,
+          ...cleanedData,
+          updatedAt: new Date().toISOString()
+        };
+      } else {
+        // 新規ドラフトを作成
+        // draftIdを除外して変数を準備
+        const { draftId: _, ...cleanedData } = draftData as any;
+        
+        PENDING_APPLICATIONS[draftId] = {
+          ...cleanedData,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        };
+      }
+      
+      console.info(`アテンダードラフト申請が正常に保存されました。ドラフトID: ${draftId}`);
+      
+      // ドラフトIDを返す
+      return draftId;
+    }
+    
+    // 本番環境ではAPIを使用
+    logApiRequest('POST', ENDPOINTS.ATTENDER.DRAFT_APPLICATION, { dataSize: JSON.stringify(draftData).length });
+    console.info('本番環境でアテンダードラフト申請を送信中...');
+    
+    const response = await api.post<{ draftId: string }>(
+      ENDPOINTS.ATTENDER.DRAFT_APPLICATION,
+      {
+        userId,
+        draftData
+      }
+    );
+    
+    logApiResponse('POST', ENDPOINTS.ATTENDER.DRAFT_APPLICATION, response);
+    
+    if (response.success && response.data) {
+      console.info(`アテンダードラフト申請が正常に保存されました。ドラフトID: ${response.data.draftId}`);
+      return response.data.draftId;
+    }
+    
+    // エラーレスポンスの処理
+    const errorMessage = response.error?.message || 'アテンダードラフト申請の保存に失敗しました';
+    throw new Error(errorMessage);
+  } catch (error) {
+    console.error('アテンダードラフト申請保存エラー:', error);
+    
+    // エラー情報を使って、オフラインモードでリカバリーを試みる
+    try {
+      const offlineDraftId = `offline_draft_${userId}_${Date.now()}`;
+      
+      // オフラインドラフトをローカルストレージに保存
+      localStorage.setItem(`attender_offline_draft_${userId}`, JSON.stringify({
+        id: offlineDraftId,
+        timestamp: new Date().toISOString(),
+        data: draftData,
+        pendingSync: true
+      }));
+      
+      console.warn('オフラインドラフトに保存しました。オンライン接続時に同期されます。');
+      return offlineDraftId;
+    } catch (offlineError) {
+      console.error('オフラインドラフト保存エラー:', offlineError);
+    }
+    
+    throw error instanceof Error 
+      ? error 
+      : new Error('アテンダードラフト申請の保存中に予期せぬエラーが発生しました');
+  }
+}
+
+/**
+ * ドラフト申請を取得する
+ * 
+ * @param userId ユーザーID
+ * @returns ドラフト申請データ（存在しない場合はnull）
+ */
+export async function getDraftApplication(userId: string): Promise<Partial<AttenderApplicationData> | null> {
+  try {
+    console.info('アテンダードラフト申請データを取得中...');
+    
+    // ローカルストレージからの復元を試みる
+    const storageKey = `attender_draft_${userId}`;
+    const storedData = localStorage.getItem(storageKey);
+    
+    // 開発環境ではモックデータとローカルストレージを使用
+    if (isDevelopment()) {
+      console.info('開発環境でアテンダードラフト申請を取得中...');
+      
+      // ローカルストレージからの復元を優先
+      if (storedData) {
+        try {
+          const parsedData = JSON.parse(storedData);
+          if (parsedData && parsedData.data) {
+            console.info('ローカルストレージからドラフトを復元しました');
+            return parsedData.data;
+          }
+        } catch (parseError) {
+          console.warn('ローカルストレージからのドラフト解析エラー:', parseError);
+        }
+      }
+      
+      // モックデータからドラフトを検索
+      const userDrafts = Object.values(PENDING_APPLICATIONS)
+        .filter(draft => (draft as any).userId === userId)
+        .sort((a, b) => 
+          new Date((b as any).updatedAt).getTime() - 
+          new Date((a as any).updatedAt).getTime()
+        );
+      
+      if (userDrafts.length > 0) {
+        console.info('モックデータからドラフトを取得しました');
+        return userDrafts[0];
+      }
+      
+      console.info('ドラフト申請が見つかりませんでした');
+      return null;
+    }
+    
+    // 本番環境ではAPIを使用
+    console.info('本番環境でアテンダードラフト申請を取得中...');
+    
+    const response = await api.get<{ draftData: Partial<AttenderApplicationData> }>(
+      ENDPOINTS.ATTENDER.GET_DRAFT_APPLICATION(userId)
+    );
+    
+    // ローカルストレージからの復元を優先（APIから取得できない場合）
+    if (!response.success && storedData) {
+      try {
+        const parsedData = JSON.parse(storedData);
+        if (parsedData && parsedData.data) {
+          console.info('ローカルストレージからドラフトを復元しました');
+          return parsedData.data;
+        }
+      } catch (parseError) {
+        console.warn('ローカルストレージからのドラフト解析エラー:', parseError);
+      }
+    }
+    
+    if (response.success && response.data) {
+      console.info('APIからドラフト申請データを取得しました');
+      return response.data.draftData;
+    }
+    
+    console.info('ドラフト申請が見つかりませんでした');
+    return null;
+  } catch (error) {
+    console.error('ドラフト申請取得エラー:', error);
+    
+    // エラー時にローカルストレージからの復元を試みる
+    try {
+      const storageKey = `attender_draft_${userId}`;
+      const storedData = localStorage.getItem(storageKey);
+      
+      if (storedData) {
+        const parsedData = JSON.parse(storedData);
+        if (parsedData && parsedData.data) {
+          console.info('エラー時にローカルストレージからドラフトを復元しました');
+          return parsedData.data;
+        }
+      }
+      
+      // オフラインドラフトの確認
+      const offlineData = localStorage.getItem(`attender_offline_draft_${userId}`);
+      if (offlineData) {
+        const parsedOfflineData = JSON.parse(offlineData);
+        if (parsedOfflineData && parsedOfflineData.data) {
+          console.info('オフラインドラフトを復元しました');
+          return parsedOfflineData.data;
+        }
+      }
+    } catch (localError) {
+      console.error('ローカルストレージ復元エラー:', localError);
+    }
+    
+    throw error instanceof Error 
+      ? error 
+      : new Error('ドラフト申請の取得中に予期せぬエラーが発生しました');
+  }
+}
+
+/**
+ * ドラフト申請を削除する
+ * 
+ * @param userId ユーザーID
+ * @param draftId ドラフトID
+ */
+export async function deleteDraftApplication(userId: string, draftId: string): Promise<void> {
+  try {
+    console.info('アテンダードラフト申請を削除中...');
+    
+    // ローカルストレージからも削除
+    const storageKey = `attender_draft_${userId}`;
+    localStorage.removeItem(storageKey);
+    localStorage.removeItem(`attender_offline_draft_${userId}`);
+    
+    // 開発環境ではモックデータを使用
+    if (isDevelopment()) {
+      console.info('開発環境でアテンダードラフト申請を削除中...');
+      
+      if (PENDING_APPLICATIONS[draftId]) {
+        delete PENDING_APPLICATIONS[draftId];
+        console.info(`ドラフト申請 ${draftId} を削除しました`);
+      } else {
+        console.warn(`ドラフト申請 ${draftId} が見つかりませんでした`);
+      }
+      
+      return;
+    }
+    
+    // 本番環境ではAPIを使用
+    const response = await api.delete(
+      ENDPOINTS.ATTENDER.DELETE_DRAFT_APPLICATION(userId, draftId)
+    );
+    
+    if (!response.success) {
+      throw new Error('ドラフト申請の削除に失敗しました');
+    }
+    
+    console.info('ドラフト申請を削除しました');
+  } catch (error) {
+    console.error('ドラフト申請削除エラー:', error);
+    throw error instanceof Error 
+      ? error 
+      : new Error('ドラフト申請の削除中に予期せぬエラーが発生しました');
+  }
+}
+
 export async function addExperienceToAttender(attenderId: string, experienceId: string): Promise<void> {
   try {
     logApiRequest('POST', `アテンダー体験追加: ${attenderId}`, { experienceId });
