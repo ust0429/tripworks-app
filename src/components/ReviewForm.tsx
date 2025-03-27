@@ -234,8 +234,8 @@ const ReviewForm: React.FC<ReviewFormProps> = ({
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-md p-4">
-      <h3 className="text-lg font-bold mb-4">
+    <div className="bg-mono-white rounded-lg shadow-md p-4">
+      <h3 className="text-lg font-bold mb-4 text-mono-black">
         「{experienceTitle}」のレビューを投稿
       </h3>
       
@@ -257,7 +257,7 @@ const ReviewForm: React.FC<ReviewFormProps> = ({
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* 星評価 */}
         <div>
-          <p className="text-sm font-medium text-gray-700 mb-2">評価</p>
+          <p className="text-sm font-medium text-mono-black mb-2">評価</p>
           <div className="flex space-x-1">
             {[1, 2, 3, 4, 5].map((star) => (
               <button
@@ -274,13 +274,13 @@ const ReviewForm: React.FC<ReviewFormProps> = ({
                   className={`${
                     (hoverRating || rating) >= star
                       ? 'text-yellow-500 fill-current'
-                      : 'text-gray-300'
+                      : 'text-mono-gray-light'
                   }`}
                   fill={(hoverRating || rating) >= star ? "currentColor" : "none"}
                 />
               </button>
             ))}
-            <span className="ml-2 text-sm text-gray-500" aria-live="polite">
+            <span className="ml-2 text-sm text-mono-gray-medium" aria-live="polite">
               {rating > 0 ? `${rating}点` : ''}
             </span>
           </div>
@@ -288,8 +288,8 @@ const ReviewForm: React.FC<ReviewFormProps> = ({
         
         {/* コメント */}
         <div>
-          <label htmlFor="comment" className="block text-sm font-medium text-gray-700 mb-1">
-            コメント <span className="text-gray-500 text-xs">(必須)</span>
+          <label htmlFor="comment" className="block text-sm font-medium text-mono-black mb-1">
+            コメント <span className="text-mono-gray-medium text-xs">(必須)</span>
           </label>
           <textarea
             id="comment"
@@ -297,28 +297,28 @@ const ReviewForm: React.FC<ReviewFormProps> = ({
             value={comment}
             onChange={(e) => setComment(e.target.value)}
             placeholder="体験の感想を詳しく書いてください..."
-            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-gray-500 focus:border-gray-500"
+            className="w-full p-3 border border-mono-light rounded-lg focus:ring-mono-black focus:border-mono-gray-medium"
             required
             aria-required="true"
           />
-          <p className="text-xs text-gray-500 mt-1">
+          <p className="text-xs text-mono-gray-medium mt-1">
             {comment.length}/1000文字
           </p>
         </div>
 
         {/* 写真アップロード */}
         <div>
-          <p className="text-sm font-medium text-gray-700 mb-2">写真を追加 (最大5枚)</p>
+          <p className="text-sm font-medium text-mono-black mb-2">写真を追加 (最大5枚)</p>
           
           {/* プレビュー表示 */}
           <div className={`grid ${isMobile ? 'grid-cols-3' : 'grid-cols-5'} gap-2 mb-2`}>
             {previewUrls.map((url, index) => (
-              <div key={index} className="relative aspect-square bg-gray-100 rounded-lg overflow-hidden">
+              <div key={index} className="relative aspect-square bg-mono-lighter rounded-lg overflow-hidden">
                 <img src={url} alt={`プレビュー ${index + 1}`} className="w-full h-full object-cover" />
                 <button
                   type="button"
                   onClick={() => handleRemovePhoto(index)}
-                  className="absolute top-1 right-1 bg-black bg-opacity-50 rounded-full p-1 text-white hover:bg-opacity-70"
+                  className="absolute top-1 right-1 bg-mono-black bg-opacity-50 rounded-full p-1 text-mono-white hover:bg-opacity-70"
                   aria-label={`写真${index + 1}を削除`}
                 >
                   <X size={14} />
@@ -330,14 +330,14 @@ const ReviewForm: React.FC<ReviewFormProps> = ({
             {Array.from({ length: Math.min(isMobile ? 3 : 5, 5 - previewUrls.length) }).map((_, index) => (
               <div 
                 key={`empty-${index}`} 
-                className="aspect-square bg-gray-100 rounded-lg flex items-center justify-center flex-col cursor-pointer hover:bg-gray-200"
+                className="aspect-square bg-mono-lighter rounded-lg flex items-center justify-center flex-col cursor-pointer hover:bg-mono-light"
                 onClick={() => fileInputRef.current?.click()}
                 role="button"
                 aria-label="写真を追加"
                 tabIndex={0}
               >
-                <Upload size={20} className="text-gray-500 mb-1" />
-                <span className="text-xs text-gray-500">写真を追加</span>
+                <Upload size={20} className="text-mono-gray-medium mb-1" />
+                <span className="text-xs text-mono-gray-medium">写真を追加</span>
               </div>
             ))}
           </div>
@@ -356,14 +356,14 @@ const ReviewForm: React.FC<ReviewFormProps> = ({
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              className="flex items-center justify-center px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium flex-1"
+              className="flex items-center justify-center px-3 py-2 bg-mono-lighter hover:bg-mono-light rounded-lg text-sm font-medium text-mono-black flex-1"
               disabled={photos.length >= 5 || isProcessing}
               aria-disabled={photos.length >= 5 || isProcessing}
             >
               {isProcessing ? (
                 <Loader size={16} className="mr-2 animate-spin" />
               ) : (
-                <Upload size={16} className="mr-2" />
+                <Upload size={16} className="mr-2 text-mono-gray-medium" />
               )}
               写真を選択
             </button>
@@ -371,18 +371,18 @@ const ReviewForm: React.FC<ReviewFormProps> = ({
               <button
                 type="button"
                 onClick={handleOpenCamera}
-                className="flex items-center justify-center px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium flex-1"
+                className="flex items-center justify-center px-3 py-2 bg-mono-lighter hover:bg-mono-light rounded-lg text-sm font-medium text-mono-black flex-1"
                 disabled={photos.length >= 5 || isProcessing}
                 aria-disabled={photos.length >= 5 || isProcessing}
               >
-                <Camera size={16} className="mr-2" />
+                <Camera size={16} className="mr-2 text-mono-gray-medium" />
                 カメラ
               </button>
             )}
           </div>
           
           {/* 注意書き */}
-          <p className="text-xs text-gray-500 mt-1">
+          <p className="text-xs text-mono-gray-light mt-1">
             写真は日付と場所の情報（EXIF）を除去して自動的に圧縮されます。
           </p>
         </div>
@@ -392,14 +392,14 @@ const ReviewForm: React.FC<ReviewFormProps> = ({
           <button
             type="button"
             onClick={onCancel}
-            className="flex-1 py-2 border border-gray-300 rounded-lg font-medium hover:bg-gray-50"
+            className="flex-1 py-2 border border-mono-light rounded-lg font-medium text-mono-dark hover:bg-mono-lighter transition-colors duration-200"
             disabled={isProcessing}
           >
             キャンセル
           </button>
           <button
             type="submit"
-            className="flex-1 py-2 bg-black text-white rounded-lg font-medium hover:bg-gray-800 transition-colors disabled:bg-gray-400"
+            className="flex-1 py-2 bg-mono-black text-mono-white rounded-lg font-medium hover:bg-mono-dark transition-colors duration-200 disabled:bg-mono-gray-light"
             disabled={rating === 0 || !comment.trim() || isProcessing}
           >
             {isProcessing ? (

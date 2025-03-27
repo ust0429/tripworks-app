@@ -167,23 +167,23 @@ const ReviewCard: React.FC<ReviewCardProps> = ({ review, onHelpfulToggle }) => {
   };
 
   return (
-    <div className="border-b pb-4 relative">
+    <div className="border-b border-mono-lighter pb-4 relative">
       <div className="flex items-start space-x-3">
-        <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center overflow-hidden">
+        <div className="w-10 h-10 bg-mono-lighter rounded-full flex items-center justify-center overflow-hidden">
           {review.userImage ? (
             <img src={review.userImage} alt={review.userName} className="w-full h-full object-cover" />
           ) : (
-            <User size={20} className="text-gray-400" />
+            <User size={20} className="text-mono-gray-light" />
           )}
         </div>
         <div className="flex-1">
           <div className="flex justify-between items-center">
-            <h3 className="font-medium">{review.userName}</h3>
+            <h3 className="font-medium text-mono-black">{review.userName}</h3>
             <div className="flex items-center space-x-2">
-              <p className="text-sm text-gray-500">{formatDate(review.date)}</p>
+              <p className="text-sm text-mono-gray-medium">{formatDate(review.date)}</p>
               <button
                 onClick={() => setShowOptions(!showOptions)}
-                className="text-gray-400 hover:text-gray-600"
+                className="text-mono-gray-light hover:text-mono-gray-medium"
               >
                 <MoreVertical size={16} />
               </button>
@@ -197,14 +197,14 @@ const ReviewCard: React.FC<ReviewCardProps> = ({ review, onHelpfulToggle }) => {
                 <Star
                   key={index}
                   size={14}
-                  className={index < review.rating ? "text-yellow-500" : "text-gray-300"}
+                  className={index < review.rating ? "text-yellow-500" : "text-mono-gray-light"}
                   fill={index < review.rating ? "currentColor" : "none"}
                 />
               ))}
             </div>
             
             {/* 体験からの経過時間 */}
-            <div className="flex items-center text-xs text-gray-500">
+            <div className="flex items-center text-xs text-mono-gray-medium">
               <Clock size={12} className="mr-1" />
               <span>{getTimeSinceExperience(review.date)}</span>
             </div>
@@ -213,7 +213,7 @@ const ReviewCard: React.FC<ReviewCardProps> = ({ review, onHelpfulToggle }) => {
           {/* 体験名とバッジ */}
           <div className="flex flex-wrap gap-2 mb-2">
             {review.experienceTitle && (
-              <div className="bg-gray-100 text-gray-700 text-xs px-2 py-1 rounded-full inline-flex items-center">
+              <div className="bg-mono-lighter text-mono-black text-xs px-2 py-1 rounded-full inline-flex items-center">
                 <Calendar size={10} className="mr-1" />
                 <span>{review.experienceTitle}</span>
               </div>
@@ -221,7 +221,7 @@ const ReviewCard: React.FC<ReviewCardProps> = ({ review, onHelpfulToggle }) => {
             
             {/* 有益なレビューバッジ（helpfulCountが高い場合） */}
             {helpfulCount >= 5 && (
-              <div className="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded-full inline-flex items-center">
+              <div className="bg-mono-light text-mono-black text-xs px-2 py-1 rounded-full inline-flex items-center">
                 <Award size={10} className="mr-1" />
                 <span>人気のレビュー</span>
               </div>
@@ -229,13 +229,13 @@ const ReviewCard: React.FC<ReviewCardProps> = ({ review, onHelpfulToggle }) => {
           </div>
           
           {/* レビュー本文 */}
-          <p className="text-sm text-gray-700 mt-1">{displayComment}</p>
+          <p className="text-sm text-mono-black mt-1">{displayComment}</p>
           
           {/* もっと見るボタン */}
           {isLongComment && (
             <button
               onClick={() => setShowFullReview(!showFullReview)}
-              className="text-gray-500 text-xs mt-1 hover:text-black"
+              className="text-mono-gray-medium text-xs mt-1 hover:text-mono-black"
             >
               {showFullReview ? '一部を表示' : 'すべて表示'}
             </button>
@@ -248,7 +248,7 @@ const ReviewCard: React.FC<ReviewCardProps> = ({ review, onHelpfulToggle }) => {
                 {review.photoUrls.map((url, index) => (
                   <div 
                     key={index} 
-                    className="w-20 h-20 bg-gray-100 rounded overflow-hidden cursor-pointer"
+                    className="w-20 h-20 bg-mono-lighter rounded overflow-hidden cursor-pointer"
                     onClick={() => {
                       setSelectedPhotoIndex(index);
                       setShowPhotoViewer(true);
@@ -262,7 +262,7 @@ const ReviewCard: React.FC<ReviewCardProps> = ({ review, onHelpfulToggle }) => {
                   </div>
                 ))}
               </div>
-              <p className="text-xs text-gray-500 mt-1 flex items-center">
+              <p className="text-xs text-mono-gray-medium mt-1 flex items-center">
                 <Image size={12} className="mr-1" />
                 {review.photoUrls.length}枚の写真が添付されています
               </p>
@@ -279,7 +279,7 @@ const ReviewCard: React.FC<ReviewCardProps> = ({ review, onHelpfulToggle }) => {
           )}
           
           {/* 追加情報とメタデータ */}
-          <div className="mt-2 flex items-center text-xs text-gray-500">
+          <div className="mt-2 flex items-center text-xs text-mono-gray-medium">
             <Calendar size={12} className="mr-1" />
             <span className="mr-3">体験日: {formatDate(review.date.split('T')[0])}</span>
           </div>
@@ -290,11 +290,11 @@ const ReviewCard: React.FC<ReviewCardProps> = ({ review, onHelpfulToggle }) => {
               onClick={toggleHelpful}
               className={`flex items-center space-x-1 text-xs px-2 py-1 rounded-full ${
                 helpful 
-                  ? 'bg-gray-200 text-gray-800' 
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  ? 'bg-mono-light text-mono-black' 
+                  : 'bg-mono-lighter text-mono-gray-medium hover:bg-mono-light'
               }`}
             >
-              <ThumbsUp size={12} className={helpful ? 'text-black' : 'text-gray-500'} />
+              <ThumbsUp size={12} className={helpful ? 'text-mono-black' : 'text-mono-gray-medium'} />
               <span>{helpful ? '役に立った' : '役に立つ'}</span>
               {helpfulCount > 0 && <span className="ml-1">({helpfulCount})</span>}
             </button>
@@ -304,7 +304,7 @@ const ReviewCard: React.FC<ReviewCardProps> = ({ review, onHelpfulToggle }) => {
               {review.replyCount && review.replyCount > 0 && (
                 <button 
                   onClick={toggleReplies}
-                  className="text-xs text-gray-500 flex items-center"
+                  className="text-xs text-mono-gray-medium flex items-center"
                 >
                   <MessageCircle size={12} className="mr-1" />
                   {showReplies ? '返信を非表示' : `返信を表示 (${review.replyCount})`}
@@ -313,7 +313,7 @@ const ReviewCard: React.FC<ReviewCardProps> = ({ review, onHelpfulToggle }) => {
               {isAuthenticated && (
                 <button 
                   onClick={toggleReplyForm}
-                  className="text-xs text-gray-500 hover:text-black"
+                  className="text-xs text-mono-gray-medium hover:text-mono-black"
                 >
                   返信
                 </button>
@@ -348,12 +348,12 @@ const ReviewCard: React.FC<ReviewCardProps> = ({ review, onHelpfulToggle }) => {
           
           {/* レビューオプションメニュー */}
           {showOptions && (
-            <div className="absolute top-8 right-0 bg-white shadow-lg rounded-lg py-1 z-10 w-32">
+            <div className="absolute top-8 right-0 bg-mono-white shadow-lg rounded-lg py-1 z-10 w-32">
               <button
                 onClick={handleReport}
-                className="w-full px-3 py-2 text-left text-sm flex items-center hover:bg-gray-100"
+                className="w-full px-3 py-2 text-left text-sm flex items-center hover:bg-mono-lighter"
               >
-                <Flag size={14} className="mr-2 text-gray-500" />
+                <Flag size={14} className="mr-2 text-mono-gray-medium" />
                 報告する
               </button>
             </div>
@@ -361,15 +361,15 @@ const ReviewCard: React.FC<ReviewCardProps> = ({ review, onHelpfulToggle }) => {
           
           {/* 報告モーダル */}
           {reportModalOpen && (
-            <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-              <div className="bg-white rounded-lg w-full max-w-md p-6">
-                <h3 className="text-lg font-bold mb-3">レビューを報告</h3>
-                <p className="text-sm text-gray-600 mb-4">このレビューを報告する理由を選択してください</p>
+            <div className="fixed inset-0 bg-mono-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+              <div className="bg-mono-white rounded-lg w-full max-w-md p-6">
+                <h3 className="text-lg font-bold mb-3 text-mono-black">レビューを報告</h3>
+                <p className="text-sm text-mono-gray-medium mb-4">このレビューを報告する理由を選択してください</p>
                 
                 <select
                   value={reportReason}
                   onChange={(e) => setReportReason(e.target.value)}
-                  className="w-full p-2 border border-gray-300 rounded-lg mb-4"
+                  className="w-full p-2 border border-mono-light rounded-lg mb-4"
                 >
                   <option value="">理由を選択</option>
                   <option value="inappropriate">不適切なコンテンツ</option>
@@ -381,14 +381,14 @@ const ReviewCard: React.FC<ReviewCardProps> = ({ review, onHelpfulToggle }) => {
                 <div className="flex space-x-3">
                   <button
                     onClick={() => setReportModalOpen(false)}
-                    className="flex-1 py-2 border border-gray-300 rounded-lg"
+                    className="flex-1 py-2 border border-mono-light rounded-lg text-mono-dark hover:bg-mono-lighter transition-colors duration-200"
                   >
                     キャンセル
                   </button>
                   <button
                     onClick={handleReportSubmit}
                     disabled={!reportReason}
-                    className="flex-1 py-2 bg-red-600 text-white rounded-lg disabled:bg-gray-400"
+                    className="flex-1 py-2 bg-mono-black text-mono-white rounded-lg hover:bg-mono-dark transition-colors duration-200 disabled:bg-mono-gray-light"
                   >
                     報告する
                   </button>

@@ -223,8 +223,8 @@ const MarketScreen: React.FC = () => {
   return (
     <div className="pb-16 space-y-6">
       {/* ヘッダー */}
-      <div className="sticky top-0 z-10 bg-white p-4 shadow-sm">
-        <h1 className="text-2xl font-bold mb-3">地域の特産品</h1>
+      <div className="sticky top-0 z-10 bg-mono-white p-4 shadow-sm">
+        <h1 className="text-2xl font-bold mb-3 text-mono-black">地域の特産品</h1>
         
         {/* 検索バー */}
         <SearchBar onSearch={handleSearch} placeholder="商品名、地域、アテンダー名で検索..." />
@@ -253,8 +253,8 @@ const MarketScreen: React.FC = () => {
         {limitedProducts.length > 0 && (
           <div>
             <div className="flex justify-between items-center mb-3">
-              <h2 className="text-xl font-bold">数量限定</h2>
-              <button className="text-sm text-black font-medium">
+              <h2 className="text-xl font-bold text-mono-black">数量限定</h2>
+              <button className="text-sm text-mono-black font-medium">
                 すべて見る
               </button>
             </div>
@@ -263,17 +263,17 @@ const MarketScreen: React.FC = () => {
                 {limitedProducts.map(product => (
                   <div 
                     key={product.id}
-                    className="w-40 flex-shrink-0 bg-white rounded-lg overflow-hidden shadow-sm"
+                    className="w-40 flex-shrink-0 bg-mono-white rounded-lg overflow-hidden shadow-sm"
                   >
-                    <div className="h-40 bg-gray-100 relative flex items-center justify-center">
-                      {product.icon && React.cloneElement(product.icon as React.ReactElement<IconProps>, { size: 32, className: "text-gray-400" })}
-                      <div className="absolute top-2 left-2 bg-red-600 text-white text-xs py-1 px-2 rounded-full">
+                    <div className="h-40 bg-mono-lighter relative flex items-center justify-center">
+                      {product.icon && React.cloneElement(product.icon as React.ReactElement<IconProps>, { size: 32, className: "text-mono-gray-medium" })}
+                      <div className="absolute top-2 left-2 bg-mono-black text-mono-white text-xs py-1 px-2 rounded-full">
                         限定品
                       </div>
                     </div>
                     <div className="p-3">
-                      <p className="font-medium line-clamp-2">{product.name}</p>
-                      <p className="text-black font-bold mt-1">¥{product.price.toLocaleString()}</p>
+                      <p className="font-medium line-clamp-2 text-mono-black">{product.name}</p>
+                      <p className="text-mono-black font-bold mt-1">¥{product.price.toLocaleString()}</p>
                     </div>
                   </div>
                 ))}
@@ -285,18 +285,18 @@ const MarketScreen: React.FC = () => {
         {/* アテンダーおすすめ商品 */}
         <div>
           <div className="flex justify-between items-center mb-3">
-            <h2 className="text-xl font-bold">アテンダーおすすめ</h2>
-            <button className="text-sm text-black font-medium">
+            <h2 className="text-xl font-bold text-mono-black">アテンダーおすすめ</h2>
+            <button className="text-sm text-mono-black font-medium">
               すべて見る
             </button>
           </div>
           
           {loading ? (
-            <div className="py-8 text-center text-gray-500">読み込み中...</div>
+            <div className="py-8 text-center text-mono-gray-medium">読み込み中...</div>
           ) : (
             searchQuery ? (
               <>
-                <p className="mb-3 text-sm text-gray-600">「{searchQuery}」の検索結果: {filteredProducts.length}件</p>
+                <p className="mb-3 text-sm text-mono-gray-medium">「{searchQuery}」の検索結果: {filteredProducts.length}件</p>
                 <ProductGrid products={filteredProducts} category={selectedCategory} />
               </>
             ) : (
@@ -306,12 +306,12 @@ const MarketScreen: React.FC = () => {
         </div>
         
         {/* 定期便サブスクリプション */}
-        <div className="bg-gradient-to-r from-gray-800 to-black rounded-lg p-4 text-white">
+        <div className="bg-mono-black rounded-lg p-4 text-mono-white">
           <h3 className="font-bold text-lg mb-2">地域の特産品定期便</h3>
           <p className="text-sm mb-3">
             あなたが体験した地域から、季節の特産品や限定アイテムを毎月お届け
           </p>
-          <button className="bg-white text-black font-medium py-2 px-4 rounded-lg text-sm">
+          <button className="bg-mono-white text-mono-black font-medium py-2 px-4 rounded-lg text-sm hover:bg-mono-lighter transition-colors duration-200">
             サブスクリプションを見る
           </button>
         </div>

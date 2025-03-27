@@ -38,17 +38,7 @@ const MobileFormWrapper: React.FC<MobileFormWrapperProps> = ({
     
   return (
     <div className={`${wrapperClasses} ${className}`}>
-      {/* デバイス表示インジケーター（開発モード時のみ表示） */}
-      {process.env.NODE_ENV !== 'production' && showDeviceIndicator && (
-        <div className="mb-3 text-xs text-gray-500 flex items-center justify-end">
-          <div className="hidden sm:block md:hidden">タブレット表示</div>
-          <div className="hidden md:block">デスクトップ表示</div>
-          <div className="sm:hidden flex items-center">
-            <Smartphone className="w-3 h-3 mr-1" />
-            <span>モバイル表示</span>
-          </div>
-        </div>
-      )}
+      {/* デバイス表示インジケーターは削除 */}
       
       {/* モバイル用の最適化コンテナ */}
       {isMobile ? (
