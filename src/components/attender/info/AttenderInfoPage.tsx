@@ -158,8 +158,8 @@ const AttenderInfoPage: React.FC<AttenderInfoPageProps> = ({ onBack }) => {
           </section>
 
           {/* アテンダーになるまでの流れ */}
-          <section className="bg-white rounded-lg shadow-sm p-6">
-            <h2 className="text-2xl font-bold mb-6">アテンダーになるまでの流れ</h2>
+          <section className="bg-mono-white rounded-lg shadow-sm p-6">
+            <h2 className="text-2xl font-bold mb-6 text-mono-black">アテンダーになるまでの流れ</h2>
             <div className="space-y-6">
               <div className="flex">
                 <div className="flex-shrink-0 mr-4">
@@ -173,49 +173,49 @@ const AttenderInfoPage: React.FC<AttenderInfoPageProps> = ({ onBack }) => {
               
               <div className="flex">
                 <div className="flex-shrink-0 mr-4">
-                  <div className="w-8 h-8 bg-teal-600 text-white rounded-full flex items-center justify-center font-bold">2</div>
+                  <div className="w-8 h-8 bg-mono-black text-mono-white rounded-full flex items-center justify-center font-bold">2</div>
                 </div>
                 <div>
-                  <h3 className="font-bold text-lg">身分証明書の提出（任意）</h3>
-                  <p className="text-gray-600">安全なコミュニティを維持するための本人確認書類です。後からの提出も可能ですが、売上が発生する前に必要になります。</p>
+                  <h3 className="font-bold text-lg text-mono-black">身分証明書の提出（任意）</h3>
+                  <p className="text-mono-gray-medium">安全なコミュニティを維持するための本人確認書類です。後からの提出も可能ですが、売上が発生する前に必要になります。</p>
                 </div>
               </div>
               
               <div className="flex">
                 <div className="flex-shrink-0 mr-4">
-                  <div className="w-8 h-8 bg-teal-600 text-white rounded-full flex items-center justify-center font-bold">3</div>
+                  <div className="w-8 h-8 bg-mono-black text-mono-white rounded-full flex items-center justify-center font-bold">3</div>
                 </div>
                 <div>
-                  <h3 className="font-bold text-lg">同意事項の確認</h3>
-                  <p className="text-gray-600">利用規約や活動ガイドラインなどの確認と同意を行います。これで基本登録は完了です。</p>
+                  <h3 className="font-bold text-lg text-mono-black">同意事項の確認</h3>
+                  <p className="text-mono-gray-medium">利用規約や活動ガイドラインなどの確認と同意を行います。これで基本登録は完了です。</p>
                 </div>
               </div>
               
               <div className="flex">
                 <div className="flex-shrink-0 mr-4">
-                  <div className="w-8 h-8 bg-teal-600 text-white rounded-full flex items-center justify-center font-bold">4</div>
+                  <div className="w-8 h-8 bg-mono-black text-mono-white rounded-full flex items-center justify-center font-bold">4</div>
                 </div>
                 <div>
-                  <h3 className="font-bold text-lg">任意情報の入力（専門分野・体験・利用可能時間）</h3>
-                  <p className="text-gray-600">基本登録後、専門分野や提供可能な体験、利用可能な時間帯などの詳細情報を入力できます。</p>
+                  <h3 className="font-bold text-lg text-mono-black">任意情報の入力（専門分野・体験・利用可能時間）</h3>
+                  <p className="text-mono-gray-medium">基本登録後、専門分野や提供可能な体験、利用可能な時間帯などの詳細情報を入力できます。</p>
                 </div>
               </div>
               
               <div className="flex">
                 <div className="flex-shrink-0 mr-4">
-                  <div className="w-8 h-8 bg-teal-600 text-white rounded-full flex items-center justify-center font-bold">5</div>
+                  <div className="w-8 h-8 bg-mono-black text-mono-white rounded-full flex items-center justify-center font-bold">5</div>
                 </div>
                 <div>
-                  <h3 className="font-bold text-lg">審査と承認</h3>
-                  <p className="text-gray-600">通常3〜5営業日程度で審査が完了します。承認されるとアテンダーとして活動開始できます。</p>
+                  <h3 className="font-bold text-lg text-mono-black">審査と承認</h3>
+                  <p className="text-mono-gray-medium">通常3〜5営業日程度で審査が完了します。承認されるとアテンダーとして活動開始できます。</p>
                 </div>
               </div>
             </div>
           </section>
 
           {/* アテンダーの声 */}
-          <section className="bg-white rounded-lg shadow-sm p-6">
-            <h2 className="text-2xl font-bold mb-6">アテンダーの声</h2>
+          <section className="bg-mono-white rounded-lg shadow-sm p-6">
+            <h2 className="text-2xl font-bold mb-6 text-mono-black">アテンダーの声</h2>
             <div className="space-y-6">
               <div className="border-l-4 border-mono-black pl-4 py-2">
                 <p className="italic text-mono-gray-dark mb-2">
@@ -241,8 +241,8 @@ const AttenderInfoPage: React.FC<AttenderInfoPageProps> = ({ onBack }) => {
           </section>
 
           {/* よくある質問 */}
-          <section className="bg-white rounded-lg shadow-sm p-6">
-            <h2 className="text-2xl font-bold mb-6">よくある質問</h2>
+          <section className="bg-mono-white rounded-lg shadow-sm p-6">
+            <h2 className="text-2xl font-bold mb-6 text-mono-black">よくある質問</h2>
             <div className="space-y-6">
               {faqs.map((faq, index) => (
                 <div key={index} className="border-b border-mono-light pb-4 last:border-0 last:pb-0">
@@ -250,7 +250,7 @@ const AttenderInfoPage: React.FC<AttenderInfoPageProps> = ({ onBack }) => {
                     <span className="text-mono-black mr-2">Q.</span> 
                     {faq.question}
                   </h3>
-                  <p className="text-mono-gray-dark pl-6">
+                  <p className="text-mono-gray-medium pl-6">
                     {faq.answer}
                   </p>
                 </div>
@@ -259,7 +259,7 @@ const AttenderInfoPage: React.FC<AttenderInfoPageProps> = ({ onBack }) => {
           </section>
 
           {/* 安心・安全のための取り組み */}
-          <section className="bg-white rounded-lg shadow-sm p-6">
+          <section className="bg-mono-white rounded-lg shadow-sm p-6">
             <h2 className="text-2xl font-bold mb-4 text-mono-black">安心・安全のための取り組み</h2>
             <div className="flex space-x-4">
               <Shield className="w-6 h-6 text-mono-black flex-shrink-0" />

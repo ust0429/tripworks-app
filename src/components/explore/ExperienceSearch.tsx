@@ -90,25 +90,25 @@ const ExperienceSearch: React.FC<ExperienceSearchProps> = ({
   return (
     <div className="space-y-4">
       {/* 検索バー */}
-      <div className="sticky top-0 bg-white z-10 pt-2 pb-4">
+      <div className="sticky top-0 bg-mono-white z-10 pt-2 pb-4">
         <div className="relative">
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <Search size={20} className="text-gray-400" />
+            <Search size={20} className="text-mono-gray-light" />
           </div>
           <input
             type="text"
             placeholder="体験を検索..."
-            className="w-full pl-10 pr-14 py-3 bg-gray-100 border-none rounded-full focus:outline-none focus:ring-2 focus:ring-gray-400"
+            className="w-full pl-10 pr-14 py-3 bg-mono-lighter border-none rounded-full focus:outline-none focus:ring-2 focus:ring-mono-light"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
           <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
             <button
               onClick={onFilterOpen}
-              className="p-1 rounded-full hover:bg-gray-200"
+              className="p-1 rounded-full hover:bg-mono-light"
               aria-label="フィルター"
             >
-              <Sliders size={20} className="text-gray-500" />
+              <Sliders size={20} className="text-mono-gray-medium" />
             </button>
           </div>
         </div>
@@ -116,11 +116,11 @@ const ExperienceSearch: React.FC<ExperienceSearchProps> = ({
       
       {/* 表示切替・並び替え */}
       <div className="flex justify-between items-center">
-        <div className="flex bg-gray-100 rounded-lg p-1">
+        <div className="flex bg-mono-lighter rounded-lg p-1">
           <button
             onClick={() => setViewMode('list')}
             className={`px-3 py-1.5 rounded-md flex items-center text-sm ${
-              viewMode === 'list' ? 'bg-white shadow-sm' : 'text-gray-500'
+              viewMode === 'list' ? 'bg-mono-white shadow-sm text-mono-black' : 'text-mono-gray-medium'
             }`}
           >
             <List size={16} className="mr-1" />
@@ -129,7 +129,7 @@ const ExperienceSearch: React.FC<ExperienceSearchProps> = ({
           <button
             onClick={() => setViewMode('map')}
             className={`px-3 py-1.5 rounded-md flex items-center text-sm ${
-              viewMode === 'map' ? 'bg-white shadow-sm' : 'text-gray-500'
+              viewMode === 'map' ? 'bg-mono-white shadow-sm text-mono-black' : 'text-mono-gray-medium'
             }`}
           >
             <MapIcon size={16} className="mr-1" />
@@ -140,14 +140,14 @@ const ExperienceSearch: React.FC<ExperienceSearchProps> = ({
         <div className="relative">
           <button
             onClick={() => setShowSortOptions(!showSortOptions)}
-            className="flex items-center text-sm bg-gray-100 px-3 py-1.5 rounded-md"
+            className="flex items-center text-sm bg-mono-lighter px-3 py-1.5 rounded-md text-mono-black"
           >
             <ArrowUpDown size={14} className="mr-1" />
             {getSortLabel(sortBy)}
           </button>
           
           {showSortOptions && (
-            <div className="absolute right-0 mt-1 bg-white rounded-lg shadow-lg overflow-hidden z-20 w-48">
+            <div className="absolute right-0 mt-1 bg-mono-white rounded-lg shadow-lg overflow-hidden z-20 w-48">
               {(['recommended', 'price_low', 'price_high', 'rating', 'distance'] as SortOption[]).map((option) => (
                 <button
                   key={option}
@@ -155,8 +155,8 @@ const ExperienceSearch: React.FC<ExperienceSearchProps> = ({
                     setSortBy(option);
                     setShowSortOptions(false);
                   }}
-                  className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-100 ${
-                    sortBy === option ? 'font-medium bg-gray-50' : ''
+                  className={`w-full text-left px-4 py-2 text-sm hover:bg-mono-lighter ${
+                    sortBy === option ? 'font-medium bg-mono-lighter text-mono-black' : 'text-mono-gray-medium'
                   }`}
                 >
                   {getSortLabel(option)}
@@ -181,9 +181,9 @@ const ExperienceSearch: React.FC<ExperienceSearchProps> = ({
               />
             ))
           ) : (
-            <div className="bg-gray-50 rounded-lg p-8 text-center">
-              <p className="text-gray-500">体験が見つかりませんでした</p>
-              <p className="text-sm text-gray-400 mt-2">
+            <div className="bg-mono-lighter rounded-lg p-8 text-center">
+              <p className="text-mono-gray-medium">体験が見つかりませんでした</p>
+              <p className="text-sm text-mono-gray-light mt-2">
                 検索条件を変更するか、別のキーワードで試してみてください
               </p>
             </div>
@@ -194,7 +194,7 @@ const ExperienceSearch: React.FC<ExperienceSearchProps> = ({
       {/* 検索結果 - 地図表示 */}
       {viewMode === 'map' && (
         <div className="pb-20">
-          <div className="h-96 bg-gray-100 rounded-lg overflow-hidden relative">
+          <div className="h-96 bg-mono-lighter rounded-lg overflow-hidden relative">
             <MapView
               center={locationCoordinates}
               zoom={12}
@@ -219,7 +219,7 @@ const ExperienceSearch: React.FC<ExperienceSearchProps> = ({
           
           {/* 地図下のリスト */}
           <div className="mt-4 space-y-4">
-            <h3 className="font-medium">近くの体験</h3>
+            <h3 className="font-medium text-mono-black">近くの体験</h3>
             {sortedExperiences.slice(0, 3).map((experience) => (
               <ExperienceCard
                 key={experience.id}

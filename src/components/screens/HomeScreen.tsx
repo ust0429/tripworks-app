@@ -128,17 +128,17 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ onAttenderClick, attendersData,
       </div>
 
       {/* アテンダー募集バナー */}
-      <div className="bg-gradient-to-r from-cyan-600 to-teal-600 rounded-lg p-6 text-white shadow-lg mt-8">
+      <div className="bg-mono-black rounded-lg p-6 text-mono-white shadow-lg mt-8">
         <div className="flex items-center justify-between">
           <div className="space-y-2">
             <div className="flex items-center space-x-2">
-              <UserPlus size={24} className="text-white" />
+              <UserPlus size={24} className="text-mono-white" />
               <h3 className="text-xl font-bold">アテンダーになりませんか？</h3>
             </div>
-            <p className="text-white/90">あなたの街の魅力を旅行者に伝えてみませんか？自分のペースで活動できるアテンダーとして、新しい出会いと収入を得ることができます。</p>
+            <p className="text-mono-white/90">あなたの街の魅力を旅行者に伝えてみませんか？自分のペースで活動できるアテンダーとして、新しい出会いと収入を得ることができます。</p>
               <button 
                 onClick={() => navigateToAttenderInfo ? navigateToAttenderInfo() : window.location.href = '/attender/info'}
-                className="mt-3 bg-white text-teal-700 px-4 py-2 rounded-lg font-medium flex items-center space-x-1 hover:bg-gray-100 transition duration-200">
+                className="mt-3 bg-mono-white text-mono-black px-4 py-2 rounded-lg font-medium flex items-center space-x-1 hover:bg-mono-lighter transition duration-200">
                 <span>詳細を見る</span>
                 <ArrowRight size={16} />
               </button>
