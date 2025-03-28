@@ -15,6 +15,13 @@ import {
   IdentificationDocument,
   FormStatusType
 } from '../types/attender/index';
+
+// ExpertiseData型の定義
+interface ExpertiseData {
+  specialties: string[];
+  expertiseAreas: ExpertiseArea[];
+  languages: any[]; // LanguageSkill型に変更してにゃならないが、簡単のためにこのようにしておく
+}
 import { submitAttenderApplication, saveDraftApplication } from '../services/AttenderService';
 
 // 必須ステップと任意ステップの定義
@@ -108,7 +115,11 @@ interface AttenderApplicationContextType {
 const initialFormData: Partial<AttenderApplicationData> = {
   specialties: [],
   languages: [],
-  expertise: [],
+  expertise: {
+    specialties: [],
+    expertiseAreas: [],
+    languages: []
+  } as ExpertiseData,
   availableTimes: [],
   experienceSamples: [],
   isLocalResident: false, // 初期値を設定してタイプエラーを防止
@@ -147,27 +158,47 @@ export const AttenderApplicationProvider: React.FC<{ children: ReactNode }> = ({
   
   // 専門分野の追加
   const addExpertise = (expertise: ExpertiseArea) => {
-    setFormData(prev => ({
-      ...prev,
-      expertise: [...(prev.expertise || []), expertise]
-    }));
+    setFormData(prev => {
+      const currentExpertise = prev.expertise as ExpertiseData || { specialties: [], expertiseAreas: [], languages: [] };
+      return {
+        ...prev,
+        expertise: {
+          ...currentExpertise,
+          expertiseAreas: [...(currentExpertise.expertiseAreas || []), expertise]
+        }
+      };
+    });
   };
   
   // 専門分野の更新
   const updateExpertise = (index: number, expertise: ExpertiseArea) => {
     setFormData(prev => {
-      const newExpertise = [...(prev.expertise || [])];
-      newExpertise[index] = expertise;
-      return { ...prev, expertise: newExpertise };
+      const currentExpertise = prev.expertise as ExpertiseData || { specialties: [], expertiseAreas: [], languages: [] };
+      const newExpertiseAreas = [...(currentExpertise.expertiseAreas || [])];
+      newExpertiseAreas[index] = expertise;
+      return { 
+        ...prev, 
+        expertise: {
+          ...currentExpertise,
+          expertiseAreas: newExpertiseAreas
+        } 
+      };
     });
   };
   
   // 専門分野の削除
   const removeExpertise = (index: number) => {
     setFormData(prev => {
-      const newExpertise = [...(prev.expertise || [])];
-      newExpertise.splice(index, 1);
-      return { ...prev, expertise: newExpertise };
+      const currentExpertise = prev.expertise as ExpertiseData || { specialties: [], expertiseAreas: [], languages: [] };
+      const newExpertiseAreas = [...(currentExpertise.expertiseAreas || [])];
+      newExpertiseAreas.splice(index, 1);
+      return { 
+        ...prev, 
+        expertise: {
+          ...currentExpertise,
+          expertiseAreas: newExpertiseAreas
+        } 
+      };
     });
   };
   
@@ -367,7 +398,8 @@ export const AttenderApplicationProvider: React.FC<{ children: ReactNode }> = ({
   formData.languages && 
   formData.languages.length > 0 && 
   formData.expertise && 
-  formData.expertise.length > 0
+  (formData.expertise as ExpertiseData).expertiseAreas && 
+  (formData.expertise as ExpertiseData).expertiseAreas.length > 0
   );
   case 'ExperienceSamples': // 体験サンプル
   return !!(    
@@ -447,7 +479,7 @@ export const AttenderApplicationProvider: React.FC<{ children: ReactNode }> = ({
       }
       
       // 価格チェック
-      if (sample.pricePerPerson < 0) {
+      if (sample.pricePerPerson !== undefined && sample.pricePerPerson < 0) {
         throw new Error(`体験サンプル${index + 1}: 価格は0以上にしてください`);
       }
       
@@ -563,10 +595,10 @@ export const AttenderApplicationProvider: React.FC<{ children: ReactNode }> = ({
       if (!data.languages || data.languages.length === 0) {
         validationErrors.languages = '少なくとも1つの言語を選択してください';
       }
-      if (!data.expertise || data.expertise.length === 0) {
+      if (!data.expertise || !(data.expertise as ExpertiseData).expertiseAreas || (data.expertise as ExpertiseData).expertiseAreas.length === 0) {
         validationErrors.expertise = '少なくとも1つの専門知識を追加してください';
       } else {
-        data.expertise.forEach((expertise, index) => {
+        (data.expertise as ExpertiseData).expertiseAreas.forEach((expertise, index) => {
           if (!expertise.category) {
             validationErrors[`expertise[${index}].category`] = 'カテゴリは必須です';
           }

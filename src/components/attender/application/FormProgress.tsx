@@ -150,7 +150,7 @@ const FormProgress: React.FC<FormProgressProps> = ({
             
             // 各ステップの状態に応じたスタイル
             let circleStyle = '';
-            let icon = null;
+            let icon: React.ReactNode = null;
             
             if (hasError) {
               circleStyle = 'bg-mono-lighter text-mono-gray-dark border-2 border-mono-gray-dark';
@@ -175,7 +175,7 @@ const FormProgress: React.FC<FormProgressProps> = ({
                   : 'text-mono-gray-medium';
             
             // ステップの完了・エラー状況を表すバッジ
-            let badge = null;
+            let badge: React.ReactNode = null;
             if (formStatus === 'required' && REQUIRED_STEPS.includes(stepKey)) {
               badge = (
                 <span className="bg-mono-lighter text-mono-black px-1 py-0.5 rounded-sm text-[9px] ml-1">必須</span>

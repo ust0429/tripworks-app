@@ -65,9 +65,9 @@ const AttenderProfileEdit: React.FC<AttenderProfileEditProps> = ({
       newErrors.name = '名前は必須です';
     }
     
-    if (!formData.email.trim()) {
+    if (!formData.email || !formData.email.trim()) {
       newErrors.email = 'メールアドレスは必須です';
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+    } else if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
       newErrors.email = '有効なメールアドレスを入力してください';
     }
     

@@ -86,6 +86,9 @@ export class AttenderProfileService {
       };
 
       // サンプルを追加
+      if (!profile.experienceSamples) {
+        profile.experienceSamples = [];
+      }
       profile.experienceSamples.push(newSample);
 
       // プロフィールを更新
@@ -111,6 +114,9 @@ export class AttenderProfileService {
       const profile = await this.getProfile(attenderId);
 
       // サンプルを検索
+      if (!profile.experienceSamples) {
+        throw new Error('Experience samples not initialized');
+      }
       const sampleIndex = profile.experienceSamples.findIndex(s => s.id === sampleId);
       if (sampleIndex === -1) {
         throw new Error(`Experience sample with id ${sampleId} not found`);
@@ -118,11 +124,14 @@ export class AttenderProfileService {
 
       // サンプルを更新
       const updatedSample: ExperienceSample = {
-        ...profile.experienceSamples[sampleIndex],
+        ...(profile.experienceSamples?.[sampleIndex] || {}),
         ...updates,
         updatedAt: new Date().toISOString(),
       };
 
+      if (!profile.experienceSamples) {
+        throw new Error('Experience samples not initialized');
+      }
       profile.experienceSamples[sampleIndex] = updatedSample;
 
       // プロフィールを更新
@@ -144,12 +153,18 @@ export class AttenderProfileService {
       const profile = await this.getProfile(attenderId);
 
       // サンプルを検索
+      if (!profile.experienceSamples) {
+        throw new Error('Experience samples not initialized');
+      }
       const sampleIndex = profile.experienceSamples.findIndex(s => s.id === sampleId);
       if (sampleIndex === -1) {
         throw new Error(`Experience sample with id ${sampleId} not found`);
       }
 
       // サンプルを削除
+      if (!profile.experienceSamples) {
+        throw new Error('Experience samples not initialized');
+      }
       profile.experienceSamples.splice(sampleIndex, 1);
 
       // プロフィールを更新
@@ -190,7 +205,7 @@ export class AttenderProfileService {
     
     // 日時フィールドの検証
     try {
-      new Date(profile.joinedAt);
+      new Date(profile.joinedAt || new Date().toISOString());
     } catch (e) {
       throw new Error('Invalid joined date');
     }
@@ -224,10 +239,16 @@ export class AttenderProfileService {
           id: 'sample_1',
           title: '下町アートギャラリー巡り',
           description: '東京の下町にある小さなギャラリーを巡るツアーです。地元アーティストの作品を見ながら、文化的背景も解説します。',
+          category: 'アート',
+          subcategory: 'ギャラリー',
+          estimatedDuration: 180,
+          price: 5000,
+          images: ['https://source.unsplash.com/random/800x600/?gallery'],
+          // 互換性のためのプロパティ
           imageUrl: 'https://source.unsplash.com/random/800x600/?gallery',
           duration: 180,
-          price: 5000,
           categories: ['アート', '文化'],
+          location: '東京都台東区',
           createdAt: now,
           updatedAt: now
         }
@@ -246,7 +267,9 @@ export class AttenderProfileService {
       verified: true,
       joinedAt: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString(), // 90日前
       lastActive: now,
-      completionScore: 85
+      completionScore: 85,
+      createdAt: now,
+      updatedAt: now
     };
   }
 }

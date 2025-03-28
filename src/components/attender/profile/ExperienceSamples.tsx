@@ -11,7 +11,17 @@ interface ExperienceSamplesProps {
   onRemove?: (id: string) => void;
 }
 
-type EditingSample = Omit<ExperienceSample, 'id' | 'createdAt' | 'updatedAt'> & { id?: string };
+// Experienceサンプルの編集用型定義
+type EditingSample = {
+  title: string;
+  description: string;
+  category: string;
+  subcategory?: string;
+  estimatedDuration: number;
+  price?: number;
+  images?: string[];
+  location?: string;
+};
 
 /**
  * 体験サンプル管理コンポーネント
@@ -28,10 +38,12 @@ const ExperienceSamples: React.FC<ExperienceSamplesProps> = ({
   const [editingSample, setEditingSample] = useState<EditingSample>({
     title: '',
     description: '',
-    imageUrl: '',
-    duration: 60,
+    category: '',
+    subcategory: '',
+    estimatedDuration: 60,
     price: 0,
-    categories: [],
+    images: [],
+    location: ''
   });
   
   // 入力値の変更ハンドラ
@@ -42,10 +54,14 @@ const ExperienceSamples: React.FC<ExperienceSamplesProps> = ({
     }));
   };
   
-  // カテゴリー入力の変更ハンドラ
-  const handleCategoriesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const categories = e.target.value.split(',').map(cat => cat.trim()).filter(Boolean);
-    handleChange('categories', categories);
+  // カテゴリー関連の変更ハンドラ
+  const handleCategoryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    handleChange('category', e.target.value);
+  };
+  
+  // サブカテゴリー変更ハンドラ
+  const handleSubcategoryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    handleChange('subcategory', e.target.value);
   };
   
   // 編集フォームの保存
@@ -62,10 +78,12 @@ const ExperienceSamples: React.FC<ExperienceSamplesProps> = ({
     setEditingSample({
       title: '',
       description: '',
-      imageUrl: '',
-      duration: 60,
+      category: '',
+      subcategory: '',
+      estimatedDuration: 60,
       price: 0,
-      categories: [],
+      images: [],
+      location: ''
     });
   };
   
@@ -76,23 +94,27 @@ const ExperienceSamples: React.FC<ExperienceSamplesProps> = ({
     setEditingSample({
       title: '',
       description: '',
-      imageUrl: '',
-      duration: 60,
+      category: '',
+      subcategory: '',
+      estimatedDuration: 60,
       price: 0,
-      categories: [],
+      images: [],
+      location: ''
     });
   };
   
   // 体験サンプルの編集を開始
   const startEdit = (sample: ExperienceSample) => {
-    setEditingSampleId(sample.id);
+    setEditingSampleId(sample.id || '');
     setEditingSample({
       title: sample.title,
       description: sample.description,
-      imageUrl: sample.imageUrl || '',
-      duration: sample.duration || 60,
+      category: sample.category || '',
+      subcategory: sample.subcategory || '',
+      estimatedDuration: sample.estimatedDuration || 60,
       price: sample.price || 0,
-      categories: sample.categories || [],
+      images: sample.images || [],
+      location: sample.location || ''
     });
   };
   
@@ -103,10 +125,12 @@ const ExperienceSamples: React.FC<ExperienceSamplesProps> = ({
     setEditingSample({
       title: '',
       description: '',
-      imageUrl: '',
-      duration: 60,
+      category: '',
+      subcategory: '',
+      estimatedDuration: 60,
       price: 0,
-      categories: [],
+      images: [],
+      location: ''
     });
   };
   
@@ -157,8 +181,8 @@ const ExperienceSamples: React.FC<ExperienceSamplesProps> = ({
           </label>
           <input
             type="text"
-            value={editingSample.imageUrl}
-            onChange={(e) => handleChange('imageUrl', e.target.value)}
+            value={editingSample.images?.[0] || ''}
+            onChange={(e) => handleChange('images', e.target.value ? [e.target.value] : [])}
             className="w-full p-2 border rounded"
             placeholder="https://example.com/image.jpg"
           />
@@ -167,14 +191,14 @@ const ExperienceSamples: React.FC<ExperienceSamplesProps> = ({
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              所要時間（分）
+            所要時間（分）
             </label>
             <input
-              type="number"
-              value={editingSample.duration}
-              onChange={(e) => handleChange('duration', parseInt(e.target.value) || 0)}
-              className="w-full p-2 border rounded"
-              min="0"
+            type="number"
+            value={editingSample.estimatedDuration}
+            onChange={(e) => handleChange('estimatedDuration', parseInt(e.target.value) || 0)}
+            className="w-full p-2 border rounded"
+            min="0"
             />
           </div>
           
@@ -194,14 +218,28 @@ const ExperienceSamples: React.FC<ExperienceSamplesProps> = ({
         
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            カテゴリー（カンマ区切り）
+            カテゴリー*
           </label>
           <input
             type="text"
-            value={editingSample.categories?.join(', ') || ''}
-            onChange={handleCategoriesChange}
+            value={editingSample.category}
+            onChange={handleCategoryChange}
             className="w-full p-2 border rounded"
             placeholder="アート, 文化, 食べ歩き"
+            required
+          />
+        </div>
+        
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            サブカテゴリー
+          </label>
+          <input
+            type="text"
+            value={editingSample.subcategory || ''}
+            onChange={handleSubcategoryChange}
+            className="w-full p-2 border rounded"
+            placeholder="オプション：より詳細なカテゴリー"
           />
         </div>
         
@@ -268,9 +306,9 @@ const ExperienceSamples: React.FC<ExperienceSamplesProps> = ({
             ) : (
               <div key={sample.id} className="border rounded-lg overflow-hidden">
                 <div className="relative">
-                  {sample.imageUrl ? (
+                  {sample.images && sample.images.length > 0 ? (
                     <img
-                      src={sample.imageUrl}
+                      src={sample.images[0]}
                       alt={sample.title}
                       className="w-full h-48 object-cover"
                     />
@@ -292,22 +330,23 @@ const ExperienceSamples: React.FC<ExperienceSamplesProps> = ({
                   <h3 className="text-lg font-medium mb-2">{sample.title}</h3>
                   
                   <div className="flex flex-wrap gap-1 mb-3">
-                    {sample.categories?.map(category => (
-                      <Badge key={category} variant="default" size="sm">
-                        {category}
+                    <Badge variant="default" size="sm">{sample.category}</Badge>
+                    {sample.subcategory && (
+                      <Badge variant="outline" size="sm">
+                        {sample.subcategory}
                       </Badge>
-                    ))}
+                    )}
                   </div>
                   
                   <p className="text-gray-600 mb-3">{sample.description}</p>
                   
                   <div className="flex items-center text-sm text-gray-500">
-                    {sample.duration && (
+                    {sample.estimatedDuration && (
                       <div className="flex items-center mr-4">
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4 mr-1">
                           <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
-                        {sample.duration}分
+                        {sample.estimatedDuration}分
                       </div>
                     )}
                   </div>
@@ -323,7 +362,7 @@ const ExperienceSamples: React.FC<ExperienceSamplesProps> = ({
                       </button>
                       <button
                         type="button"
-                        onClick={() => handleRemove(sample.id)}
+                        onClick={() => handleRemove(sample.id || '')}
                         className="px-3 py-1 text-sm text-red-600 hover:text-red-800"
                       >
                         削除

@@ -51,6 +51,7 @@ const IdentificationStep: React.FC<IdentificationStepProps> = ({ onNext, onBack 
     relationship: '',
     email: '',
     contactInfo: '',
+    phoneNumber: '',
     yearsKnown: 0
   });
   
@@ -58,7 +59,8 @@ const IdentificationStep: React.FC<IdentificationStepProps> = ({ onNext, onBack 
   const [newDocument, setNewDocument] = useState<Omit<AdditionalDocument, 'fileUrl' | 'uploadDate'>>({
     type: '' as 'certification' | 'license' | 'insurance' | 'reference_letter' | 'other',
     title: '',
-    description: ''
+    description: '',
+    verified: false
   });
   
   // 身分証明書情報の更新
@@ -134,15 +136,15 @@ const IdentificationStep: React.FC<IdentificationStepProps> = ({ onNext, onBack 
   // 推薦者の追加
   const handleAddReference = () => {
     if (newReference.name && newReference.relationship && (newReference.contactInfo || newReference.email)) {
-      // contactInfo から email または phoneNumber を設定
+      // contactInfo から email または phone を設定
       const reference: Reference = {
         name: newReference.name,
         relationship: newReference.relationship,
         email: newReference.email || newReference.contactInfo || '',
-        phoneNumber: newReference.phoneNumber,
+        phone: newReference.phoneNumber,
         yearsKnown: newReference.yearsKnown,
         message: newReference.message,
-        verified: newReference.verified
+        verified: newReference.verified || false
       };
       
       addReference(reference);
@@ -151,6 +153,7 @@ const IdentificationStep: React.FC<IdentificationStepProps> = ({ onNext, onBack 
         relationship: '',
         email: '',
         contactInfo: '',
+        phoneNumber: '',
         yearsKnown: 0
       });
     }
@@ -190,7 +193,8 @@ const IdentificationStep: React.FC<IdentificationStepProps> = ({ onNext, onBack 
       setNewDocument({
         type: '' as 'certification' | 'license' | 'insurance' | 'reference_letter' | 'other',
         title: '',
-        description: ''
+        description: '',
+        verified: false
       });
       setAdditionalDocFile(null);
     }

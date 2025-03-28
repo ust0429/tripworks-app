@@ -61,7 +61,11 @@ const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
   ];
   
   // モバイル決済方法を条件に応じて追加
-  const mobileMethods = [];
+  const mobileMethods: Array<{
+    id: PaymentMethodType;
+    name: string;
+    icon: JSX.Element;
+  }> = [];
   
   if (isApplePayAvailable) {
     mobileMethods.push({

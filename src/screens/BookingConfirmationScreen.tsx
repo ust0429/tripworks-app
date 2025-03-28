@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Calendar, Clock, Users, MapPin, DollarSign, CreditCard, ArrowRight, CheckCircle, AlertTriangle, XCircle } from 'lucide-react';
-import { BookingData } from '../types/booking';
+import { BookingData, BookingStatus, PaymentStatus, AttenderInfo } from '../types/booking';
 import { usePayment } from '../contexts/PaymentContext';
 import PaymentForm from '../components/payment/PaymentForm';
 import TipSection from '../components/tip/TipSection';
@@ -9,30 +9,41 @@ import TipSection from '../components/tip/TipSection';
 // モックデータ（実際の実装ではAPIから取得）
 const mockBookingData: BookingData = {
   id: 'booking-123',
-  status: 'confirmed',
-  experienceTitle: '京都の裏路地アート巡り',
+  userId: 'user-123',
+  attenderId: 'attender-456',
+  experienceId: 'exp-001',
+  title: '京都の裏路地アート巡り',
+  description: '京都の隠れた名所を巡るツアー',
+  status: BookingStatus.CONFIRMED,
+  paymentStatus: PaymentStatus.PENDING,
+  hasReview: false,
+  cancellationPolicy: '予約日の3日前まで全額返金、それ以降は返金不可',
+  experience: {
+    id: 'exp-001',
+    title: '京都の裏路地アート巡り',
+    description: '京都の隠れた名所を巡るツアー',
+    imageUrl: '',
+    price: 5000,
+    duration: '180',
+    maxParticipants: 4,
+    location: '京都市中京区',
+    category: 'アート'
+  },
   date: '2025-04-15',
-  startTime: '13:00',
-  endTime: '16:00',
-  duration: 180,
+  time: '13:00',
+  duration: '180',
   attender: {
     id: 'attender-456',
     name: '鈴木 アート',
-    profileImage: '',
+    imageUrl: '',
     specialties: ['現代アート', '裏路地散策', '地元文化'],
     rating: 4.8,
     reviewCount: 24
   },
-  location: {
-    name: '京都市役所前',
-    address: '京都府京都市中京区寺町通御池上る上本能寺前町488'
-  },
+  location: '京都市役所前（京都府京都市中京区寺町通御池上る上本能寺前町488）',
   participants: 2,
-  basePrice: 5000,
-  optionPrice: 1000,
-  taxAmount: 600,
-  totalAmount: 6600,
-  cancellationPolicy: '予約日の3日前まで全額返金、それ以降は返金不可',
+  price: 5000,
+  updatedAt: '2025-03-15T10:30:00Z',
   createdAt: '2025-03-15T10:30:00Z'
 };
 
@@ -200,7 +211,7 @@ const BookingConfirmationScreen: React.FC = () => {
       
       {/* 予約概要 */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
-        <h2 className="text-xl font-semibold text-gray-800 mb-4">{bookingData.experienceTitle}</h2>
+        <h2 className="text-xl font-semibold text-gray-800 mb-4">{bookingData.experience.title}</h2>
         
         <div className="space-y-4">
           <div className="flex items-start">
@@ -220,7 +231,7 @@ const BookingConfirmationScreen: React.FC = () => {
             <Clock className="w-5 h-5 text-gray-400 mt-1 mr-3" />
             <div>
               <p className="text-gray-800">
-                {bookingData.startTime} 〜 {bookingData.endTime}（{bookingData.duration}分）
+                {bookingData.time} （{bookingData.duration}）
               </p>
             </div>
           </div>
@@ -235,10 +246,9 @@ const BookingConfirmationScreen: React.FC = () => {
           <div className="flex items-start">
             <MapPin className="w-5 h-5 text-gray-400 mt-1 mr-3" />
             <div>
-              <p className="text-gray-800">{bookingData.location.name}</p>
-              <p className="text-gray-600 text-sm">{bookingData.location.address}</p>
+              <p className="text-gray-800">{bookingData.location}</p>
               <button 
-                onClick={() => window.open(`https://maps.google.com/?q=${encodeURIComponent(bookingData.location.address)}`, '_blank')}
+                onClick={() => window.open(`https://maps.google.com/?q=${encodeURIComponent(bookingData.location)}`, '_blank')}
                 className="text-blue-600 text-sm hover:underline mt-1 inline-flex items-center"
               >
                 地図で確認する
@@ -253,9 +263,9 @@ const BookingConfirmationScreen: React.FC = () => {
         <div className="mt-6 pt-6 border-t border-gray-200">
           <h3 className="font-medium text-gray-800 mb-3">アテンダー</h3>
           <div className="flex items-center">
-            {bookingData.attender.profileImage ? (
+            {bookingData.attender.imageUrl ? (
               <img
-                src={bookingData.attender.profileImage}
+                src={bookingData.attender.imageUrl}
                 alt={bookingData.attender.name}
                 className="w-12 h-12 rounded-full mr-3 object-cover"
               />
@@ -287,24 +297,29 @@ const BookingConfirmationScreen: React.FC = () => {
         <div className="space-y-3">
           <div className="flex justify-between">
             <span className="text-gray-600">基本料金（{bookingData.participants}名）</span>
-            <span className="text-gray-800">{bookingData.basePrice.toLocaleString()}円</span>
+            <span className="text-gray-800">{bookingData.price.toLocaleString()}円</span>
           </div>
           
+          {/* 追加料金やオプション料金があれば表示する */}
+          {/* 
           {bookingData.optionPrice > 0 && (
             <div className="flex justify-between">
               <span className="text-gray-600">オプション料金</span>
               <span className="text-gray-800">{bookingData.optionPrice.toLocaleString()}円</span>
             </div>
           )}
+          */}
           
+          {/* 消費税 
           <div className="flex justify-between">
             <span className="text-gray-600">消費税</span>
             <span className="text-gray-800">{bookingData.taxAmount.toLocaleString()}円</span>
           </div>
+          */}
           
           <div className="flex justify-between pt-3 border-t border-gray-200 font-medium">
             <span className="text-gray-800">合計</span>
-            <span className="text-gray-900 text-lg">{bookingData.totalAmount.toLocaleString()}円</span>
+            <span className="text-gray-900 text-lg">{bookingData.price.toLocaleString()}円</span>
           </div>
         </div>
       </div>
@@ -353,7 +368,7 @@ const BookingConfirmationScreen: React.FC = () => {
             </div>
             
             <PaymentForm 
-              totalAmount={bookingData.totalAmount} 
+              totalAmount={bookingData.price} 
               onPaymentSubmit={handlePaymentSubmit}
               onCancel={handlePaymentCancel}
             />

@@ -341,7 +341,7 @@ export const PaymentProvider: React.FC<{ children: React.ReactNode; navigate?: N
     switch (paymentMethod) {
       case 'qr_code':
         retryPaymentData = {
-          amount: bookingData.totalAmount,
+          amount: bookingData.price,
           bookingId: bookingData.id,
           paymentMethod: paymentMethod,
           qrData: {
@@ -352,7 +352,7 @@ export const PaymentProvider: React.FC<{ children: React.ReactNode; navigate?: N
         break;
       case 'credit_card':
         retryPaymentData = {
-          amount: bookingData.totalAmount,
+          amount: bookingData.price,
           bookingId: bookingData.id,
           paymentMethod: paymentMethod,
           cardData: {
@@ -366,7 +366,7 @@ export const PaymentProvider: React.FC<{ children: React.ReactNode; navigate?: N
         break;
       case 'convenience':
         retryPaymentData = {
-          amount: bookingData.totalAmount,
+          amount: bookingData.price,
           bookingId: bookingData.id,
           paymentMethod: paymentMethod,
           convenienceData: {
@@ -379,7 +379,7 @@ export const PaymentProvider: React.FC<{ children: React.ReactNode; navigate?: N
         break;
       case 'bank_transfer':
         retryPaymentData = {
-          amount: bookingData.totalAmount,
+          amount: bookingData.price,
           bookingId: bookingData.id,
           paymentMethod: paymentMethod,
           bankData: {

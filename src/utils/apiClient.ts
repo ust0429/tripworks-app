@@ -1,13 +1,19 @@
 /**
- * API クライアント
+ * APIクライアント
  * 
- * HTTP リクエストを行うための共通ユーティリティ
+ * RESTful API呼び出しのためのシンプルなラッパー
  */
 
-import { API_BASE_URL, DEFAULT_HEADERS, DEFAULT_TIMEOUT } from '../config/api';
-import { isProduction } from '../config/env';
+import { API_BASE_URL } from '../config/api';
 
-// レスポンスの型定義
+// APIオプションの型定義
+export interface ApiOptions {
+  headers?: Record<string, string>;
+  params?: Record<string, any>;
+  timeout?: number;
+}
+
+// APIレスポンスの型定義
 export interface ApiResponse<T = any> {
   success: boolean;
   data?: T;
@@ -16,230 +22,311 @@ export interface ApiResponse<T = any> {
     message: string;
     details?: any;
   };
+  status: number;
+  headers: Headers;
 }
 
-// APIオプションの型定義
-export interface ApiOptions {
-  headers?: Record<string, string>;
-  timeout?: number;
-  withCredentials?: boolean;
+// APIクライアントインターフェース
+export interface ApiClient {
+  get<T = any>(
+    url: string,
+    options?: ApiOptions
+  ): Promise<ApiResponse<T>>;
+  post<T = any>(
+    url: string,
+    data?: any,
+    options?: ApiOptions
+  ): Promise<ApiResponse<T>>;
+  put<T = any>(
+    url: string,
+    data?: any,
+    options?: ApiOptions
+  ): Promise<ApiResponse<T>>;
+  patch<T = any>(
+    url: string,
+    data?: any,
+    options?: ApiOptions
+  ): Promise<ApiResponse<T>>;
+  delete<T = any>(
+    url: string,
+    options?: ApiOptions
+  ): Promise<ApiResponse<T>>;
+  uploadFile<T = any>(
+    url: string,
+    file: File,
+    fieldName?: string,
+    additionalData?: Record<string, any>,
+    options?: ApiOptions,
+    progressCallback?: (progress: number) => void
+  ): Promise<ApiResponse<T>>;
 }
-
-// デフォルトのオプション
-const defaultOptions: ApiOptions = {
-  headers: DEFAULT_HEADERS,
-  timeout: DEFAULT_TIMEOUT,
-  withCredentials: true
-};
 
 /**
- * リクエスト関数
- * 非同期でHTTPリクエストを行います
+ * 簡易APIクライアント
+ *
+ * 認証機能なしのシンプルな実装
  */
-async function request<T = any>(
-  method: string,
-  endpoint: string,
-  data?: any,
-  options?: ApiOptions
-): Promise<ApiResponse<T>> {
-  const opts = { ...defaultOptions, ...options };
-  const url = endpoint.startsWith('http') ? endpoint : `${API_BASE_URL}${endpoint}`;
-  
-  // タイムアウト処理のための Promise
-  const timeoutPromise = new Promise<never>((_, reject) => {
-    setTimeout(() => {
-      reject(new Error(`Request timeout after ${opts.timeout}ms`));
-    }, opts.timeout);
-  });
-  
-  // Fetch APIを使用したリクエスト
-  const fetchPromise = fetch(url, {
-    method,
-    headers: {
-      ...DEFAULT_HEADERS,
-      ...opts.headers,
-      ...(data && !(data instanceof FormData) ? { 'Content-Type': 'application/json' } : {})
-    },
-    credentials: opts.withCredentials ? 'include' : 'same-origin',
-    body: data instanceof FormData
-      ? data
-      : data
-        ? JSON.stringify(data)
-        : undefined
-  })
-  .then(async (response) => {
-    let responseData;
+class SimpleApiClient implements ApiClient {
+  async get<T = any>(
+    url: string,
+    options: ApiOptions = {}
+  ): Promise<ApiResponse<T>> {
+    const queryParams = new URLSearchParams();
     
-    // レスポンスボディの解析を試みる
-    try {
-      const contentType = response.headers.get('Content-Type') || '';
-      if (contentType.includes('application/json')) {
-        responseData = await response.json();
-      } else {
-        responseData = await response.text();
-      }
-    } catch (error) {
-      // レスポンスの解析に失敗した場合
-      responseData = { message: 'Failed to parse response' };
+    if (options.params) {
+      Object.entries(options.params).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          queryParams.append(key, String(value));
+        }
+      });
     }
     
-    // 成功レスポンス
-    if (response.ok) {
-      return {
-        success: true,
-        data: responseData
-      };
-    }
+    const queryString = queryParams.toString();
+    const fullUrl = queryString ? `${url}?${queryString}` : url;
     
-    // エラーレスポンス
-    return {
-      success: false,
-      error: {
-        code: response.status.toString(),
-        message: responseData.message || response.statusText,
-        details: responseData
-      }
-    };
-  })
-  .catch((error) => {
-    // ネットワークエラーなど
-    return {
-      success: false,
-      error: {
-        code: 'NETWORK_ERROR',
-        message: error.message || 'Network request failed',
-      }
-    };
-  });
-  
-  // タイムアウトとフェッチを競争させる
-  try {
-    const result = await Promise.race([fetchPromise, timeoutPromise]) as ApiResponse<T>;
-    return result;
-  } catch (error) {
-    return {
-      success: false,
-      error: {
-        code: 'TIMEOUT',
-        message: error instanceof Error ? error.message : 'Request timed out',
-      }
-    };
-  }
-}
-
-/**
- * GETリクエスト
- */
-export function get<T = any>(endpoint: string, options?: ApiOptions): Promise<ApiResponse<T>> {
-  return request<T>('GET', endpoint, undefined, options);
-}
-
-/**
- * POSTリクエスト
- */
-export function post<T = any>(endpoint: string, data?: any, options?: ApiOptions): Promise<ApiResponse<T>> {
-  return request<T>('POST', endpoint, data, options);
-}
-
-/**
- * PUTリクエスト
- */
-export function put<T = any>(endpoint: string, data?: any, options?: ApiOptions): Promise<ApiResponse<T>> {
-  return request<T>('PUT', endpoint, data, options);
-}
-
-/**
- * PATCHリクエスト
- */
-export function patch<T = any>(endpoint: string, data?: any, options?: ApiOptions): Promise<ApiResponse<T>> {
-  return request<T>('PATCH', endpoint, data, options);
-}
-
-/**
- * DELETEリクエスト
- */
-export function del<T = any>(endpoint: string, options?: ApiOptions): Promise<ApiResponse<T>> {
-  return request<T>('DELETE', endpoint, undefined, options);
-}
-
-/**
- * FormDataを使用したファイルアップロード
- */
-export function uploadFile<T = any>(
-  endpoint: string, 
-  file: File, 
-  fieldName: string = 'file',
-  additionalData?: Record<string, string>,
-  options?: ApiOptions
-): Promise<ApiResponse<T>> {
-  const formData = new FormData();
-  formData.append(fieldName, file);
-  
-  // 追加データがあれば追加
-  if (additionalData) {
-    Object.entries(additionalData).forEach(([key, value]) => {
-      formData.append(key, value);
+    return this.request<T>(fullUrl, {
+      method: 'GET',
+      headers: options.headers,
+      timeout: options.timeout
     });
   }
-  
-  // Content-Typeヘッダーは自動的に設定されるので削除
-  const customOptions: ApiOptions = {
-    ...options,
-    headers: {
-      ...options?.headers,
+
+  async post<T = any>(
+    url: string,
+    data?: any,
+    options: ApiOptions = {}
+  ): Promise<ApiResponse<T>> {
+    return this.request<T>(url, {
+      method: 'POST',
+      body: data ? JSON.stringify(data) : undefined,
+      headers: options.headers,
+      timeout: options.timeout
+    });
+  }
+
+  async put<T = any>(
+    url: string,
+    data?: any,
+    options: ApiOptions = {}
+  ): Promise<ApiResponse<T>> {
+    return this.request<T>(url, {
+      method: 'PUT',
+      body: data ? JSON.stringify(data) : undefined,
+      headers: options.headers,
+      timeout: options.timeout
+    });
+  }
+
+  async patch<T = any>(
+    url: string,
+    data?: any,
+    options: ApiOptions = {}
+  ): Promise<ApiResponse<T>> {
+    return this.request<T>(url, {
+      method: 'PATCH',
+      body: data ? JSON.stringify(data) : undefined,
+      headers: options.headers,
+      timeout: options.timeout
+    });
+  }
+
+  async delete<T = any>(
+    url: string,
+    options: ApiOptions = {}
+  ): Promise<ApiResponse<T>> {
+    return this.request<T>(url, {
+      method: 'DELETE',
+      headers: options.headers,
+      timeout: options.timeout
+    });
+  }
+
+  async uploadFile<T = any>(
+    url: string,
+    file: File,
+    fieldName: string = 'file',
+    additionalData: Record<string, any> = {},
+    options: ApiOptions = {},
+    progressCallback?: (progress: number) => void
+  ): Promise<ApiResponse<T>> {
+    const formData = new FormData();
+    formData.append(fieldName, file);
+
+    Object.entries(additionalData).forEach(([key, value]) => {
+      formData.append(key, String(value));
+    });
+
+    // プログレスコールバックがある場合はモック実装（実際の実装は拡張APIクライアントで行う）
+    if (progressCallback) {
+      setTimeout(() => progressCallback(50), 500);
+      setTimeout(() => progressCallback(100), 1000);
     }
-  };
-  
-  // Content-Typeを明示的に削除（自動的に設定されるため）
-  if (customOptions.headers) {
-    delete customOptions.headers['Content-Type'];
+
+    return this.request<T>(url, {
+      method: 'POST',
+      body: formData,
+      headers: options.headers,
+      timeout: options.timeout
+    });
   }
-  
-  return post<T>(endpoint, formData, customOptions);
+
+  private async request<T = any>(
+    url: string,
+    options: {
+      method: string;
+      body?: any;
+      headers?: Record<string, string>;
+      timeout?: number;
+    } = { method: 'GET' }
+  ): Promise<ApiResponse<T>> {
+    try {
+      // URLの先頭にベースURLがない場合は追加
+      const fullUrl = url.startsWith('http') ? url : `${API_BASE_URL}${url}`;
+
+      // ヘッダーにContent-Typeを設定（フォームデータの場合は設定しない）
+      const headers: HeadersInit = {
+        ...options.headers,
+      };
+
+      if (
+        options.body &&
+        !(options.body instanceof FormData) &&
+        !headers['Content-Type']
+      ) {
+        headers['Content-Type'] = 'application/json';
+      }
+
+      // AbortController for timeout
+      const controller = new AbortController();
+      let timeoutId: NodeJS.Timeout | null = null;
+      
+      if (options.timeout) {
+        timeoutId = setTimeout(() => controller.abort(), options.timeout);
+      }
+
+      const mergedOptions: RequestInit = {
+        method: options.method,
+        headers,
+        body: options.body,
+        signal: controller.signal
+      };
+
+      const response = await fetch(fullUrl, mergedOptions);
+      
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+
+      // レスポンスヘッダー
+      const responseHeaders = response.headers;
+      const contentType = responseHeaders.get('content-type') || '';
+
+      // レスポンスボディの取得
+      let data;
+      if (contentType.includes('application/json')) {
+        data = await response.json();
+      } else if (contentType.includes('text/')) {
+        data = await response.text();
+      } else {
+        // バイナリデータなど
+        data = await response.blob();
+      }
+
+      // 成功レスポンスの処理
+      if (response.ok) {
+        return {
+          success: true,
+          data,
+          status: response.status,
+          headers: responseHeaders,
+        };
+      }
+
+      // エラーレスポンスの処理
+      let errorData = {
+        code: 'UNKNOWN_ERROR',
+        message: 'An unknown error occurred',
+      };
+
+      if (typeof data === 'object' && data !== null) {
+        errorData = {
+          ...errorData,
+          ...data,
+        };
+      }
+
+      return {
+        success: false,
+        error: errorData,
+        status: response.status,
+        headers: responseHeaders,
+      };
+    } catch (error) {
+      console.error('API request error:', error);
+
+      // AbortControllerによるタイムアウトの場合
+      if (error instanceof DOMException && error.name === 'AbortError') {
+        return {
+          success: false,
+          error: {
+            code: 'TIMEOUT',
+            message: 'Request timed out',
+          },
+          status: 0,
+          headers: new Headers(),
+        };
+      }
+
+      return {
+        success: false,
+        error: {
+          code: 'NETWORK_ERROR',
+          message: error instanceof Error ? error.message : 'Network error',
+          details: error,
+        },
+        status: 0,
+        headers: new Headers(),
+      };
+    }
+  }
 }
 
 /**
- * API接続のヘルスチェック
+ * APIリクエストをログ出力（開発環境のみ）
  */
-export async function healthCheck(): Promise<boolean> {
-  try {
-    const response = await get('/health');
-    return response.success;
-  } catch (error) {
-    return false;
-  }
-}
-
-/**
- * デバッグログ出力
- */
-export function logApiRequest(method: string, endpoint: string, data?: any): void {
-  if (!isProduction()) {
-    console.group(`API Request: ${method} ${endpoint}`);
-    if (data) console.log('Request Data:', data);
+export function logApiRequest(method: string, url: string, data?: any): void {
+  if (process.env.NODE_ENV === 'development' || process.env.DEBUG === 'true') {
+    console.groupCollapsed(`🚀 API Request: ${method} ${url}`);
+    console.log('URL:', url);
+    console.log('Method:', method);
+    if (data) console.log('Data:', data);
     console.groupEnd();
   }
 }
 
 /**
- * デバッグレスポンスログ出力
+ * APIレスポンスをログ出力（開発環境のみ）
  */
-export function logApiResponse<T>(method: string, endpoint: string, response: ApiResponse<T>): void {
-  if (!isProduction()) {
-    console.group(`API Response: ${method} ${endpoint}`);
+export function logApiResponse<T = any>(
+  method: string,
+  url: string,
+  response: ApiResponse<T>
+): void {
+  if (process.env.NODE_ENV === 'development' || process.env.DEBUG === 'true') {
+    if (response.success) {
+      console.groupCollapsed(`✅ API Response: ${method} ${url}`);
+    } else {
+      console.groupCollapsed(`❌ API Error: ${method} ${url}`);
+    }
+    console.log('Status:', response.status);
     console.log('Success:', response.success);
-    if (response.data) console.log('Response Data:', response.data);
-    if (response.error) console.error('Error:', response.error);
+    if (response.data) console.log('Data:', response.data);
+    if (response.error) console.log('Error:', response.error);
     console.groupEnd();
   }
 }
 
-export default {
-  get,
-  post,
-  put,
-  patch,
-  delete: del,
-  uploadFile,
-  healthCheck
-};
+// APIクライアントのシングルトンインスタンス
+const api = new SimpleApiClient();
+
+export default api;

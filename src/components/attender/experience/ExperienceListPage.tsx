@@ -211,7 +211,7 @@ const ExperienceListPage: React.FC = () => {
                       <ul className="py-1">
                         <li>
                           <button
-                            onClick={() => handleEditExperience(experience.id)}
+                            onClick={() => experience.id && handleEditExperience(experience.id)}
                             className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
                           >
                             <Edit size={14} className="mr-2" />
@@ -220,7 +220,7 @@ const ExperienceListPage: React.FC = () => {
                         </li>
                         <li>
                           <button
-                            onClick={() => handleDeleteExperience(experience.id)}
+                            onClick={() => experience.id && handleDeleteExperience(experience.id)}
                             className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100 flex items-center"
                           >
                             <Trash size={14} className="mr-2" />
@@ -236,7 +236,7 @@ const ExperienceListPage: React.FC = () => {
               <div className="p-4">
                 <h3 
                   className="text-lg font-bold mb-2 cursor-pointer hover:text-blue-600"
-                  onClick={() => handleViewExperience(experience.id)}
+                  onClick={() => experience.id && handleViewExperience(experience.id)}
                 >
                   {experience.title}
                 </h3>

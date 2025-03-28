@@ -1,115 +1,132 @@
 /**
- * APIエンドポイントの定義
+ * API設定
  * 
- * すべてのAPIエンドポイントをここで一元管理します。
- * これにより、エンドポイントの変更が必要な場合に一箇所だけを修正すれば良くなります。
+ * APIエンドポイントURLとその他の設定
  */
 
-// APIのベースURL（環境に応じて変更）
-export const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'https://api.echo-app.jp/v1';
+// API基本URL
+export const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'https://api.echo-app.jp';
 
-// 各種エンドポイント
+// 開発環境では固定のモックAPIを使用
+export const DEVELOPMENT_API_URL = 'http://localhost:3001';
+
+// 環境変数を基にしたAPIベースURL
+export const getApiBaseUrl = (): string => {
+  // 開発環境ではモックAPIを使用
+  if (process.env.NODE_ENV === 'development') {
+    return DEVELOPMENT_API_URL;
+  }
+  
+  return API_BASE_URL;
+};
+
+// APIバージョン
+export const API_VERSION = 'v1';
+
+// APIエンドポイント一覧
 export const ENDPOINTS = {
   // 認証関連
   AUTH: {
-    LOGIN: `${API_BASE_URL}/auth/login`,
-    REGISTER: `${API_BASE_URL}/auth/register`,
-    LOGOUT: `${API_BASE_URL}/auth/logout`,
-    REFRESH_TOKEN: `${API_BASE_URL}/auth/refresh`,
-    RESET_PASSWORD: `${API_BASE_URL}/auth/reset-password`,
-    VERIFY_EMAIL: `${API_BASE_URL}/auth/verify-email`,
+    LOGIN: `${getApiBaseUrl()}/api/${API_VERSION}/auth/login`,
+    LOGOUT: `${getApiBaseUrl()}/api/${API_VERSION}/auth/logout`,
+    REGISTER: `${getApiBaseUrl()}/api/${API_VERSION}/auth/register`,
+    VERIFY_EMAIL: `${getApiBaseUrl()}/api/${API_VERSION}/auth/verify-email`,
+    RESET_PASSWORD: `${getApiBaseUrl()}/api/${API_VERSION}/auth/reset-password`,
+    REFRESH_TOKEN: `${getApiBaseUrl()}/api/${API_VERSION}/auth/refresh-token`,
   },
   
   // ユーザー関連
   USER: {
-    PROFILE: `${API_BASE_URL}/users/profile`,
-    UPDATE_PROFILE: `${API_BASE_URL}/users/profile`,
-    PREFERENCES: `${API_BASE_URL}/users/preferences`,
-    NOTIFICATIONS: `${API_BASE_URL}/users/notifications`,
+    PROFILE: `${getApiBaseUrl()}/api/${API_VERSION}/users/profile`,
+    UPDATE_PROFILE: `${getApiBaseUrl()}/api/${API_VERSION}/users/profile`,
+    NOTIFICATIONS: `${getApiBaseUrl()}/api/${API_VERSION}/users/notifications`,
+    PREFERENCES: `${getApiBaseUrl()}/api/${API_VERSION}/users/preferences`,
   },
   
   // アテンダー関連
   ATTENDER: {
-    LIST: `${API_BASE_URL}/attenders`,
-    DETAIL: (attenderId: string) => `${API_BASE_URL}/attenders/${attenderId}`,
-    APPLICATION: `${API_BASE_URL}/attenders/application`,
-    SAVE_DRAFT: `${API_BASE_URL}/attenders/draft`,
-    FILTER: `${API_BASE_URL}/attenders/filter`,
-    UPDATE_PROFILE: (attenderId: string) => `${API_BASE_URL}/attenders/${attenderId}/profile`,
-    UPDATE_AVAILABILITY: (attenderId: string) => `${API_BASE_URL}/attenders/${attenderId}/availability`,
-    ADD_PORTFOLIO: (attenderId: string) => `${API_BASE_URL}/attenders/${attenderId}/portfolio`,
+    LIST: `${getApiBaseUrl()}/api/${API_VERSION}/attenders`,
+    DETAIL: (id: string) => `${getApiBaseUrl()}/api/${API_VERSION}/attenders/${id}`,
+    CREATE: `${getApiBaseUrl()}/api/${API_VERSION}/attenders`,
+    UPDATE: (id: string) => `${getApiBaseUrl()}/api/${API_VERSION}/attenders/${id}`,
+    EXPERIENCES: (id: string) => `${getApiBaseUrl()}/api/${API_VERSION}/attenders/${id}/experiences`,
   },
   
   // 体験関連
   EXPERIENCE: {
-    LIST: `${API_BASE_URL}/experiences`,
-    DETAIL: (experienceId: string) => `${API_BASE_URL}/experiences/${experienceId}`,
-    CREATE: `${API_BASE_URL}/experiences`,
-    UPDATE: (experienceId: string) => `${API_BASE_URL}/experiences/${experienceId}`,
-    DELETE: (experienceId: string) => `${API_BASE_URL}/experiences/${experienceId}`,
-    SEARCH: `${API_BASE_URL}/experiences/search`,
-    CATEGORIES: `${API_BASE_URL}/experiences/categories`,
+    LIST: `${getApiBaseUrl()}/api/${API_VERSION}/experiences`,
+    DETAIL: (id: string) => `${getApiBaseUrl()}/api/${API_VERSION}/experiences/${id}`,
+    CREATE: `${getApiBaseUrl()}/api/${API_VERSION}/experiences`,
+    UPDATE: (id: string) => `${getApiBaseUrl()}/api/${API_VERSION}/experiences/${id}`,
+    DELETE: (id: string) => `${getApiBaseUrl()}/api/${API_VERSION}/experiences/${id}`,
+    AVAILABILITY: (id: string) => `${getApiBaseUrl()}/api/${API_VERSION}/experiences/${id}/availability`,
   },
   
   // 予約関連
   BOOKING: {
-    CREATE: `${API_BASE_URL}/bookings`,
-    LIST: `${API_BASE_URL}/bookings`,
-    DETAIL: (bookingId: string) => `${API_BASE_URL}/bookings/${bookingId}`,
-    CANCEL: (bookingId: string) => `${API_BASE_URL}/bookings/${bookingId}/cancel`,
-    CONFIRM: (bookingId: string) => `${API_BASE_URL}/bookings/${bookingId}/confirm`,
+    LIST: `${getApiBaseUrl()}/api/${API_VERSION}/bookings`,
+    DETAIL: (id: string) => `${getApiBaseUrl()}/api/${API_VERSION}/bookings/${id}`,
+    CREATE: `${getApiBaseUrl()}/api/${API_VERSION}/bookings`,
+    CANCEL: (id: string) => `${getApiBaseUrl()}/api/${API_VERSION}/bookings/${id}/cancel`,
   },
   
   // レビュー関連
   REVIEW: {
-    CREATE: `${API_BASE_URL}/reviews`,
-    LIST: `${API_BASE_URL}/reviews`,
-    DETAIL: (reviewId: string) => `${API_BASE_URL}/reviews/${reviewId}`,
-    UPDATE: (reviewId: string) => `${API_BASE_URL}/reviews/${reviewId}`,
-    DELETE: (reviewId: string) => `${API_BASE_URL}/reviews/${reviewId}`,
+    LIST: `${getApiBaseUrl()}/api/${API_VERSION}/reviews`,
+    DETAIL: (id: string) => `${getApiBaseUrl()}/api/${API_VERSION}/reviews/${id}`,
+    CREATE: `${getApiBaseUrl()}/api/${API_VERSION}/reviews`,
+    UPDATE: (id: string) => `${getApiBaseUrl()}/api/${API_VERSION}/reviews/${id}`,
+    DELETE: (id: string) => `${getApiBaseUrl()}/api/${API_VERSION}/reviews/${id}`,
   },
   
-  // 支払い関連
-  PAYMENT: {
-    METHODS: `${API_BASE_URL}/payments/methods`,
-    ADD_METHOD: `${API_BASE_URL}/payments/methods`,
-    PROCESS: `${API_BASE_URL}/payments/process`,
-    HISTORY: `${API_BASE_URL}/payments/history`,
+  // メッセージ関連
+  MESSAGE: {
+    LIST: `${getApiBaseUrl()}/api/${API_VERSION}/messages`,
+    CONVERSATIONS: `${getApiBaseUrl()}/api/${API_VERSION}/messages/conversations`,
+    CONVERSATION: (id: string) => `${getApiBaseUrl()}/api/${API_VERSION}/messages/conversations/${id}`,
+    SEND: `${getApiBaseUrl()}/api/${API_VERSION}/messages/send`,
   },
   
-  // 商品関連
-  PRODUCT: {
-    LIST: `${API_BASE_URL}/products`,
-    DETAIL: (productId: string) => `${API_BASE_URL}/products/${productId}`,
-    CATEGORIES: `${API_BASE_URL}/products/categories`,
-  },
-  
-  // ファイルアップロード
+  // アップロード関連
   UPLOAD: {
-    IMAGE: `${API_BASE_URL}/uploads/image`,
-    DOCUMENT: `${API_BASE_URL}/uploads/document`,
+    IMAGE: `${getApiBaseUrl()}/api/${API_VERSION}/uploads/image`,
+    FILE: `${getApiBaseUrl()}/api/${API_VERSION}/uploads/file`,
+    PROFILE_PHOTO: `${getApiBaseUrl()}/api/${API_VERSION}/uploads/profile-photo`,
+  },
+  
+  // 検索関連
+  SEARCH: {
+    ATTENDERS: `${getApiBaseUrl()}/api/${API_VERSION}/search/attenders`,
+    EXPERIENCES: `${getApiBaseUrl()}/api/${API_VERSION}/search/experiences`,
   },
   
   // 通知関連
   NOTIFICATION: {
-    LIST: `${API_BASE_URL}/notifications`,
-    MARK_READ: (notificationId: string) => `${API_BASE_URL}/notifications/${notificationId}/read`,
-    SETTINGS: `${API_BASE_URL}/notifications/settings`,
+    LIST: `${getApiBaseUrl()}/api/${API_VERSION}/notifications`,
+    READ: (id: string) => `${getApiBaseUrl()}/api/${API_VERSION}/notifications/${id}/read`,
+    SETTINGS: `${getApiBaseUrl()}/api/${API_VERSION}/notifications/settings`,
   },
   
-  // チャット関連
-  CHAT: {
-    CONVERSATIONS: `${API_BASE_URL}/chats`,
-    MESSAGES: (conversationId: string) => `${API_BASE_URL}/chats/${conversationId}/messages`,
-    SEND: (conversationId: string) => `${API_BASE_URL}/chats/${conversationId}/messages`,
-  },
-  
-  // ヘルプ・サポート
-  SUPPORT: {
-    FAQ: `${API_BASE_URL}/support/faq`,
-    CONTACT: `${API_BASE_URL}/support/contact`,
-    CATEGORIES: `${API_BASE_URL}/support/categories`,
+  // 支払い関連
+  PAYMENT: {
+    METHODS: `${getApiBaseUrl()}/api/${API_VERSION}/payments/methods`,
+    ADD_METHOD: `${getApiBaseUrl()}/api/${API_VERSION}/payments/methods/add`,
+    PROCESS: `${getApiBaseUrl()}/api/${API_VERSION}/payments/process`,
+    HISTORY: `${getApiBaseUrl()}/api/${API_VERSION}/payments/history`,
   },
 };
 
-export default ENDPOINTS;
+// リクエストタイムアウト設定（ミリ秒）
+export const REQUEST_TIMEOUT = 30000; // 30秒
+
+// ページネーション設定
+export const DEFAULT_PAGE_SIZE = 10;
+
+// API設定をエクスポート
+export default {
+  API_BASE_URL,
+  API_VERSION,
+  ENDPOINTS,
+  REQUEST_TIMEOUT,
+  DEFAULT_PAGE_SIZE,
+};

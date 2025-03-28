@@ -114,7 +114,7 @@ export const hashData = async (data: string): Promise<string> => {
 export const obfuscateData = (data: string, salt: string): string => {
   // 単純な可逆的難読化（XORベース）
   // 注：これは真のセキュリティ対策ではなく、単なる難読化です
-  const result = [];
+  const result: string[] = [];
   for (let i = 0; i < data.length; i++) {
     const charCode = data.charCodeAt(i) ^ salt.charCodeAt(i % salt.length);
     result.push(String.fromCharCode(charCode));
@@ -130,7 +130,7 @@ export const obfuscateData = (data: string, salt: string): string => {
  */
 export const deobfuscateData = (obfuscatedData: string, salt: string): string => {
   const data = atob(obfuscatedData);
-  const result = [];
+  const result: string[] = [];
   for (let i = 0; i < data.length; i++) {
     const charCode = data.charCodeAt(i) ^ salt.charCodeAt(i % salt.length);
     result.push(String.fromCharCode(charCode));

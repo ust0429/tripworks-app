@@ -1,0 +1,54 @@
+/**
+ * 専門分野と言語ステップ
+ * 
+ * アテンダー申請フォームの専門分野と言語を入力するステップ
+ */
+import React, { useState } from 'react';
+import { useAttenderApplication } from '../../../../contexts/AttenderApplicationContext';
+import { ExpertiseArea, LanguageSkill } from '../../../../types/attender/index';
+
+interface ExpertiseStepProps {
+  onNext: () => void;
+  onBack: () => void;
+}
+
+// ExpertiseAreaを拡張した型を定義
+interface EnhancedExpertiseArea extends ExpertiseArea {
+  certifications?: string[];
+}
+
+const ExpertiseStep: React.FC<ExpertiseStepProps> = ({ onNext, onBack }) => {
+  const { 
+    formData, 
+    updateFormData, 
+    addExpertise,
+    updateExpertise,
+    removeExpertise,
+    errors, 
+    clearError,
+    updateSocialMediaLinks 
+  } = useAttenderApplication();
+  
+  // カテゴリリスト（実際の実装ではより多くのカテゴリが必要）
+  const categories = [
+    '伝統工芸',
+    '音楽',
+    'アート',
+    '料理',
+    'アウトドア',
+    '歴史',
+    '寺社仏閣',
+    'サブカルチャー',
+    'ファッション',
+    '建築',
+    '自然',
+    'ローカルフード',
+    'ナイトライフ',
+    'スポーツ',
+    'テクノロジー',
+    'その他'
+  ];
+  
+  // サブカテゴリ（実際の実装ではカテゴリに紐づいたサブカテゴリが必要）
+  const getSubcategories = (category: string): string[] => {
+    switch (category) {

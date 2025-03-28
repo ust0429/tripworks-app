@@ -49,8 +49,10 @@ const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
     if (!isEditing) return;
 
     const defaultSlot: AvailabilityTimeSlot = {
+      dayOfWeek: dayOfWeek,
       startTime: '10:00',
-      endTime: '18:00'
+      endTime: '18:00',
+      isAvailable: true
     };
 
     const updatedAvailability = localAvailability.map(day => {

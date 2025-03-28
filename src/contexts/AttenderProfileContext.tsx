@@ -15,14 +15,23 @@ const initialState: ProfileContextState = {
 };
 
 // アクションの型定義
+// ExperienceSample型を利用するためにインポートが必要
+import { ExperienceSample } from '../types/attender/index';
+
+// 型が渡された際に変換を行うアダプター関数
+const convertExperienceSample = (sample: any): any => {
+  // 型の変換が必要な場合はここで行う
+  return sample as any;
+};
+
 type ProfileAction =
   | { type: 'SET_PROFILE'; payload: AttenderProfile }
   | { type: 'SET_LOADING_STATE'; payload: ProfileContextState['loadingState'] }
   | { type: 'SET_ERROR'; payload: string | null }
   | { type: 'SET_EDIT_MODE'; payload: ProfileEditMode }
   | { type: 'UPDATE_PROFILE_FIELD'; payload: ProfileUpdateOperation }
-  | { type: 'ADD_EXPERIENCE_SAMPLE'; payload: AttenderProfile['experienceSamples'][0] }
-  | { type: 'UPDATE_EXPERIENCE_SAMPLE'; payload: { id: string; data: Partial<AttenderProfile['experienceSamples'][0]> } }
+  | { type: 'ADD_EXPERIENCE_SAMPLE'; payload: ExperienceSample }
+  | { type: 'UPDATE_EXPERIENCE_SAMPLE'; payload: { id: string; data: Partial<ExperienceSample> } }
   | { type: 'REMOVE_EXPERIENCE_SAMPLE'; payload: string }
   | { type: 'UPDATE_AVAILABILITY'; payload: AttenderProfile['availability'] };
 
@@ -33,8 +42,8 @@ interface ProfileContextValue extends ProfileContextState {
   setError: (error: string | null) => void;
   setEditMode: (mode: ProfileEditMode) => void;
   updateProfileField: (operation: ProfileUpdateOperation) => void;
-  addExperienceSample: (sample: AttenderProfile['experienceSamples'][0]) => void;
-  updateExperienceSample: (id: string, data: Partial<AttenderProfile['experienceSamples'][0]>) => void;
+  addExperienceSample: (sample: ExperienceSample) => void;
+  updateExperienceSample: (id: string, data: Partial<ExperienceSample>) => void;
   removeExperienceSample: (id: string) => void;
   updateAvailability: (availability: AttenderProfile['availability']) => void;
 }
@@ -73,7 +82,7 @@ const profileReducer = (state: ProfileContextState, action: ProfileAction): Prof
         ...state,
         profile: {
           ...state.profile,
-          experienceSamples: [...state.profile.experienceSamples, action.payload]
+          experienceSamples: [...(state.profile.experienceSamples || []), convertExperienceSample(action.payload)]
         }
       };
     
@@ -83,9 +92,9 @@ const profileReducer = (state: ProfileContextState, action: ProfileAction): Prof
         ...state,
         profile: {
           ...state.profile,
-          experienceSamples: state.profile.experienceSamples.map(sample => 
+          experienceSamples: (state.profile.experienceSamples || []).map(sample => 
             sample.id === action.payload.id 
-              ? { ...sample, ...action.payload.data } 
+              ? { ...sample, ...convertExperienceSample(action.payload.data) } 
               : sample
           )
         }
@@ -97,7 +106,7 @@ const profileReducer = (state: ProfileContextState, action: ProfileAction): Prof
         ...state,
         profile: {
           ...state.profile,
-          experienceSamples: state.profile.experienceSamples.filter(
+          experienceSamples: (state.profile.experienceSamples || []).filter(
             sample => sample.id !== action.payload
           )
         }
@@ -142,16 +151,19 @@ export const AttenderProfileProvider: React.FC<ProfileProviderProps> = ({ childr
   const updateProfileField = (operation: ProfileUpdateOperation) => 
     dispatch({ type: 'UPDATE_PROFILE_FIELD', payload: operation });
   
-  const addExperienceSample = (sample: AttenderProfile['experienceSamples'][0]) => 
-    dispatch({ type: 'ADD_EXPERIENCE_SAMPLE', payload: sample });
+  const addExperienceSample = (sample: ExperienceSample) => {
+    dispatch({ type: 'ADD_EXPERIENCE_SAMPLE', payload: convertExperienceSample(sample) });
+  };
   
   const updateExperienceSample = (
     id: string, 
-    data: Partial<AttenderProfile['experienceSamples'][0]>
-  ) => dispatch({ 
-    type: 'UPDATE_EXPERIENCE_SAMPLE', 
-    payload: { id, data } 
-  });
+    data: Partial<ExperienceSample>
+  ) => {
+    dispatch({ 
+      type: 'UPDATE_EXPERIENCE_SAMPLE', 
+      payload: { id, data: convertExperienceSample(data) } 
+    });
+  };
   
   const removeExperienceSample = (id: string) => 
     dispatch({ type: 'REMOVE_EXPERIENCE_SAMPLE', payload: id });

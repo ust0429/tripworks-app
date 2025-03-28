@@ -186,7 +186,7 @@ const ExperienceSamplesStep: React.FC<ExperienceSamplesStepProps> = ({ onNext, o
       errors.maxParticipants = '最大参加人数は1人以上に設定してください';
     }
     
-    if (newSample.pricePerPerson < 0) {
+    if ((newSample.pricePerPerson ?? 0) < 0) {
       errors.pricePerPerson = '料金は0円以上に設定してください';
     }
     
@@ -257,7 +257,8 @@ const ExperienceSamplesStep: React.FC<ExperienceSamplesStepProps> = ({ onNext, o
   };
   
   // 価格表示のフォーマット
-  const formatPrice = (price: number): string => {
+  const formatPrice = (price: number | undefined): string => {
+    if (price === undefined) return '0円';
     return price.toLocaleString('ja-JP') + '円';
   };
   

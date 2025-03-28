@@ -26,7 +26,7 @@ const ConnectionStatusIndicator: React.FC<ConnectionStatusIndicatorProps> = ({ c
 
   // 状態に応じてメッセージとスタイルを設定
   let message = '';
-  let icon = null;
+  let icon: React.ReactNode = null;
   let bgColor = '';
   let textColor = '';
 

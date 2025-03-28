@@ -2,7 +2,8 @@
  * アテンダー申請に関する定数
  */
 
-export type FormStatusType = 'required' | 'optional' | 'completed';
+// FormStatusTypeをtypes/attender/index.tsの定義を使用
+export type FormStatusType = 'required' | 'completed' | 'pending' | 'rejected' | 'draft' | 'review' | 'approved' | 'optional';
 
 // 必須ステップと任意ステップの区分
 export const REQUIRED_STEPS = ['BasicInfo', 'Identification', 'Agreements'];

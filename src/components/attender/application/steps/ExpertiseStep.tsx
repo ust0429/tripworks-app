@@ -80,7 +80,7 @@ const ExpertiseStep: React.FC<ExpertiseStepProps> = ({ onNext, onBack }) => {
   type LanguageCode = string;
   
   // 新規専門分野の状態
-  const [newExpertise, setNewExpertise] = useState<ExpertiseArea>({
+  const [newExpertise, setNewExpertise] = useState<ExpertiseArea & { certifications?: string[] }>({
     category: '',
     subcategories: [],
     yearsOfExperience: 0,
@@ -114,9 +114,11 @@ const ExpertiseStep: React.FC<ExpertiseStepProps> = ({ onNext, onBack }) => {
     const { value, checked } = e.target;
     
     setNewExpertise(prev => {
+      // subcategoriesが存在しない場合は空配列を使用
+      const currentSubcategories = prev.subcategories || [];
       const updatedSubcategories = checked
-        ? [...prev.subcategories, value]
-        : prev.subcategories.filter(item => item !== value);
+        ? [...currentSubcategories, value]
+        : currentSubcategories.filter(item => item !== value);
       
       return {
         ...prev,
@@ -151,8 +153,9 @@ const ExpertiseStep: React.FC<ExpertiseStepProps> = ({ onNext, onBack }) => {
   // 専門分野の追加ハンドラ
   const handleAddExpertise = () => {
     if (
-      newExpertise.category &&
-      newExpertise.subcategories.length > 0 &&
+    newExpertise.category &&
+    newExpertise.subcategories && 
+    newExpertise.subcategories.length > 0 &&
       newExpertise.description
     ) {
       addExpertise(newExpertise);
@@ -310,10 +313,10 @@ const ExpertiseStep: React.FC<ExpertiseStepProps> = ({ onNext, onBack }) => {
         </p>
         
         {/* 登録済み専門知識のリスト */}
-        {(formData.expertise || []).length > 0 && (
+        {Array.isArray(formData.expertise) && formData.expertise.length > 0 && (
           <div className="mb-6 space-y-4">
             <h4 className="text-md font-medium text-gray-700">登録済み専門知識</h4>
-            {(formData.expertise || []).map((expertise, index) => (
+            {Array.isArray(formData.expertise) && formData.expertise.map((expertise, index) => (
               <div key={index} className="bg-gray-50 p-4 rounded-md relative">
                 <div className="absolute top-2 right-2 flex space-x-2">
                   <button
@@ -337,7 +340,7 @@ const ExpertiseStep: React.FC<ExpertiseStepProps> = ({ onNext, onBack }) => {
                 </div>
                 <p className="font-semibold">{expertise.category}</p>
                 <p className="text-sm text-gray-600">
-                  {expertise.subcategories.join(', ')}
+                  {expertise.subcategories ? expertise.subcategories.join(', ') : ''}
                 </p>
                 <p className="text-sm">
                   <span className="font-medium">経験年数:</span> {expertise.yearsOfExperience}年
@@ -396,7 +399,7 @@ const ExpertiseStep: React.FC<ExpertiseStepProps> = ({ onNext, onBack }) => {
                         name="subcategories"
                         type="checkbox"
                         value={subcategory}
-                        checked={newExpertise.subcategories.includes(subcategory)}
+                        checked={newExpertise.subcategories ? newExpertise.subcategories.includes(subcategory) : false}
                         onChange={handleSubcategoryChange}
                         className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
                       />
@@ -498,7 +501,7 @@ const ExpertiseStep: React.FC<ExpertiseStepProps> = ({ onNext, onBack }) => {
             <button
               type="button"
               onClick={handleAddExpertise}
-              disabled={!newExpertise.category || newExpertise.subcategories.length === 0 || !newExpertise.description}
+              disabled={!newExpertise.category || !newExpertise.subcategories || newExpertise.subcategories.length === 0 || !newExpertise.description}
               className="w-full px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:bg-blue-300 disabled:cursor-not-allowed"
             >
               専門知識を追加
@@ -646,7 +649,7 @@ const ExpertiseStep: React.FC<ExpertiseStepProps> = ({ onNext, onBack }) => {
           type="button"
           onClick={onNext}
           className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-          disabled={!formData.specialties?.length || !formData.languages?.length || !formData.expertise?.length}
+          disabled={!formData.specialties?.length || !formData.languages?.length || !Array.isArray(formData.expertise) || formData.expertise.length === 0}
         >
           次へ
         </button>

@@ -125,9 +125,9 @@ const TipForm: React.FC<TipFormProps> = ({ attender, bookingId, onSubmit, option
     <div className="p-6 bg-white rounded-lg shadow-sm border border-gray-200">
       <div className="flex items-center mb-6">
         <div className="flex-shrink-0 mr-4">
-          {attender.profileImage ? (
+          {attender.imageUrl ? (
             <img
-              src={attender.profileImage}
+              src={attender.imageUrl}
               alt={attender.name}
               className="w-16 h-16 rounded-full object-cover"
             />

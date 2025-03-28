@@ -1,132 +1,206 @@
 /**
- * アテンダー関連の型定義
+ * アテンダー型定義ファイル
  */
 
-// アテンダー基本情報
-export interface Attender {
-  id: string;
-  userId: string;
+// UUID型定義（IDとして使用する文字列）
+export type UUID = string;
+
+// アテンダー基本プロフィール情報
+export interface AttenderBasic {
+  id: UUID;
   name: string;
   profileImage?: string;
-  backgroundImage?: string;
-  email: string;
-  phoneNumber: string;
-  location: {
-    country: string;
-    region: string;
-    city: string;
-  };
-  biography: string;
+  location: string;
   specialties: string[];
-  languages: LanguageSkill[];
-  experiences: string[]; // 提供可能な体験IDのリスト
-  averageRating: number;
+  rating: number;
   reviewCount: number;
-  verificationStatus: VerificationStatus;
-  registrationDate: string; // ISO形式の日付文字列
-  lastActiveDate: string; // ISO形式の日付文字列
-  status: AttenderStatus;
-  responseRate: number; // 返信率（0-100%）
-  responseTime: number; // 平均返信時間（分）
-  cancellationRate: number; // キャンセル率（0-100%）
-  completedExperienceCount: number; // 完了した体験数
-  earnings: {
-    total: number;
-    lastMonth: number;
-  };
-  availableTimes: AvailabilityTimeSlot[];
-  backgroundCheck: BackgroundCheckStatus;
-  identityVerified: boolean;
-  isLocalResident: boolean; // 地元住民かどうか
-  isMigrant: boolean; // 移住者かどうか
-  yearsMoved?: number; // 移住してからの年数
-  previousLocation?: string; // 以前の居住地
-  expertise: ExpertiseArea[];
-  socialMediaLinks?: SocialMediaLinks;
-  portfolio?: PortfolioItem[];
 }
 
-// アテンダーステータス
-export type AttenderStatus = 
-  | 'active' // 活動中
-  | 'inactive' // 一時的に非アクティブ
-  | 'pending_review' // 審査待ち
-  | 'suspended' // 停止中
-  | 'banned'; // 永久停止
-
-// 認証ステータス
-export type VerificationStatus = 
-  | 'unverified' // 未認証
-  | 'pending' // 審査中
-  | 'verified' // 認証済み
-  | 'rejected'; // 拒否
-
-// バックグラウンドチェックステータス
-export type BackgroundCheckStatus = 
-  | 'not_submitted' // 未提出
-  | 'pending' // 審査中
-  | 'passed' // 合格
-  | 'failed'; // 不合格
-
-// 身分証明書の型定義
-export interface IdentificationDocument {
-  type: 'passport' | 'driver_license' | 'id_card' | 'residence_card' | 'other';
-  number: string;
-  expirationDate: string;
-  frontImageUrl: string;
-  backImageUrl?: string;
+// アテンダー検索パラメータ
+export interface AttenderSearchParams {
+  query?: string;
+  location?: string;
+  specialties?: string[];
+  minRating?: number;
+  isLocalResident?: boolean;
+  isMigrant?: boolean;
+  page?: number;
+  limit?: number;
 }
 
-// 利用可能時間枠
+// アテンダー検索結果
+export interface AttenderSearchResult {
+  attenders: AttenderBasic[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
+/**
+ * 言語スキル
+ */
+export interface LanguageSkill {
+  language: string;
+  proficiency: 'beginner' | 'intermediate' | 'advanced' | 'native';
+}
+
+/**
+ * 専門分野
+ */
+export interface ExpertiseArea {
+  category: string;
+  subcategories?: string[];
+  yearsOfExperience?: number;
+  description?: string;
+}
+
+/**
+ * 専門知識データ
+ */
+export interface ExpertiseData {
+  specialties: string[];
+  expertiseAreas: ExpertiseArea[];
+  languages: LanguageSkill[];
+  background?: string;
+  education?: string[];
+  certificates?: string[];
+}
+
+/**
+ * 体験サンプル
+ */
+export interface ExperienceSample {
+  id?: string;
+  title: string;
+  description: string;
+  category: string;
+  subcategory?: string;
+  estimatedDuration: number;
+  price?: number;
+  pricePerPerson?: number;
+  maxParticipants?: number;
+  images?: string[];
+  imageUrl?: string;
+  imageUrls?: string[];
+  location?: string;
+  duration?: number;
+  categories?: string[];
+  includesFood?: boolean;
+  includesTransportation?: boolean;
+  cancellationPolicy?: 'flexible' | 'moderate' | 'strict';
+  specialRequirements?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+/**
+ * 利用可能時間枠
+ */
 export interface AvailabilityTimeSlot {
-  dayOfWeek: 0 | 1 | 2 | 3 | 4 | 5 | 6; // 0: 日曜, 1: 月曜, ...
-  startTime: string; // 24時間形式 "HH:MM"
-  endTime: string; // 24時間形式 "HH:MM"
+  dayOfWeek: number; // 0 = 日曜, 1 = 月曜, ...
+  startTime: string; // HH:MM 形式
+  endTime: string;   // HH:MM 形式
   isAvailable: boolean;
 }
 
-// 専門分野
-export interface ExpertiseArea {
-  category: string;
-  subcategories: string[];
-  yearsOfExperience: number;
-  description: string;
-  certifications?: string[];
+/**
+ * 日次の利用可能時間
+ */
+export interface DailyAvailability {
+  dayOfWeek: number;
+  isAvailable: boolean;
+  timeSlots: AvailabilityTimeSlot[];
 }
 
-// SNSリンク
+/**
+ * 本人確認書類
+ */
+export interface IdentificationDocument {
+  type: 'passport' | 'driver_license' | 'id_card' | 'residence_card' | 'other';
+  number: string;
+  documentNumber?: string;
+  expirationDate: string;
+  expiryDate?: string;
+  frontImageUrl?: string;
+  backImageUrl?: string;
+  verified?: boolean;
+  verificationDate?: string;
+  status?: 'pending' | 'verified' | 'rejected';
+  rejectionReason?: string;
+}
+
+/**
+ * 追加書類
+ */
+export interface AdditionalDocument {
+  type: string;
+  title: string;
+  description?: string;
+  fileUrl: string;
+  uploadDate: string;
+  verified: boolean;
+  verificationDate?: string;
+}
+
+/**
+ * 参照情報（推薦者）
+ */
+export interface Reference {
+  name: string;
+  relationship: string;
+  company?: string;
+  email: string;
+  phone?: string;
+  yearsKnown?: number;
+  message?: string;
+  verified: boolean;
+  verificationDate?: string;
+}
+
+/**
+ * ソーシャルメディアリンク
+ */
 export interface SocialMediaLinks {
   instagram?: string;
   twitter?: string;
-  youtube?: string;
-  tiktok?: string;
   facebook?: string;
+  linkedin?: string;
+  youtube?: string;
   website?: string;
   blog?: string;
+  tiktok?: string;
+  other?: string[];
 }
 
-// ポートフォリオ項目
+/**
+ * ポートフォリオ項目
+ */
 export interface PortfolioItem {
   id: string;
   title: string;
-  description: string;
+  description?: string;
   imageUrls: string[];
+  videoUrls?: string[];
   videoUrl?: string;
   link?: string;
+  linkUrl?: string;
+  type: 'image' | 'video' | 'document' | 'link';
+  createdAt: string;
+  updatedAt: string;
 }
 
-// アテンダー申請フォームの状態
-export type FormStatusType = 'required' | 'optional' | 'completed';
+/**
+ * フォームステータスタイプ
+ */
+export type FormStatusType = 'required' | 'completed' | 'pending' | 'rejected' | 'draft' | 'review' | 'approved' | 'optional';
 
-// アテンダー登録申請フォームデータ
-// 言語スキルの型定義
-export interface LanguageSkill {
-  language: string; // 言語コード（例: 'ja', 'en'）
-  proficiency: 'beginner' | 'intermediate' | 'advanced' | 'native'; // 熟練度
-}
-
+/**
+ * アテンダー申請データ
+ */
 export interface AttenderApplicationData {
-  // 基本情報
+  id?: string;
+  userId?: string;
   name: string;
   email: string;
   phoneNumber: string;
@@ -135,96 +209,78 @@ export interface AttenderApplicationData {
     region: string;
     city: string;
   };
-  
-  // プロフィール情報
   biography: string;
-  specialties: string[];
-  languages: LanguageSkill[]; // 言語スキルの配列
-  
-  // 居住情報
   isLocalResident: boolean;
   isMigrant: boolean;
   yearsMoved?: number;
   previousLocation?: string;
-  
-  // 専門情報
-  expertise: ExpertiseArea[];
-  
-  // 提供可能な体験の概要
-  experienceSamples: ExperienceSample[];
-  
-  // 利用可能時間
+  specialties: string[];
+  languages: LanguageSkill[];
+  expertise: ExpertiseData;
   availableTimes: AvailabilityTimeSlot[];
-  
-  // 身分証明書（任意）
-  identificationDocument?: {    type: 'passport' | 'driver_license' | 'id_card' | 'residence_card' | 'other';
-    number: string;
-    expirationDate: string;
-    frontImageUrl: string;
-    backImageUrl?: string;
-  };
-  
-  // 承諾事項
+  experienceSamples: ExperienceSample[];
+  identificationDocument: IdentificationDocument;
+  additionalDocuments?: AdditionalDocument[];
   agreements: {
     termsOfService: boolean;
     privacyPolicy: boolean;
     codeOfConduct: boolean;
     backgroundCheck: boolean;
   };
-  
-  // 追加情報
   socialMediaLinks?: SocialMediaLinks;
   references?: Reference[];
-  additionalDocuments?: AdditionalDocument[];
-  
-  // フォーム状態
   formStatus?: FormStatusType;
+  applicationDate?: string;
+  updatedAt?: string;
+  reviewNotes?: string;
+  reviewerId?: string;
+  reviewDate?: string;
 }
 
-// 体験サンプル（アテンダー申請時に入力する提供可能な体験の例）
-export interface ExperienceSample {
-  title: string;
-  description: string;
-  category: string;
-  estimatedDuration: number; // 分単位
-  maxParticipants: number;
-  pricePerPerson: number;
-  imageUrls?: string[]; // 画像の配列
-  includesFood: boolean;
-  includesTransportation: boolean;
-  specialRequirements?: string;
-  cancellationPolicy: 'flexible' | 'moderate' | 'strict';
-}
-
-// 推薦者情報
-export interface Reference {
+/**
+ * アテンダープロファイル
+ */
+export interface AttenderProfile {
+  id: string;
   name: string;
-  relationship: string;
-  email: string;
-  phoneNumber?: string;
-  contactInfo?: string;
-  yearsKnown?: number;
-  message?: string;
+  bio: string;
+  location: string;
+  specialties: string[];
+  profileImage?: string;
+  imageUrl?: string;
+  experienceSamples?: ExperienceSample[];
+  languages: LanguageSkill[];
+  isLocalResident: boolean;
+  isMigrant: boolean;
+  yearsMoved?: number;
+  previousLocation?: string;
+  expertise: ExpertiseArea[];
+  availability?: DailyAvailability[];
+  availableTimes?: AvailabilityTimeSlot[];
+  averageRating: number;
+  rating?: number;
+  reviewCount: number;
   verified?: boolean;
+  joinedAt?: string;
+  createdAt: string;
+  lastActive?: string;
+  updatedAt: string;
+  completionScore?: number;
 }
 
-// 追加書類
-export interface AdditionalDocument {
-  type: 'certification' | 'license' | 'insurance' | 'reference_letter' | 'other';
-  title: string;
-  description?: string;
-  fileUrl: string;
-  uploadDate: string;
-}
-
-// アテンダー審査結果
-export interface AttenderVerificationResult {
-  attender: Attender;
-  reviewerId: string;
-  reviewDate: string;
-  status: VerificationStatus;
-  notes?: string;
-  requiredChanges?: string[];
-  verifiedDocuments: string[];
-  rejectionReason?: string;
+/**
+ * アテンダー（認証情報含む）
+ */
+export interface Attender extends AttenderProfile {
+  userId: string;
+  email: string;
+  isActive: boolean;
+  accountStatus: 'pending' | 'active' | 'suspended' | 'inactive';
+  stripeConnectAccountId?: string;
+  paymentVerified: boolean;
+  notificationSettings: {
+    email: boolean;
+    push: boolean;
+    sms: boolean;
+  };
 }

@@ -72,16 +72,14 @@ const ProfileAdapter: React.FC<ProfileAdapterProps> = ({ profile, children }) =>
       }
       
       // 体験サンプルの変換
-      const experiences = profile.experienceSamples.map(sample => ({
-        id: sample.id,
+      const experiences = (profile.experienceSamples || []).map(sample => ({
+        id: sample.id || '',
         title: sample.title,
         description: sample.description,
-        imageUrl: sample.imageUrl || '',
-        duration: sample.duration || 60,
+        imageUrl: sample.images && sample.images.length > 0 ? sample.images[0] : '',
+        duration: sample.estimatedDuration || 60,
         price: sample.price || 0,
-        category: Array.isArray(sample.categories) && sample.categories.length > 0 
-          ? sample.categories[0] 
-          : undefined
+        category: sample.category
       }));
       
       // 変換済みのプロフィールを設定
@@ -99,7 +97,7 @@ const ProfileAdapter: React.FC<ProfileAdapterProps> = ({ profile, children }) =>
         rating: profile.rating || 0,
         reviewCount: profile.reviewCount || 0,
         verified: profile.verified || false,
-        createdAt: new Date(profile.joinedAt),
+        createdAt: profile.joinedAt ? new Date(profile.joinedAt) : new Date(),
         updatedAt: profile.lastActive ? new Date(profile.lastActive) : new Date()
       });
     };

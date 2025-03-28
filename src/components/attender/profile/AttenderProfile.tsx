@@ -91,7 +91,7 @@ const AttenderProfile: React.FC<AttenderProfileProps> = ({ attenderId, renderPro
       const newSample = await AttenderProfileService.addExperienceSample(profile.id, sample);
       
       const updatedProfile = { ...profile };
-      updatedProfile.experienceSamples = [...profile.experienceSamples, newSample];
+      updatedProfile.experienceSamples = profile.experienceSamples ? [...profile.experienceSamples, newSample] : [newSample];
       updatedProfile.completionScore = AttenderProfileService.calculateCompletionScore(updatedProfile);
       updatedProfile.lastActive = new Date().toISOString();
       
@@ -118,9 +118,9 @@ const AttenderProfile: React.FC<AttenderProfileProps> = ({ attenderId, renderPro
       const updatedSample = await AttenderProfileService.updateExperienceSample(profile.id, id, updates);
       
       const updatedProfile = { ...profile };
-      updatedProfile.experienceSamples = profile.experienceSamples.map(s => 
+      updatedProfile.experienceSamples = profile.experienceSamples ? profile.experienceSamples.map(s => 
         s.id === id ? { ...s, ...updatedSample } : s
-      );
+      ) : [];
       updatedProfile.lastActive = new Date().toISOString();
       
       setProfile(updatedProfile);
@@ -143,7 +143,7 @@ const AttenderProfile: React.FC<AttenderProfileProps> = ({ attenderId, renderPro
       await AttenderProfileService.removeExperienceSample(profile.id, id);
       
       const updatedProfile = { ...profile };
-      updatedProfile.experienceSamples = profile.experienceSamples.filter(s => s.id !== id);
+      updatedProfile.experienceSamples = profile.experienceSamples ? profile.experienceSamples.filter(s => s.id !== id) : [];
       updatedProfile.completionScore = AttenderProfileService.calculateCompletionScore(updatedProfile);
       updatedProfile.lastActive = new Date().toISOString();
       
@@ -283,7 +283,7 @@ const AttenderProfile: React.FC<AttenderProfileProps> = ({ attenderId, renderPro
           
           {/* 体験サンプル */}
           <ExperienceSamples
-            samples={profile.experienceSamples}
+            samples={profile.experienceSamples || []}
             isEditing={editMode === 'edit'}
             onAdd={handleAddSample}
             onUpdate={handleUpdateSample}
@@ -294,7 +294,7 @@ const AttenderProfile: React.FC<AttenderProfileProps> = ({ attenderId, renderPro
         <div>
           {/* 利用可能時間 */}
           <AvailabilityCalendar
-            availability={profile.availability}
+            availability={profile.availability || []}
             isEditing={editMode === 'edit'}
             onChange={handleUpdateAvailability}
           />

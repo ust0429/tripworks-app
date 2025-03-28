@@ -35,7 +35,10 @@ const portfolioItem: PortfolioItem = {
   description: '作品の詳細説明',
   imageUrls: ['https://example.com/portfolio1.jpg', 'https://example.com/portfolio2.jpg'],
   videoUrl: 'https://example.com/portfolio-video.mp4',
-  link: 'https://myportfolio.com/sample'
+  link: 'https://myportfolio.com/sample',
+  type: 'image',
+  createdAt: new Date().toISOString(),
+  updatedAt: new Date().toISOString()
 };
 
 // 5. ApplePay関連のテスト

@@ -1,328 +1,651 @@
-import axios from '../mocks/axiosMock';
-import { Review, ReviewSummary } from '../types/review';
-import { UUID } from '../types/attender';
-
-const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:8080/api';
-
-// モック関数を使用するかのフラグ
-const USE_MOCK = process.env.NODE_ENV === 'development';
-
 /**
- * アテンダーのレビュー一覧を取得
+ * レビューサービス
+ * 
+ * レビューの投稿、取得、編集、削除などの機能を提供します。
  */
-export const getAttenderReviews = async (attenderId: UUID): Promise<Review[]> => {
-  if (USE_MOCK) {
-    return mockGetAttenderReviews(attenderId);
-  }
-  
-  const response = await axios.get(`${API_BASE_URL}/attenders/${attenderId}/reviews`);
-  return response.data;
-};
 
-/**
- * アテンダーのレビュー統計を取得
- */
-export const getReviewSummary = async (attenderId: UUID): Promise<ReviewSummary> => {
-  if (USE_MOCK) {
-    return mockGetReviewSummary(attenderId);
-  }
-  
-  const response = await axios.get(`${API_BASE_URL}/attenders/${attenderId}/reviews/summary`);
-  return response.data;
-};
+import { v4 as uuidv4 } from 'uuid';
+import api, { logApiRequest, logApiResponse, ApiOptions } from '../utils/apiClient';
+import enhancedApi from '../utils/apiClientEnhanced';
+import { ENDPOINTS } from '../config/api';
+import { isDevelopment } from '../config/env';
 
-/**
- * レビューに返信
- */
-export const submitReply = async (reviewId: string, replyText: string): Promise<Review> => {
-  if (USE_MOCK) {
-    return mockSubmitReply(reviewId, replyText);
-  }
-  
-  const response = await axios.post(`${API_BASE_URL}/reviews/${reviewId}/reply`, { text: replyText });
-  return response.data;
-};
+// Firebase AuthのインポートとFallback
+let getAuth;
+try {
+  getAuth = require('firebase/auth').getAuth;
+} catch (e) {
+  // Firebaseが利用できない場合はモックを使用
+  getAuth = () => ({
+    currentUser: { uid: 'mock-user-id' }
+  });
+}
 
-/**
- * 体験のレビュー一覧を取得
- */
-export const getExperienceReviews = async (experienceId: string): Promise<Review[]> => {
-  if (USE_MOCK) {
-    return mockGetExperienceReviews(experienceId);
-  }
-  
-  const response = await axios.get(`${API_BASE_URL}/experiences/${experienceId}/reviews`);
-  return response.data;
-};
-
-/**
- * レビュー投稿
- */
-export const submitReview = async (reviewData: {
-  experienceId: string;
-  reservationId: string;
+// レビューの型定義
+export interface Review {
+  id: string;
+  userId: string;
+  attenderId: string;
+  experienceId?: string;
   rating: number;
   comment: string;
   photos?: string[];
-  isAnonymous?: boolean;
-}): Promise<Review> => {
-  if (USE_MOCK) {
-    return mockSubmitReview(reviewData.reservationId, {
-      rating: reviewData.rating,
-      text: reviewData.comment,
-      // ファイルの代わりに文字列のURLを使用
-      photos: reviewData.photos ? [] : undefined
-    });
+  helpfulCount: number;
+  replyCount: number;
+  createdAt: string;
+  updatedAt: string;
+  userDisplayName?: string;
+  userPhotoUrl?: string;
+}
+
+// レビュー作成用データの型定義
+export interface ReviewCreateData {
+  attenderId: string;
+  experienceId?: string;
+  rating: number;
+  comment: string;
+  photos?: string[];
+}
+
+// レビュー統計情報の型定義
+export interface ReviewSummary {
+  averageRating: number;
+  totalReviews: number;
+  ratingCounts: {
+    5: number;
+    4: number;
+    3: number;
+    2: number;
+    1: number;
+  };
+  mostRecent: Review | null;
+}
+
+// モックデータ（開発環境でのみ使用）
+const MOCK_REVIEWS: Record<string, Review> = {
+  'rev_123': {
+    id: 'rev_123',
+    userId: 'user_456',
+    attenderId: 'att_123',
+    experienceId: 'exp_001',
+    rating: 5,
+    comment: '素晴らしい体験でした！アテンダーの方の知識が豊富で、陶芸の奥深さを知ることができました。',
+    photos: ['/images/reviews/review1.jpg', '/images/reviews/review2.jpg'],
+    helpfulCount: 12,
+    replyCount: 1,
+    createdAt: '2025-02-15T10:30:00Z',
+    updatedAt: '2025-02-15T10:30:00Z',
+    userDisplayName: '山田太郎',
+    userPhotoUrl: '/images/users/user_456.jpg'
+  },
+  'rev_124': {
+    id: 'rev_124',
+    userId: 'user_789',
+    attenderId: 'att_123',
+    experienceId: 'exp_001',
+    rating: 4,
+    comment: '良い体験でした。もう少し時間があれば完成度の高い作品ができたかもしれません。',
+    helpfulCount: 5,
+    replyCount: 1,
+    createdAt: '2025-02-20T14:15:00Z',
+    updatedAt: '2025-02-20T14:15:00Z',
+    userDisplayName: '鈴木花子',
+    userPhotoUrl: '/images/users/user_789.jpg'
   }
-  
-  // 画像を含む場合はFormDataを使用
-  const formData = new FormData();
-  formData.append('rating', reviewData.rating.toString());
-  formData.append('text', reviewData.comment);
-  
-  if (reviewData.photos && reviewData.photos.length > 0) {
-    reviewData.photos.forEach((photoUrl, index) => {
-      formData.append(`photoUrls[${index}]`, photoUrl);
-    });
-  }
-  
-  if (reviewData.isAnonymous) {
-    formData.append('isAnonymous', 'true');
-  }
-  
-  const response = await axios.post(
-    `${API_BASE_URL}/experiences/${reviewData.experienceId}/reviews`,
-    formData,
-    {
-      headers: {
-        'Content-Type': 'multipart/form-data'
-      }
-    }
-  );
-  
-  return response.data;
 };
 
-// モック実装
-function mockGetAttenderReviews(attenderId: UUID): Promise<Review[]> {
-  // 現在の日時
-  const now = new Date();
-  
-  // 過去の日付を生成するヘルパー関数
-  const daysAgo = (days: number) => {
-    const date = new Date(now);
-    date.setDate(date.getDate() - days);
-    return date.toISOString();
-  };
-  
-  const mockReviews: Review[] = [
-    {
-      id: 'rev-001',
-      experienceId: 'exp-101',
-      experienceTitle: '路地裏アート探検',
-      bookingId: 'book-101',
-      userId: 'user-001',
-      userName: '田中 優子',
-      userImage: '',
-      attenderId,
-      rating: 5.0,
-      text: '素晴らしい体験でした！アテンダーの案内で、普段は絶対に見つけられないような隠れた芸術作品を発見できました。地元の人からしか聞けないようなストーリーも聞けて、とても充実した時間を過ごせました。また参加したいです！',
-      photos: [
-        { id: 'photo-001', url: 'https://example.com/photo1.jpg' },
-        { id: 'photo-002', url: 'https://example.com/photo2.jpg' }
-      ],
-      attenderReply: {
-        id: 'reply-001',
-        text: '田中様、素敵なレビューをありがとうございます！路地裏アート探検を楽しんでいただけて嬉しいです。また新しい作品が増えた時にぜひいらしてください。次回もお待ちしております！',
-        createdAt: daysAgo(12)
-      },
-      createdAt: daysAgo(14)
-    },
-    {
-      id: 'rev-002',
-      experienceId: 'exp-102',
-      experienceTitle: '地元職人と巡る伝統工芸ツアー',
-      bookingId: 'book-102',
-      userId: 'user-002',
-      userName: '佐藤 健太',
-      userImage: '',
-      attenderId,
-      rating: 4.5,
-      text: '職人さんの技術を間近で見られて感動しました。伝統工芸の奥深さを知ることができて、とても勉強になりました。ただ、時間が少し長く感じたので、もう少しコンパクトだと良いかもしれません。でも総合的には大変満足しています！',
-      photos: [],
-      attenderReply: {
-        id: 'reply-002',
-        text: '佐藤様、ご参加とレビューをありがとうございます。職人の技を感じていただけて嬉しいです。時間配分については貴重なご意見として、今後のツアー改善に活かしてまいります。またのお越しをお待ちしております。',
-        createdAt: daysAgo(5)
-      },
-      createdAt: daysAgo(7)
-    },
-    {
-      id: 'rev-003',
-      experienceId: 'exp-103',
-      experienceTitle: '夜の屋台グルメツアー',
-      bookingId: 'book-103',
-      userId: 'user-003',
-      userName: '伊藤 雄太',
-      userImage: '',
-      attenderId,
-      rating: 3.0,
-      text: '地元の屋台を巡るというコンセプトは良かったのですが、訪れた場所が混雑していてあまり楽しめませんでした。もう少し穴場的な場所に連れて行ってほしかったです。料理自体は美味しかったです。',
-      photos: [
-        { id: 'photo-003', url: 'https://example.com/photo3.jpg' }
-      ],
-      attenderReply: null,
-      createdAt: daysAgo(2)
-    },
-    {
-      id: 'rev-004',
-      experienceId: 'exp-101',
-      experienceTitle: '路地裏アート探検',
-      bookingId: 'book-104',
-      userId: 'user-004',
-      userName: '山田 花子',
-      userImage: '',
-      attenderId,
-      rating: 5.0,
-      text: 'アテンダーさんの知識が豊富で、各作品の背景やアーティストについて詳しく教えてもらえました。普段は気づかないような場所にもアートがあって新鮮でした。写真スポットも教えてもらえて最高の思い出ができました！',
-      photos: [
-        { id: 'photo-004', url: 'https://example.com/photo4.jpg' },
-        { id: 'photo-005', url: 'https://example.com/photo5.jpg' },
-        { id: 'photo-006', url: 'https://example.com/photo6.jpg' }
-      ],
-      attenderReply: {
-        id: 'reply-004',
-        text: '山田様、素敵なレビューをありがとうございます！アート作品の魅力をお伝えできて本当に嬉しいです。素敵な写真もたくさん撮れたようで何よりです。また新しい作品が増えたら、ぜひ遊びにいらしてください！',
-        createdAt: daysAgo(1)
-      },
-      createdAt: daysAgo(3)
-    },
-    {
-      id: 'rev-005',
-      experienceId: 'exp-102',
-      experienceTitle: '地元職人と巡る伝統工芸ツアー',
-      bookingId: 'book-105',
-      userId: 'user-005',
-      userName: '鈴木 一郎',
-      userImage: '',
-      attenderId,
-      rating: 4.0,
-      text: '伝統工芸に興味があって参加しました。職人さんの技術を直接見られたのは貴重な体験でした。ただ、もう少し質問できる時間があるとより良かったです。総じて満足できる内容でした。',
-      photos: [],
-      attenderReply: null,
-      createdAt: daysAgo(5)
+// 使用するAPIクライアント
+// 開発環境では既存のモックを使用し、本番環境ではclientプロパティを使用
+const getApiClient = () => {
+  return isDevelopment() ? api : enhancedApi.client;
+};
+
+/**
+ * 特定のアテンダーのレビュー一覧を取得
+ * 
+ * @param attenderId アテンダーID
+ * @param limit 取得件数（デフォルト10件）
+ * @returns レビュー一覧
+ */
+export async function getAttenderReviews(attenderId: string, limit: number = 10): Promise<Review[]> {
+  try {
+    // 開発環境ではモックデータを使用
+    if (isDevelopment()) {
+      // モックデータからこのアテンダーのレビューだけをフィルタリング
+      let reviews = Object.values(MOCK_REVIEWS).filter(
+        review => review.attenderId === attenderId
+      );
+      
+      // 最新順に並べ替え
+      reviews.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      
+      // リミットを適用
+      return reviews.slice(0, limit);
     }
-  ];
-  
-  return Promise.resolve(mockReviews);
+    
+    // 本番環境ではAPIを使用
+    const options: ApiOptions = {
+      headers: { 'X-Limit': String(limit) }
+    };
+    
+    logApiRequest('GET', ENDPOINTS.REVIEW.ATTENDER_REVIEWS(attenderId), { limit });
+    
+    const response = await getApiClient().get<Review[]>(ENDPOINTS.REVIEW.ATTENDER_REVIEWS(attenderId), options);
+    
+    logApiResponse('GET', ENDPOINTS.REVIEW.ATTENDER_REVIEWS(attenderId), response);
+    
+    if (response.success && response.data) {
+      return response.data;
+    }
+    
+    return [];
+  } catch (error) {
+    console.error('レビュー一覧取得エラー:', error);
+    return [];
+  }
 }
 
-function mockGetReviewSummary(attenderId: UUID): Promise<ReviewSummary> {
-  // レビューデータから統計を計算
-  const reviews = mockGetAttenderReviews(attenderId);
-  
-  return reviews.then(reviewsData => {
-    const totalReviews = reviewsData.length;
-    const totalRating = reviewsData.reduce((sum, review) => sum + review.rating, 0);
-    const averageRating = totalReviews > 0 ? totalRating / totalReviews : 0;
+/**
+ * 特定の体験のレビュー一覧を取得
+ * 
+ * @param experienceId 体験ID
+ * @param limit 取得件数（デフォルト10件）
+ * @returns レビュー一覧
+ */
+export async function getExperienceReviews(experienceId: string, limit: number = 10): Promise<Review[]> {
+  try {
+    // 開発環境ではモックデータを使用
+    if (isDevelopment()) {
+      // モックデータからこの体験のレビューだけをフィルタリング
+      let reviews = Object.values(MOCK_REVIEWS).filter(
+        review => review.experienceId === experienceId
+      );
+      
+      // 最新順に並べ替え
+      reviews.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      
+      // リミットを適用
+      return reviews.slice(0, limit);
+    }
     
-    // 評価ごとの件数
-    const ratingCounts: Record<number, number> = {};
-    reviewsData.forEach(review => {
-      const roundedRating = Math.round(review.rating);
-      ratingCounts[roundedRating] = (ratingCounts[roundedRating] || 0) + 1;
+    // 本番環境ではAPIを使用
+    const options: ApiOptions = {
+      headers: { 'X-Limit': String(limit) }
+    };
+    
+    logApiRequest('GET', ENDPOINTS.REVIEW.EXPERIENCE_REVIEWS(experienceId), { limit });
+    
+    const response = await getApiClient().get<Review[]>(ENDPOINTS.REVIEW.EXPERIENCE_REVIEWS(experienceId), options);
+    
+    logApiResponse('GET', ENDPOINTS.REVIEW.EXPERIENCE_REVIEWS(experienceId), response);
+    
+    if (response.success && response.data) {
+      return response.data;
+    }
+    
+    return [];
+  } catch (error) {
+    console.error('レビュー一覧取得エラー:', error);
+    return [];
+  }
+}
+
+/**
+ * ユーザーが投稿したレビュー一覧を取得
+ * 
+ * @param limit 取得件数（デフォルト10件）
+ * @returns レビュー一覧
+ */
+export async function getUserReviews(limit: number = 10): Promise<Review[]> {
+  try {
+    // 現在のユーザーIDを取得
+    const auth = getAuth();
+    const user = auth.currentUser;
+    
+    if (!user) {
+      throw new Error('ユーザーがログインしていません');
+    }
+    
+    const userId = user.uid;
+    
+    // 開発環境ではモックデータを使用
+    if (isDevelopment()) {
+      // モックデータからこのユーザーのレビューだけをフィルタリング
+      let reviews = Object.values(MOCK_REVIEWS).filter(
+        review => review.userId === userId
+      );
+      
+      // 最新順に並べ替え
+      reviews.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      
+      // リミットを適用
+      return reviews.slice(0, limit);
+    }
+    
+    // 本番環境ではAPIを使用
+    const options: ApiOptions = {
+      headers: { 'X-Limit': String(limit) }
+    };
+    
+    logApiRequest('GET', ENDPOINTS.REVIEW.USER_REVIEWS, { userId, limit });
+    
+    const response = await getApiClient().get<Review[]>(ENDPOINTS.REVIEW.USER_REVIEWS, options);
+    
+    logApiResponse('GET', ENDPOINTS.REVIEW.USER_REVIEWS, response);
+    
+    if (response.success && response.data) {
+      return response.data;
+    }
+    
+    return [];
+  } catch (error) {
+    console.error('ユーザーレビュー一覧取得エラー:', error);
+    return [];
+  }
+}
+
+/**
+ * 特定のレビューの詳細を取得
+ * 
+ * @param reviewId レビューID
+ * @returns レビュー詳細、存在しない場合はnull
+ */
+export async function getReviewDetails(reviewId: string): Promise<Review | null> {
+  try {
+    // 開発環境ではモックデータを使用
+    if (isDevelopment() && MOCK_REVIEWS[reviewId]) {
+      return MOCK_REVIEWS[reviewId];
+    }
+    
+    // 本番環境ではAPIを使用
+    logApiRequest('GET', ENDPOINTS.REVIEW.DETAIL(reviewId), {});
+    
+    const response = await getApiClient().get<Review>(ENDPOINTS.REVIEW.DETAIL(reviewId));
+    
+    logApiResponse('GET', ENDPOINTS.REVIEW.DETAIL(reviewId), response);
+    
+    if (response.success && response.data) {
+      return response.data;
+    }
+    
+    return null;
+  } catch (error) {
+    console.error('レビュー詳細取得エラー:', error);
+    return null;
+  }
+}
+
+/**
+ * レビュー統計情報を取得
+ * 
+ * @param attenderId アテンダーID
+ * @returns レビュー統計情報
+ */
+export async function getReviewSummary(attenderId: string): Promise<ReviewSummary> {
+  try {
+    // 開発環境ではモックデータを使用
+    if (isDevelopment()) {
+      // アテンダーに関連するレビューを取得
+      const reviews = Object.values(MOCK_REVIEWS).filter(
+        review => review.attenderId === attenderId
+      );
+      
+      if (reviews.length === 0) {
+        return {
+          averageRating: 0,
+          totalReviews: 0,
+          ratingCounts: { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 },
+          mostRecent: null
+        };
+      }
+      
+      // 評価の合計を計算
+      const totalRating = reviews.reduce((sum, review) => sum + review.rating, 0);
+      
+      // 評価ごとの数を集計
+      const ratingCounts = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
+      reviews.forEach(review => {
+        ratingCounts[review.rating as keyof typeof ratingCounts]++;
+      });
+      
+      // 最新のレビューを取得
+      const sortedReviews = [...reviews].sort(
+        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
+      
+      return {
+        averageRating: totalRating / reviews.length,
+        totalReviews: reviews.length,
+        ratingCounts,
+        mostRecent: sortedReviews[0] || null
+      };
+    }
+    
+    // 本番環境ではAPIを使用
+    logApiRequest('GET', `${ENDPOINTS.REVIEW.ATTENDER_REVIEWS(attenderId)}/summary`, {});
+    
+    const response = await getApiClient().get<ReviewSummary>(`${ENDPOINTS.REVIEW.ATTENDER_REVIEWS(attenderId)}/summary`);
+    
+    logApiResponse('GET', `${ENDPOINTS.REVIEW.ATTENDER_REVIEWS(attenderId)}/summary`, response);
+    
+    if (response.success && response.data) {
+      return response.data;
+    }
+    
+    // デフォルト値を返す
+    return {
+      averageRating: 0,
+      totalReviews: 0,
+      ratingCounts: { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 },
+      mostRecent: null
+    };
+  } catch (error) {
+    console.error('レビュー統計取得エラー:', error);
+    return {
+      averageRating: 0,
+      totalReviews: 0,
+      ratingCounts: { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 },
+      mostRecent: null
+    };
+  }
+}
+
+/**
+ * 新規レビューを投稿
+ * 
+ * @param reviewData レビューデータ
+ * @returns 成功時はレビューID、失敗時はエラーをスロー
+ */
+export async function createReview(reviewData: ReviewCreateData): Promise<string> {
+  try {
+    // フィールドの検証
+    if (reviewData.rating < 1 || reviewData.rating > 5) {
+      throw new Error('評価は1から5の間で入力してください');
+    }
+    
+    if (!reviewData.comment || reviewData.comment.trim().length === 0) {
+      throw new Error('コメントは必須です');
+    }
+    
+    // 現在のユーザーIDを取得
+    const auth = getAuth();
+    const user = auth.currentUser;
+    
+    if (!user) {
+      throw new Error('ユーザーがログインしていません');
+    }
+    
+    const userId = user.uid;
+    
+    // 開発環境ではモックデータを使用
+    if (isDevelopment()) {
+      // 模擬的に処理遅延を再現
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      const reviewId = `rev_${uuidv4().substring(0, 8)}`;
+      
+      // 新しいレビューデータを作成
+      MOCK_REVIEWS[reviewId] = {
+        id: reviewId,
+        userId,
+        attenderId: reviewData.attenderId,
+        experienceId: reviewData.experienceId,
+        rating: reviewData.rating,
+        comment: reviewData.comment,
+        photos: reviewData.photos,
+        helpfulCount: 0,
+        replyCount: 0,
+        userDisplayName: 'テストユーザー', // 実際のユーザー名はバックエンドで設定
+        userPhotoUrl: '/images/users/default.jpg', // 実際のユーザー画像はバックエンドで設定
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+      
+      return reviewId;
+    }
+    
+    // 本番環境ではAPIを使用
+    const requestData = {
+      userId,
+      ...reviewData
+    };
+    
+    logApiRequest('POST', ENDPOINTS.REVIEW.CREATE, { dataSize: JSON.stringify(requestData).length });
+    
+    const response = await getApiClient().post<{ id: string }>(ENDPOINTS.REVIEW.CREATE, requestData);
+    
+    logApiResponse('POST', ENDPOINTS.REVIEW.CREATE, response);
+    
+    if (response.success && response.data) {
+      return response.data.id;
+    }
+    
+    // エラーレスポンスの処理
+    const errorMessage = response.error?.message || 'レビューの投稿に失敗しました';
+    throw new Error(errorMessage);
+  } catch (error) {
+    console.error('レビュー投稿エラー:', error);
+    throw error instanceof Error 
+      ? error 
+      : new Error('レビューの投稿中に予期せぬエラーが発生しました');
+  }
+}
+
+/**
+ * レビューフォームからレビューを投稿
+ * (ReviewForm.tsxコンポーネント用)
+ */
+export async function submitReview(reviewData: ReviewCreateData): Promise<string> {
+  return createReview(reviewData);
+}
+
+/**
+ * レビューを編集
+ * 
+ * @param reviewId レビューID
+ * @param updateData 更新データ
+ * @returns 成功時はtrue、失敗時はエラーをスロー
+ */
+export async function updateReview(
+  reviewId: string, 
+  updateData: Partial<{
+    rating: number;
+    comment: string;
+    photos: string[];
+  }>
+): Promise<boolean> {
+  try {
+    // 現在のユーザーIDを取得
+    const auth = getAuth();
+    const user = auth.currentUser;
+    
+    if (!user) {
+      throw new Error('ユーザーがログインしていません');
+    }
+    
+    const userId = user.uid;
+    
+    // 開発環境ではモックデータを使用
+    if (isDevelopment()) {
+      const review = MOCK_REVIEWS[reviewId];
+      if (!review) {
+        throw new Error('指定されたレビューが見つかりません');
+      }
+      
+      // 自分のレビューかチェック
+      if (review.userId !== userId) {
+        throw new Error('他のユーザーのレビューは編集できません');
+      }
+      
+      // フィールドの検証
+      if (updateData.rating !== undefined && (updateData.rating < 1 || updateData.rating > 5)) {
+        throw new Error('評価は1から5の間で入力してください');
+      }
+      
+      if (updateData.comment !== undefined && updateData.comment.trim().length === 0) {
+        throw new Error('コメントは必須です');
+      }
+      
+      // レビューデータの更新
+      if (updateData.rating !== undefined) review.rating = updateData.rating;
+      if (updateData.comment !== undefined) review.comment = updateData.comment;
+      if (updateData.photos !== undefined) review.photos = updateData.photos;
+      review.updatedAt = new Date().toISOString();
+      
+      return true;
+    }
+    
+    // 本番環境ではAPIを使用
+    logApiRequest('PUT', ENDPOINTS.REVIEW.UPDATE(reviewId), updateData);
+    
+    const response = await getApiClient().put(ENDPOINTS.REVIEW.UPDATE(reviewId), {
+      userId, // 認証情報としてユーザーIDを含める
+      ...updateData
     });
     
-    // 返信済みレビュー数
-    const repliedReviews = reviewsData.filter(review => review.attenderReply !== null).length;
+    logApiResponse('PUT', ENDPOINTS.REVIEW.UPDATE(reviewId), response);
     
-    // 写真付きレビュー数
-    const reviewsWithPhotos = reviewsData.filter(review => 
-      review.photos && review.photos.length > 0
-    ).length;
-    
-    // 最新レビュー日
-    const latestReview = reviewsData.reduce((latest, review) => {
-      return new Date(review.createdAt) > new Date(latest.createdAt) ? review : latest;
-    }, reviewsData[0]);
-    
-    // 返信時間の計算（モック用にランダム）
-    const averageReplyTime = Math.floor(Math.random() * 48) + 2; // 2〜50時間
-    
-    const summary: ReviewSummary = {
-      attenderId,
-      totalReviews,
-      averageRating,
-      ratingCounts,
-      repliedReviews,
-      reviewsWithPhotos,
-      latestReviewDate: latestReview?.createdAt || new Date().toISOString(),
-      averageReplyTime
-    };
-    
-    return summary;
-  });
-}
-
-function mockSubmitReply(reviewId: string, replyText: string): Promise<Review> {
-  // ダミーの返信処理
-  return mockGetAttenderReviews('dummy-id').then(reviews => {
-    const review = reviews.find(r => r.id === reviewId);
-    
-    if (!review) {
-      throw new Error('Review not found');
+    if (response.success) {
+      return true;
     }
     
-    const updatedReview = {
-      ...review,
-      attenderReply: {
-        id: `reply-${Date.now()}`,
-        text: replyText,
-        createdAt: new Date().toISOString()
-      }
-    };
-    
-    return updatedReview;
-  });
-}
-
-function mockGetExperienceReviews(experienceId: string): Promise<Review[]> {
-  return mockGetAttenderReviews('dummy-id').then(reviews => {
-    return reviews.filter(review => review.experienceId === experienceId);
-  });
-}
-
-function mockSubmitReview(
-  bookingId: string,
-  reviewData: {
-    rating: number;
-    text: string;
-    photos?: any[];
+    // エラーレスポンスの処理
+    const errorMessage = response.error?.message || 'レビューの更新に失敗しました';
+    throw new Error(errorMessage);
+  } catch (error) {
+    console.error('レビュー更新エラー:', error);
+    throw error instanceof Error 
+      ? error 
+      : new Error('レビューの更新中に予期せぬエラーが発生しました');
   }
-): Promise<Review> {
-  // ダミーの投稿処理
-  const mockPhotos = reviewData.photos 
-    ? Array.from({ length: reviewData.photos.length }).map((_, idx) => ({
-        id: `photo-new-${idx}`,
-        url: `https://example.com/mock-photo-${idx}.jpg`
-      }))
-    : [];
-    
-  const mockReview: Review = {
-    id: `rev-new-${Date.now()}`,
-    experienceId: 'exp-101',
-    experienceTitle: '路地裏アート探検',
-    bookingId,
-    userId: 'user-current',
-    userName: '現在のユーザー',
-    userImage: '',
-    attenderId: 'attender-101',
-    rating: reviewData.rating,
-    text: reviewData.text,
-    photos: mockPhotos,
-    attenderReply: null,
-    createdAt: new Date().toISOString()
-  };
-  
-  return Promise.resolve(mockReview);
 }
+
+/**
+ * レビューを削除
+ * 
+ * @param reviewId レビューID
+ * @returns 成功時はtrue、失敗時はエラーをスロー
+ */
+export async function deleteReview(reviewId: string): Promise<boolean> {
+  try {
+    // 現在のユーザーIDを取得
+    const auth = getAuth();
+    const user = auth.currentUser;
+    
+    if (!user) {
+      throw new Error('ユーザーがログインしていません');
+    }
+    
+    const userId = user.uid;
+    
+    // 開発環境ではモックデータを使用
+    if (isDevelopment()) {
+      const review = MOCK_REVIEWS[reviewId];
+      if (!review) {
+        throw new Error('指定されたレビューが見つかりません');
+      }
+      
+      // 自分のレビューかチェック
+      if (review.userId !== userId) {
+        throw new Error('他のユーザーのレビューは削除できません');
+      }
+      
+      // レビューの削除
+      delete MOCK_REVIEWS[reviewId];
+      
+      return true;
+    }
+    
+    // 本番環境ではAPIを使用
+    logApiRequest('DELETE', ENDPOINTS.REVIEW.DELETE(reviewId), { userId });
+    
+    const response = await getApiClient().delete(ENDPOINTS.REVIEW.DELETE(reviewId));
+    
+    logApiResponse('DELETE', ENDPOINTS.REVIEW.DELETE(reviewId), response);
+    
+    if (response.success) {
+      return true;
+    }
+    
+    // エラーレスポンスの処理
+    const errorMessage = response.error?.message || 'レビューの削除に失敗しました';
+    throw new Error(errorMessage);
+  } catch (error) {
+    console.error('レビュー削除エラー:', error);
+    throw error instanceof Error 
+      ? error 
+      : new Error('レビューの削除中に予期せぬエラーが発生しました');
+  }
+}
+
+/**
+ * レビューに「役に立った」を追加
+ * 
+ * @param reviewId レビューID
+ * @returns 成功時はtrue、失敗時はエラーをスロー
+ */
+export async function markReviewAsHelpful(reviewId: string): Promise<boolean> {
+  try {
+    // 現在のユーザーIDを取得
+    const auth = getAuth();
+    const user = auth.currentUser;
+    
+    if (!user) {
+      throw new Error('ユーザーがログインしていません');
+    }
+    
+    const userId = user.uid;
+    
+    // 開発環境ではモックデータを使用
+    if (isDevelopment()) {
+      const review = MOCK_REVIEWS[reviewId];
+      if (!review) {
+        throw new Error('指定されたレビューが見つかりません');
+      }
+      
+      // 自分のレビューには「役に立った」をつけられないようにする
+      if (review.userId === userId) {
+        throw new Error('自分のレビューには「役に立った」をつけられません');
+      }
+      
+      // 「役に立った」カウントを増やす
+      review.helpfulCount += 1;
+      review.updatedAt = new Date().toISOString();
+      
+      return true;
+    }
+    
+    // 本番環境ではAPIを使用
+    logApiRequest('POST', ENDPOINTS.REVIEW.HELPFUL(reviewId), { userId });
+    
+    const response = await getApiClient().post(ENDPOINTS.REVIEW.HELPFUL(reviewId), { userId });
+    
+    logApiResponse('POST', ENDPOINTS.REVIEW.HELPFUL(reviewId), response);
+    
+    if (response.success) {
+      return true;
+    }
+    
+    // エラーレスポンスの処理
+    const errorMessage = response.error?.message || '「役に立った」の追加に失敗しました';
+    throw new Error(errorMessage);
+  } catch (error) {
+    console.error('「役に立った」追加エラー:', error);
+    throw error instanceof Error 
+      ? error 
+      : new Error('「役に立った」の追加中に予期せぬエラーが発生しました');
+  }
+}
+
+export default {
+  getAttenderReviews,
+  getExperienceReviews,
+  getUserReviews,
+  getReviewDetails,
+  getReviewSummary,
+  createReview,
+  submitReview,
+  updateReview,
+  deleteReview,
+  markReviewAsHelpful
+};
