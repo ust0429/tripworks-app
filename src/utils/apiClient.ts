@@ -91,9 +91,9 @@ async function request<T = any>(url: string, options: RequestInit = {}): Promise
     const token = await getAuthToken();
     
     // ヘッダーを準備
-    const headers: HeadersInit = {
+    const headers: Record<string, string> = {
       'Content-Type': 'application/json',
-      ...options.headers,
+      ...options.headers as Record<string, string>,
     };
     
     // 認証トークンがあれば追加

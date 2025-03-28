@@ -108,6 +108,36 @@
    - トークンの有効期限切れとリフレッシュ
    - 権限確認
 
+## トラブルシューティングと修正点
+
+実装中に発生した主なエラーとその修正方法を記録します。
+
+### タイプスクリプトエラー
+
+1. **react-router-domの依存関係**
+   - エラー: `Cannot find module 'react-router-dom' or its corresponding type declarations`
+   - 修正: `npm install react-router-dom @types/react-router-dom` を実行
+
+2. **AttenderRegistrationFormのproficiency型エラー**
+   - エラー: `Type 'string' is not assignable to type '"beginner" | "intermediate" | "advanced" | "native"'`
+   - 修正: `proficiency: 'native'` を `proficiency: 'native' as const` に変更
+
+3. **apiClientのヘッダー型エラー**
+   - エラー: `Element implicitly has an 'any' type because expression of type '"Authorization"' can't be used to index type 'HeadersInit'`
+   - 修正: `HeadersInit` 型を `Record<string, string>` 型に変更
+
+4. **コンポーネントのインポートパス**
+   - エラー: サービスのインポートパスが適切でない
+   - 修正: インポートパスを正しいパスに調整
+
+5. **追加のパス修正**
+   - エラー: インポートパスが `../../services/` で失敗
+   - 修正: `../../../services/` に修正して正しい相対パスを設定
+
+6. **暗黙的な型エラー**
+   - エラー: `Parameter 'specialty' implicitly has an 'any' type` など
+   - 修正: 明示的な型注釈を追加 (`(specialty: string, index: number)`)
+
 ## まとめ
 
 バックエンド統合の全ての主要コンポーネントの実装が完了しました。予約管理、レビュー管理、アテンダー管理、ユーザー管理の全てのAPIエンドポイントとフロントエンドサービスが実装され、Firebase認証との連携が確立されました。

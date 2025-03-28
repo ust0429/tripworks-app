@@ -120,7 +120,7 @@ const AttenderProfile: React.FC = () => {
             
             {/* 専門分野 */}
             <div className="flex flex-wrap gap-2 mb-4">
-              {attender.specialties.map((specialty, index) => (
+              {attender.specialties.map((specialty: string, index: number) => (
                 <span 
                   key={index}
                   className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm"
@@ -148,7 +148,7 @@ const AttenderProfile: React.FC = () => {
             <div className="mb-4">
               <h3 className="text-sm font-medium text-gray-500 mb-1">対応言語</h3>
               <div className="flex flex-wrap gap-2">
-                {attender.languages.map((lang, index) => (
+                {attender.languages.map((lang: { language: string; proficiency: string }, index: number) => (
                   <span 
                     key={index}
                     className="px-3 py-1 bg-gray-100 text-gray-800 rounded-full text-sm"

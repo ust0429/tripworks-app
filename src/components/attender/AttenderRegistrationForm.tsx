@@ -64,30 +64,30 @@ const AttenderRegistrationForm: React.FC<AttenderRegistrationFormProps> = ({ onS
       
       // アテンダー登録データの作成
       const registrationData = {
-        name: formData.name,
-        bio: formData.bio,
-        location: formData.location,
-        specialties: formData.specialties,
-        profilePhoto: userProfile?.photoURL,
-        isLocalResident: formData.isLocalResident,
-        isMigrant: formData.isMigrant,
-        yearsMoved: formData.yearsMoved ? Number(formData.yearsMoved) : undefined,
-        previousLocation: formData.previousLocation || undefined,
-        // その他の初期値
-        languages: [{ language: '日本語', proficiency: 'native' }],
-        expertise: [
-          {
-            category: formData.specialties[0],
-            description: formData.bio
-          }
-        ],
-        availableTimes: [
-          { dayOfWeek: 1, startTime: '09:00', endTime: '17:00', isAvailable: true },
-          { dayOfWeek: 2, startTime: '09:00', endTime: '17:00', isAvailable: true },
-          { dayOfWeek: 3, startTime: '09:00', endTime: '17:00', isAvailable: true },
-          { dayOfWeek: 4, startTime: '09:00', endTime: '17:00', isAvailable: true },
-          { dayOfWeek: 5, startTime: '09:00', endTime: '17:00', isAvailable: true }
-        ]
+      name: formData.name,
+      bio: formData.bio,
+      location: formData.location,
+      specialties: formData.specialties,
+      profilePhoto: userProfile?.photoURL,
+      isLocalResident: formData.isLocalResident,
+      isMigrant: formData.isMigrant,
+      yearsMoved: formData.yearsMoved ? Number(formData.yearsMoved) : undefined,
+      previousLocation: formData.previousLocation || undefined,
+      // その他の初期値
+      languages: [{ language: '日本語', proficiency: 'native' as const }],
+      expertise: [
+      {
+      category: formData.specialties[0],
+      description: formData.bio
+      }
+      ],
+      availableTimes: [
+      { dayOfWeek: 1, startTime: '09:00', endTime: '17:00', isAvailable: true },
+      { dayOfWeek: 2, startTime: '09:00', endTime: '17:00', isAvailable: true },
+      { dayOfWeek: 3, startTime: '09:00', endTime: '17:00', isAvailable: true },
+      { dayOfWeek: 4, startTime: '09:00', endTime: '17:00', isAvailable: true },
+      { dayOfWeek: 5, startTime: '09:00', endTime: '17:00', isAvailable: true }
+      ]
       };
       
       // アテンダー登録API呼び出し
