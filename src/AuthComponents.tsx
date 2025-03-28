@@ -15,6 +15,7 @@ interface AuthContextType {
 // ユーザーの型定義
 interface UserType {
   id: string;
+  uid: string; // Firebaseのuidを追加
   name: string;
   email: string;
   profileImage?: string;
@@ -40,8 +41,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       
       // テスト用アカウント
       if (email === 'test@example.com' && password === 'password') {
+        const userId = '1';
         setUser({
-          id: '1',
+          id: userId,
+          uid: userId, // uidを追加
           name: 'テストユーザー',
           email: email,
           profileImage: undefined
@@ -64,8 +67,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       await new Promise(resolve => setTimeout(resolve, 1000));
       
       // 実際にはここでAPIにリクエストを送信
+      const userId = Date.now().toString(); // 仮のID生成
       setUser({
-        id: Date.now().toString(), // 仮のID生成
+        id: userId,
+        uid: userId, // uidを追加
         name: name,
         email: email,
         profileImage: undefined

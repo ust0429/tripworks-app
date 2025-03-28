@@ -67,3 +67,20 @@ export interface AttenderDetailType extends Omit<AttenderType, 'rating'> {
   gallery: string[];
   specialties: string[];
 }
+
+// 通知関連の型定義
+export interface Notification {
+  id: string;
+  userId: string;
+  title: string;
+  message: string;
+  type: 'booking' | 'review' | 'system';
+  subType?: 'success' | 'info' | 'warning' | 'error';
+  isRead: boolean;
+  createdAt: Date | any; // FirestoreのTimestampを考慮
+  readAt?: Date | any;
+  resourceType?: 'booking' | 'review' | 'attender' | 'experience';
+  resourceId?: string;
+  link?: string;
+  image?: string;
+}

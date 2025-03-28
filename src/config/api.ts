@@ -33,6 +33,15 @@ export const ENDPOINTS = {
     PROFILE: `${BASE_URL}/users/profile`,
     UPDATE_PROFILE: `${BASE_URL}/users/profile`,
   },
+  
+  // ファイルアップロード関連
+  UPLOAD: {
+    PROFILE: `${BASE_URL}/uploads/profile`,
+    REVIEW: `${BASE_URL}/uploads/review`,
+    EXPERIENCE: `${BASE_URL}/uploads/experience`,
+    REVIEWS_MULTIPLE: `${BASE_URL}/uploads/reviews/multiple`,
+    EXPERIENCES_MULTIPLE: `${BASE_URL}/uploads/experiences/multiple`,
+  },
 };
 
 export default ENDPOINTS;

@@ -15,6 +15,7 @@ router.use('/attenders', verifyAuth);
 router.use('/bookings', verifyAuth);
 router.use('/reviews', verifyAuth);
 router.use('/users/profile', verifyAuth);
+router.use('/uploads', verifyAuth);
 
 // 特定の役割が必要なルートグループ
 // 管理者専用ルート
@@ -30,12 +31,14 @@ import attenderRoutes from './attenders';
 import bookingRoutes from './bookings';
 import reviewRoutes from './reviews';
 import userRoutes from './users';
+import uploadRoutes from './uploads';
 
 // ルーターをマウント
 router.use('/attenders', attenderRoutes);
 router.use('/bookings', bookingRoutes);
 router.use('/reviews', reviewRoutes);
 router.use('/users', userRoutes);
+router.use('/uploads', uploadRoutes);
 
 // ヘルスチェックエンドポイント
 router.get('/health', (req, res) => {
