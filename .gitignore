@@ -163,3 +163,8 @@ yarn-error.log*key.json
 .env.local
 
 yarn-error.log*
+
+# セキュリティ関連
+key.json
+.env.local
+.env
