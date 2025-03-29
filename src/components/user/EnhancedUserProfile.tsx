@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { 
   getUserProfile, 
   updateUserProfile 
-} from '../../services/userService';
+} from '../../services/UserService';
 import { 
   User as UserIcon, 
   Camera, 

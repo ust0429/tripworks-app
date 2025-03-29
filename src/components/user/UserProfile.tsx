@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getUserProfile, updateUserProfile } from '../../services/userService';
+import { getUserProfile, updateUserProfile } from '../../services/UserService';
 import { User } from '../../types/user';
 import { Loader, Camera, Check } from 'lucide-react';
 import FileUploader from '../common/FileUploader';

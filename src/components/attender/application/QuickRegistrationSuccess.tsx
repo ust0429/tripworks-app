@@ -8,7 +8,7 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { navigateToProfile } from '../../../utils/navigation';
 import { CheckCircle, Home, User, Mail, ArrowRight, Calendar, FileText, AlertTriangle, Copy, Check, Award } from 'lucide-react';
-import { updateUserProfile } from '../../../services/userService';
+import { updateUserProfile } from '../../../services/UserService';
 import { useAuth } from '../../../AuthComponents';
 
 interface QuickRegistrationSuccessProps {

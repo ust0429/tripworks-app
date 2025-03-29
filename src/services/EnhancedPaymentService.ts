@@ -33,7 +33,7 @@ import { TransactionFeatures } from '../utils/fraudDetection';
 import { 
   // getUserProfile as getUser, 
   // updateUserProfile 
-} from './userService';
+} from './UserService';
 
 // かわりに独自のモック関数を定義
 const getUser = (userId: string) => {
