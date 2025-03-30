@@ -10,6 +10,7 @@ export interface EnvironmentConfig {
   development: boolean;
   apiUrl: string;
   debugMode: boolean;
+  useMockData: boolean;
 }
 
 // 現在の環境を判定
@@ -31,6 +32,30 @@ export const isDebugMode = (): boolean => {
   return process.env.REACT_APP_DEBUG_MODE === 'true';
 };
 
+// モックデータ使用の判定
+export const useMockData = (): boolean => {
+  // クエリパラメータでモックデータの切り替えが可能（開発環境のみ）
+  if (isDevelopment() && typeof window !== 'undefined') {
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.has('mock')) {
+      return urlParams.get('mock') !== 'false';
+    }
+  }
+  
+  // テスト環境では常にモックデータを使用
+  if (isTest()) {
+    return true;
+  }
+  
+  // 本番環境では常に実データを使用
+  if (isProduction()) {
+    return false;
+  }
+  
+  // 開発環境では環境変数に基づく
+  return process.env.REACT_APP_USE_MOCK_DATA !== 'false';
+};
+
 // API URLの取得
 export const getApiUrl = (): string => {
   if (isDevelopment()) {
@@ -50,7 +75,8 @@ export const getEnvironmentConfig = (): EnvironmentConfig => {
     production: isProduction(),
     development: isDevelopment(),
     apiUrl: getApiUrl(),
-    debugMode: isDebugMode()
+    debugMode: isDebugMode(),
+    useMockData: useMockData()
   };
 };
 
@@ -59,6 +85,7 @@ export default {
   isProduction,
   isTest,
   isDebugMode,
+  useMockData,
   getApiUrl,
   getEnvironmentConfig
 };

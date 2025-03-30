@@ -4,7 +4,7 @@
  * 各APIエンドポイントのテストを実行するための関数群
  */
 
-import api from './apiClient';
+import enhancedApi from './apiClientEnhanced';
 import { getAuth, signInWithEmailAndPassword } from 'firebase/auth';
 import { ENDPOINTS } from '../config/api';
 
@@ -42,18 +42,18 @@ export async function testAuthentication(): Promise<TestResult> {
     
     const endTime = performance.now();
     return {
-      name: 'Authentication Test',
+      name: '認証テスト',
       success: !!token,
-      message: 'Successfully retrieved authentication token',
-      data: { uid: user.uid },
+      message: '認証トークンの取得に成功しました',
+      data: { uid: user.uid, tokenLength: token.length },
       duration: endTime - startTime
     };
   } catch (error) {
     const endTime = performance.now();
     return {
-      name: 'Authentication Test',
+      name: '認証テスト',
       success: false,
-      message: error instanceof Error ? error.message : 'Unknown authentication error',
+      message: error instanceof Error ? error.message : '不明な認証エラー',
       error,
       duration: endTime - startTime
     };
@@ -66,15 +66,15 @@ export async function testAuthentication(): Promise<TestResult> {
 export async function testGetBookings(): Promise<TestResult> {
   const startTime = performance.now();
   try {
-    const response = await api.get(ENDPOINTS.BOOKING.LIST);
+    const response = await enhancedApi.get(ENDPOINTS.BOOKING.LIST);
     
     const endTime = performance.now();
     return {
-      name: 'Get Bookings Test',
+      name: '予約一覧取得テスト',
       success: response.success,
       message: response.success 
-        ? `Successfully retrieved ${response.data?.length || 0} bookings` 
-        : `Failed to retrieve bookings: ${response.error?.message || 'Unknown error'}`,
+        ? `${response.data?.length || 0}件の予約を取得しました` 
+        : `予約の取得に失敗しました: ${response.error?.message || '不明なエラー'}`,
       data: response.data,
       error: response.error,
       duration: endTime - startTime
@@ -82,9 +82,9 @@ export async function testGetBookings(): Promise<TestResult> {
   } catch (error) {
     const endTime = performance.now();
     return {
-      name: 'Get Bookings Test',
+      name: '予約一覧取得テスト',
       success: false,
-      message: error instanceof Error ? error.message : 'Unknown error',
+      message: error instanceof Error ? error.message : '不明なエラー',
       error,
       duration: endTime - startTime
     };
@@ -100,18 +100,18 @@ export async function testGetReviews(): Promise<TestResult> {
     // アテンダーIDのサンプル
     const sampleAttenderId = 'att_123';
     
-    const response = await api.get(
+    const response = await enhancedApi.get(
       ENDPOINTS.REVIEW.LIST,
       { attenderId: sampleAttenderId }
     );
     
     const endTime = performance.now();
     return {
-      name: 'Get Reviews Test',
+      name: 'レビュー一覧取得テスト',
       success: response.success,
       message: response.success 
-        ? `Successfully retrieved ${response.data?.length || 0} reviews` 
-        : `Failed to retrieve reviews: ${response.error?.message || 'Unknown error'}`,
+        ? `${response.data?.length || 0}件のレビューを取得しました` 
+        : `レビューの取得に失敗しました: ${response.error?.message || '不明なエラー'}`,
       data: response.data,
       error: response.error,
       duration: endTime - startTime
@@ -119,9 +119,9 @@ export async function testGetReviews(): Promise<TestResult> {
   } catch (error) {
     const endTime = performance.now();
     return {
-      name: 'Get Reviews Test',
+      name: 'レビュー一覧取得テスト',
       success: false,
-      message: error instanceof Error ? error.message : 'Unknown error',
+      message: error instanceof Error ? error.message : '不明なエラー',
       error,
       duration: endTime - startTime
     };
@@ -139,21 +139,21 @@ export async function testCreateReview(): Promise<TestResult> {
       attenderId: 'att_123',
       experienceId: 'exp_001',
       rating: 4,
-      comment: 'This is a test review from the API tester. Please ignore.'
+      comment: 'これはAPIテスターからのテストレビューです。無視してください。'
     };
     
-    const response = await api.post(
+    const response = await enhancedApi.post(
       ENDPOINTS.REVIEW.CREATE,
       reviewData
     );
     
     const endTime = performance.now();
     return {
-      name: 'Create Review Test',
+      name: 'レビュー投稿テスト',
       success: response.success,
       message: response.success 
-        ? `Successfully created review with ID: ${response.data?.id}` 
-        : `Failed to create review: ${response.error?.message || 'Unknown error'}`,
+        ? `ID: ${response.data?.id}のレビューを作成しました` 
+        : `レビューの作成に失敗しました: ${response.error?.message || '不明なエラー'}`,
       data: response.data,
       error: response.error,
       duration: endTime - startTime
@@ -161,9 +161,9 @@ export async function testCreateReview(): Promise<TestResult> {
   } catch (error) {
     const endTime = performance.now();
     return {
-      name: 'Create Review Test',
+      name: 'レビュー投稿テスト',
       success: false,
-      message: error instanceof Error ? error.message : 'Unknown error',
+      message: error instanceof Error ? error.message : '不明なエラー',
       error,
       duration: endTime - startTime
     };
@@ -189,21 +189,21 @@ export async function testCreateBooking(): Promise<TestResult> {
       duration: '2時間',
       price: 5000,
       location: '東京都渋谷区',
-      notes: 'This is a test booking from the API tester. Please ignore.'
+      notes: 'これはAPIテスターからのテスト予約です。無視してください。'
     };
     
-    const response = await api.post(
+    const response = await enhancedApi.post(
       ENDPOINTS.BOOKING.CREATE,
       bookingData
     );
     
     const endTime = performance.now();
     return {
-      name: 'Create Booking Test',
+      name: '予約作成テスト',
       success: response.success,
       message: response.success 
-        ? `Successfully created booking with ID: ${response.data?.id}` 
-        : `Failed to create booking: ${response.error?.message || 'Unknown error'}`,
+        ? `ID: ${response.data?.id}の予約を作成しました` 
+        : `予約の作成に失敗しました: ${response.error?.message || '不明なエラー'}`,
       data: response.data,
       error: response.error,
       duration: endTime - startTime
@@ -211,9 +211,9 @@ export async function testCreateBooking(): Promise<TestResult> {
   } catch (error) {
     const endTime = performance.now();
     return {
-      name: 'Create Booking Test',
+      name: '予約作成テスト',
       success: false,
-      message: error instanceof Error ? error.message : 'Unknown error',
+      message: error instanceof Error ? error.message : '不明なエラー',
       error,
       duration: endTime - startTime
     };
@@ -226,37 +226,96 @@ export async function testCreateBooking(): Promise<TestResult> {
 export async function testFileUpload(): Promise<TestResult> {
   const startTime = performance.now();
   try {
-    // テスト用のダミーファイルデータを作成
-    // Note: 実際のファイルオブジェクトがないので、このテストは失敗することを想定
-    const dummyFormData = new FormData();
+    // テスト用の小さなBlobデータを作成
+    const dummyBlob = new Blob(['テストデータ'], { type: 'text/plain' });
+    const dummyFile = new File([dummyBlob], 'test.txt', { type: 'text/plain' });
     
-    const response = await fetch(ENDPOINTS.UPLOAD.IMAGE, {
-      method: 'POST',
-      body: dummyFormData,
-      headers: {
-        // 通常はAuthorizationヘッダーを追加するが、formDataを使うので自動的に追加される
-      }
-    });
-    
-    const responseData = await response.json();
+    const response = await enhancedApi.uploadFile(
+      ENDPOINTS.UPLOAD.FILE,
+      dummyFile,
+      'file',
+      { description: 'テストアップロード' }
+    );
     
     const endTime = performance.now();
     return {
-      name: 'File Upload Test',
-      success: response.ok,
-      message: response.ok 
-        ? `Successfully uploaded file: ${responseData?.url}` 
-        : `Failed to upload file: ${responseData?.message || response.statusText}`,
-      data: responseData,
-      error: !response.ok ? responseData : undefined,
+      name: 'ファイルアップロードテスト',
+      success: response.success,
+      message: response.success 
+        ? `ファイルのアップロードに成功しました: ${response.data?.url || ''}` 
+        : `ファイルのアップロードに失敗しました: ${response.error?.message || '不明なエラー'}`,
+      data: response.data,
+      error: response.error,
       duration: endTime - startTime
     };
   } catch (error) {
     const endTime = performance.now();
     return {
-      name: 'File Upload Test',
+      name: 'ファイルアップロードテスト',
       success: false,
-      message: error instanceof Error ? error.message : 'Unknown error',
+      message: error instanceof Error ? error.message : '不明なエラー',
+      error,
+      duration: endTime - startTime
+    };
+  }
+}
+
+/**
+ * アテンダー一覧取得テスト
+ */
+export async function testGetAttenders(): Promise<TestResult> {
+  const startTime = performance.now();
+  try {
+    const response = await enhancedApi.get(ENDPOINTS.ATTENDER.LIST);
+    
+    const endTime = performance.now();
+    return {
+      name: 'アテンダー一覧取得テスト',
+      success: response.success,
+      message: response.success 
+        ? `${response.data?.length || 0}件のアテンダー情報を取得しました` 
+        : `アテンダー情報の取得に失敗しました: ${response.error?.message || '不明なエラー'}`,
+      data: response.data,
+      error: response.error,
+      duration: endTime - startTime
+    };
+  } catch (error) {
+    const endTime = performance.now();
+    return {
+      name: 'アテンダー一覧取得テスト',
+      success: false,
+      message: error instanceof Error ? error.message : '不明なエラー',
+      error,
+      duration: endTime - startTime
+    };
+  }
+}
+
+/**
+ * 体験一覧取得テスト
+ */
+export async function testGetExperiences(): Promise<TestResult> {
+  const startTime = performance.now();
+  try {
+    const response = await enhancedApi.get(ENDPOINTS.EXPERIENCE.LIST);
+    
+    const endTime = performance.now();
+    return {
+      name: '体験一覧取得テスト',
+      success: response.success,
+      message: response.success 
+        ? `${response.data?.length || 0}件の体験情報を取得しました` 
+        : `体験情報の取得に失敗しました: ${response.error?.message || '不明なエラー'}`,
+      data: response.data,
+      error: response.error,
+      duration: endTime - startTime
+    };
+  } catch (error) {
+    const endTime = performance.now();
+    return {
+      name: '体験一覧取得テスト',
+      success: false,
+      message: error instanceof Error ? error.message : '不明なエラー',
       error,
       duration: endTime - startTime
     };
@@ -272,18 +331,53 @@ export async function runAllTests(): Promise<TestResult[]> {
   // 認証テスト
   results.push(await testAuthentication());
   
-  // 予約関連テスト
-  results.push(await testGetBookings());
-  results.push(await testCreateBooking());
+  // 一覧取得テスト
+  results.push(await testGetAttenders());
+  results.push(await testGetExperiences());
   
-  // レビュー関連テスト
-  results.push(await testGetReviews());
-  results.push(await testCreateReview());
-  
-  // アップロードテスト
-  results.push(await testFileUpload());
+  // 認証が必要なAPIテスト
+  const authTest = results[0];
+  if (authTest.success) {
+    // 予約関連テスト
+    results.push(await testGetBookings());
+    results.push(await testCreateBooking());
+    
+    // レビュー関連テスト
+    results.push(await testGetReviews());
+    results.push(await testCreateReview());
+    
+    // アップロードテスト
+    results.push(await testFileUpload());
+  } else {
+    console.warn('認証に失敗したため、認証が必要なAPIテストはスキップします');
+  }
   
   return results;
+}
+
+/**
+ * テスト結果をコンソールに出力
+ */
+export function printTestResults(results: TestResult[]): void {
+  console.group('APIテスト結果');
+  
+  results.forEach(result => {
+    const statusIcon = result.success ? '✅' : '❌';
+    console.log(`${statusIcon} ${result.name} - ${result.message} (${result.duration.toFixed(2)}ms)`);
+    
+    if (result.data) {
+      console.log('  データ:', result.data);
+    }
+    
+    if (result.error) {
+      console.error('  エラー:', result.error);
+    }
+  });
+  
+  const successCount = results.filter(r => r.success).length;
+  console.log(`\n総合結果: ${results.length}件中 ${successCount}件成功 (${(successCount / results.length * 100).toFixed(1)}%成功率)`);
+  
+  console.groupEnd();
 }
 
 export default {
@@ -293,5 +387,8 @@ export default {
   testCreateReview,
   testCreateBooking,
   testFileUpload,
-  runAllTests
+  testGetAttenders,
+  testGetExperiences,
+  runAllTests,
+  printTestResults
 };

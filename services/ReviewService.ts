@@ -5,7 +5,7 @@
  */
 
 import { v4 as uuidv4 } from 'uuid';
-import api, { logApiRequest, logApiResponse } from '../utils/apiClient';
+import enhancedApi, { logApiRequest, logApiResponse, ApiResponse } from '../utils/apiClientEnhanced';
 import { ENDPOINTS } from '../config/api';
 import { isDevelopment } from '../config/env';
 import { getAuth } from 'firebase/auth';
@@ -100,7 +100,7 @@ export async function getAttenderReviews(attenderId: string, limit: number = 10)
     
     logApiRequest('GET', ENDPOINTS.REVIEW.LIST, queryParams);
     
-    const response = await api.get<Review[]>(
+    const response = await enhancedApi.get<Review[]>(
       ENDPOINTS.REVIEW.LIST,
       queryParams
     );
@@ -149,7 +149,7 @@ export async function getExperienceReviews(experienceId: string, limit: number =
     
     logApiRequest('GET', ENDPOINTS.REVIEW.LIST, queryParams);
     
-    const response = await api.get<Review[]>(
+    const response = await enhancedApi.get<Review[]>(
       ENDPOINTS.REVIEW.LIST,
       queryParams
     );
@@ -207,7 +207,7 @@ export async function getUserReviews(limit: number = 10): Promise<Review[]> {
     
     logApiRequest('GET', ENDPOINTS.REVIEW.LIST, queryParams);
     
-    const response = await api.get<Review[]>(
+    const response = await enhancedApi.get<Review[]>(
       ENDPOINTS.REVIEW.LIST,
       queryParams
     );
@@ -241,7 +241,7 @@ export async function getReviewDetails(reviewId: string): Promise<Review | null>
     // 本番環境ではAPIを使用
     logApiRequest('GET', ENDPOINTS.REVIEW.DETAIL(reviewId), {});
     
-    const response = await api.get<Review>(
+    const response = await enhancedApi.get<Review>(
       ENDPOINTS.REVIEW.DETAIL(reviewId)
     );
     
@@ -320,7 +320,7 @@ export async function createReview(reviewData: ReviewCreateData): Promise<string
     
     logApiRequest('POST', ENDPOINTS.REVIEW.CREATE, { dataSize: JSON.stringify(requestData).length });
     
-    const response = await api.post<{ id: string }>(
+    const response = await enhancedApi.post<{ id: string }>(
       ENDPOINTS.REVIEW.CREATE,
       requestData
     );
@@ -401,7 +401,7 @@ export async function updateReview(
     // 本番環境ではAPIを使用
     logApiRequest('PUT', ENDPOINTS.REVIEW.UPDATE(reviewId), updateData);
     
-    const response = await api.put(
+    const response = await enhancedApi.put(
       ENDPOINTS.REVIEW.UPDATE(reviewId),
       {
         userId, // 認証情報としてユーザーIDを含める
@@ -465,7 +465,7 @@ export async function deleteReview(reviewId: string): Promise<boolean> {
     // 本番環境ではAPIを使用
     logApiRequest('DELETE', ENDPOINTS.REVIEW.DELETE(reviewId), { userId });
     
-    const response = await api.delete(
+    const response = await enhancedApi.delete(
       ENDPOINTS.REVIEW.DELETE(reviewId)
     );
     
@@ -526,7 +526,7 @@ export async function markReviewAsHelpful(reviewId: string): Promise<boolean> {
     // 本番環境ではAPIを使用
     logApiRequest('POST', ENDPOINTS.REVIEW.DETAIL(reviewId) + '/helpful', { userId });
     
-    const response = await api.post(
+    const response = await enhancedApi.post(
       ENDPOINTS.REVIEW.DETAIL(reviewId) + '/helpful',
       { userId }
     );

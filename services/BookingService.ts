@@ -5,9 +5,9 @@
  */
 
 import { v4 as uuidv4 } from 'uuid';
-import api, { logApiRequest, logApiResponse } from '../utils/apiClient';
+import enhancedApi, { logApiRequest, logApiResponse, ApiResponse } from '../utils/apiClientEnhanced';
 import { ENDPOINTS } from '../config/api';
-import { isDevelopment } from '../config/env';
+import { useMockData } from '../config/env';
 import { getAuth } from 'firebase/auth';
 
 // 予約の型定義
@@ -138,7 +138,7 @@ export async function getUserBookings(filters?: {
     
     logApiRequest('GET', ENDPOINTS.BOOKING.LIST, queryParams);
     
-    const response = await api.get<Booking[]>(
+    const response = await enhancedApi.get<Booking[]>(
       ENDPOINTS.BOOKING.LIST,
       queryParams
     );
@@ -204,7 +204,7 @@ export async function getAttenderBookings(attenderId: string, filters?: {
     
     logApiRequest('GET', ENDPOINTS.BOOKING.LIST, queryParams);
     
-    const response = await api.get<Booking[]>(
+    const response = await enhancedApi.get<Booking[]>(
       ENDPOINTS.BOOKING.LIST,
       queryParams
     );
@@ -238,7 +238,7 @@ export async function getBookingDetails(bookingId: string): Promise<Booking | nu
     // 本番環境ではAPIを使用
     logApiRequest('GET', ENDPOINTS.BOOKING.DETAIL(bookingId), {});
     
-    const response = await api.get<Booking>(
+    const response = await enhancedApi.get<Booking>(
       ENDPOINTS.BOOKING.DETAIL(bookingId)
     );
     
@@ -311,7 +311,7 @@ export async function createBooking(bookingData: BookingCreateData): Promise<str
     
     logApiRequest('POST', ENDPOINTS.BOOKING.CREATE, { dataSize: JSON.stringify(requestData).length });
     
-    const response = await api.post<{ id: string }>(
+    const response = await enhancedApi.post<{ id: string }>(
       ENDPOINTS.BOOKING.CREATE,
       requestData
     );
@@ -375,7 +375,7 @@ export async function cancelBooking(bookingId: string, reason?: string): Promise
     
     logApiRequest('PATCH', ENDPOINTS.BOOKING.DETAIL(bookingId) + '/status', requestData);
     
-    const response = await api.patch(
+    const response = await enhancedApi.patch(
       ENDPOINTS.BOOKING.DETAIL(bookingId) + '/status',
       requestData
     );
@@ -441,7 +441,7 @@ export async function confirmBooking(bookingId: string): Promise<boolean> {
     
     logApiRequest('PATCH', ENDPOINTS.BOOKING.DETAIL(bookingId) + '/status', requestData);
     
-    const response = await api.patch(
+    const response = await enhancedApi.patch(
       ENDPOINTS.BOOKING.DETAIL(bookingId) + '/status',
       requestData
     );
@@ -507,7 +507,7 @@ export async function completeBooking(bookingId: string): Promise<boolean> {
     
     logApiRequest('PATCH', ENDPOINTS.BOOKING.DETAIL(bookingId) + '/status', requestData);
     
-    const response = await api.patch(
+    const response = await enhancedApi.patch(
       ENDPOINTS.BOOKING.DETAIL(bookingId) + '/status',
       requestData
     );

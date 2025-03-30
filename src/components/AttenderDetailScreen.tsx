@@ -1,7 +1,7 @@
 // src/components/AttenderDetailScreen.tsx
 import React, { useState, useEffect } from 'react';
 import { Star, MapPin, Clock, Calendar, MessageCircle, Heart, Share2, ArrowLeft, Bookmark, ChevronDown, Image, User, Music, Camera, Coffee, Gift, Loader, Plus } from 'lucide-react';
-import { useAuth } from '../AuthComponents';
+import { useAuth } from '../contexts/AuthContext';
 import DirectRequestModal from './DirectRequestModal';
 import ReviewsList from './ReviewsList';
 import ReviewCard from './ReviewCard';
@@ -195,7 +195,7 @@ const AttenderDetailScreen: React.FC<AttenderDetailScreenProps> = ({ attenderId,
       const newReview = addReview({
         attenderId,
         userId: user.id,
-        userName: user.name,
+        userName: user.name || '名前なし',
         rating: reviewData.rating,
         comment: reviewData.comment,
         experienceTitle

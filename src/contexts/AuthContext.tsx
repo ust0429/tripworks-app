@@ -1,181 +1,357 @@
-import React, { createContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { User as FirebaseUser } from 'firebase/auth';
+import AuthService, { UserProfile } from '../services/AuthService';
+import { firestore } from '../config/firebase';
+import { doc, getDoc } from 'firebase/firestore';
 
-// 認証ユーザー情報の型
-interface User {
-  id: string;
-  email: string;
-  name: string;
-  isAttender: boolean;
+// 拡張されたユーザー型
+interface ExtendedUser extends FirebaseUser {
+  id: string;  // uidのエイリアス
+  name: string;  // displayNameのエイリアス
+  photoUrl: string | null;  // photoURLのエイリアス
 }
 
-// 認証コンテキストの型
-interface AuthContextType {
-  user: User | null;
-  isAuthenticated: boolean;
+// モーダル表示の状態
+export interface AuthModalState {
+  showLogin: boolean;
+  showSignup: boolean;
+}
+
+// 認証コンテキストの型定義
+export interface AuthContextType {
+  currentUser: FirebaseUser | null;
+  userProfile: UserProfile | null;
   isLoading: boolean;
   error: string | null;
-  login: (email: string, password: string) => Promise<void>;
-  logout: () => Promise<void>;
-  register: (userData: any) => Promise<void>;
-  getToken: () => Promise<string | null>;
+  isAuthenticated: boolean;
+  modals?: AuthModalState; // モーダル表示状態を公開
+  registerUser: (name: string, email: string, password: string) => Promise<void>;
+  loginUser: (email: string, password: string) => Promise<void>;
+  loginWithGoogle: () => Promise<void>;
+  logoutUser: () => Promise<void>;
+  resetPassword: (email: string) => Promise<void>;
+  updateProfile: (data: Partial<UserProfile>) => Promise<void>;
+  uploadProfileImage: (file: File) => Promise<string>;
+  deleteAccount: () => Promise<void>;
+  openLoginModal: () => void;
+  openSignupModal: () => void;
+  closeAuthModals: () => void;
+  
+  // 互換性のためのエイリアス
+  user?: ExtendedUser | null; // currentUserのエイリアス
+  logout?: () => Promise<void>; // logoutUserのエイリアス
+  updateAuthUser?: (data: Partial<UserProfile>) => Promise<void>; // updateProfileのエイリアス
+  login?: (email: string, password: string) => Promise<void>; // loginUserのエイリアス
+  signup?: (name: string, email: string, password: string) => Promise<void>; // registerUserのエイリアス
 }
 
-// 初期値
-const defaultAuthContext: AuthContextType = {
-  user: null,
-  isAuthenticated: false,
-  isLoading: true,
-  error: null,
-  login: async () => {},
-  logout: async () => {},
-  register: async () => {},
-  getToken: async () => null
-};
+// 初期コンテキスト値
+export const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// コンテキストの作成
-export const AuthContext = createContext<AuthContextType>(defaultAuthContext);
+// この宣言は上に移動しました
 
-// AuthProvider Props
+// 認証プロバイダーのProps
 interface AuthProviderProps {
-  children: React.ReactNode;
+  children: ReactNode;
 }
 
-/**
- * 認証情報を提供するコンテキストプロバイダー
- */
+// 認証プロバイダーコンポーネント
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  const [currentUser, setCurrentUser] = useState<FirebaseUser | null>(null);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [modals, setModals] = useState<AuthModalState>({
+    showLogin: false,
+    showSignup: false
+  });
 
-  // 初期認証状態の確認
+  // Firebase Authの状態監視
   useEffect(() => {
-    const checkAuthStatus = async () => {
+    const unsubscribe = AuthService.setupAuthListener(async (user) => {
+      setCurrentUser(user);
+      setIsLoading(true);
+      
       try {
-        // ローカルストレージやクッキーから認証情報を確認
-        const token = localStorage.getItem('auth_token');
-        
-        if (token) {
-          // トークンの検証（実際の実装ではAPIリクエストでトークンを検証）
-          // ここでは仮実装としてダミーユーザー情報を設定
-          setUser({
-            id: 'user-123',
-            email: 'user@example.com',
-            name: 'Echo User',
-            isAttender: false
-          });
-          setIsAuthenticated(true);
+        if (user) {
+          // ユーザーがログインしている場合、プロフィール情報を取得
+          const profile = await AuthService.getUserProfile(user.uid);
+          setUserProfile(profile);
+        } else {
+          setUserProfile(null);
         }
       } catch (err) {
-        console.error('Auth check failed:', err);
-        setError('認証情報の確認中にエラーが発生しました');
+        console.error('ユーザープロフィール取得エラー:', err);
+        setError('ユーザー情報の取得に失敗しました');
       } finally {
         setIsLoading(false);
       }
-    };
-
-    checkAuthStatus();
+    });
+    
+    // クリーンアップ関数
+    return () => unsubscribe();
   }, []);
 
-  /**
-   * ログイン処理
-   */
-  const login = async (email: string, password: string) => {
+  // 新規ユーザー登録
+  const registerUser = async (name: string, email: string, password: string) => {
+    setIsLoading(true);
+    setError(null);
+    
     try {
-      setIsLoading(true);
-      setError(null);
-      
-      // 実際の実装ではAPI呼び出しでログイン処理
-      // ここでは仮実装としてダミーユーザー情報を設定
-      const mockUser = {
-        id: 'user-123',
-        email,
-        name: 'Echo User',
-        isAttender: false
-      };
-      
-      // 仮のトークンをローカルストレージに保存
-      localStorage.setItem('auth_token', 'dummy-jwt-token');
-      
-      setUser(mockUser);
-      setIsAuthenticated(true);
+      const profile = await AuthService.registerWithEmailPassword(email, password, name);
+      setUserProfile(profile);
+      closeAuthModals();
     } catch (err: any) {
-      console.error('Login failed:', err);
-      setError(err.message || 'ログインに失敗しました');
+      console.error('ユーザー登録エラー:', err);
+      // Firebase Auth エラーメッセージの日本語化
+      if (err.code === 'auth/email-already-in-use') {
+        setError('このメールアドレスは既に使用されています');
+      } else if (err.code === 'auth/invalid-email') {
+        setError('無効なメールアドレスです');
+      } else if (err.code === 'auth/weak-password') {
+        setError('パスワードが弱すぎます。6文字以上のパスワードを設定してください');
+      } else {
+        setError('アカウント作成中にエラーが発生しました');
+      }
     } finally {
       setIsLoading(false);
     }
   };
 
-  /**
-   * ログアウト処理
-   */
-  const logout = async () => {
+  // メールアドレスとパスワードでログイン
+  const loginUser = async (email: string, password: string) => {
+    setIsLoading(true);
+    setError(null);
+    
     try {
-      setIsLoading(true);
-      
-      // 認証情報の削除
-      localStorage.removeItem('auth_token');
-      
-      setUser(null);
-      setIsAuthenticated(false);
+      const userCredential = await AuthService.loginWithEmailPassword(email, password);
+      const profile = await AuthService.getUserProfile(userCredential.user.uid);
+      setUserProfile(profile);
+      closeAuthModals();
     } catch (err: any) {
-      console.error('Logout failed:', err);
-      setError(err.message || 'ログアウト中にエラーが発生しました');
+      console.error('ログインエラー:', err);
+      // Firebase Auth エラーメッセージの日本語化
+      if (err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password') {
+        setError('メールアドレスまたはパスワードが正しくありません');
+      } else if (err.code === 'auth/invalid-email') {
+        setError('無効なメールアドレスです');
+      } else if (err.code === 'auth/user-disabled') {
+        setError('このアカウントは無効になっています');
+      } else if (err.code === 'auth/too-many-requests') {
+        setError('ログイン試行回数が多すぎます。しばらく時間をおいてお試しください');
+      } else {
+        setError('ログイン中にエラーが発生しました');
+      }
     } finally {
       setIsLoading(false);
     }
   };
 
-  /**
-   * ユーザー登録処理
-   */
-  const register = async (userData: any) => {
+  // Googleアカウントでログイン
+  const loginWithGoogle = async () => {
+    setIsLoading(true);
+    setError(null);
+    
     try {
-      setIsLoading(true);
-      setError(null);
-      
-      // 実際の実装ではAPI呼び出しでユーザー登録処理
-      // ここでは仮実装としてダミーユーザー情報を設定
-      const mockUser = {
-        id: 'user-' + Date.now(),
-        email: userData.email,
-        name: userData.name,
-        isAttender: false
-      };
-      
-      // 仮のトークンをローカルストレージに保存
-      localStorage.setItem('auth_token', 'dummy-jwt-token');
-      
-      setUser(mockUser);
-      setIsAuthenticated(true);
+      const userCredential = await AuthService.loginWithGoogle();
+      const profile = await AuthService.getUserProfile(userCredential.user.uid);
+      setUserProfile(profile);
+      closeAuthModals();
     } catch (err: any) {
-      console.error('Registration failed:', err);
-      setError(err.message || 'ユーザー登録に失敗しました');
+      console.error('Googleログインエラー:', err);
+      if (err.code === 'auth/popup-closed-by-user') {
+        setError('ログインがキャンセルされました');
+      } else {
+        setError('Googleログイン中にエラーが発生しました');
+      }
     } finally {
       setIsLoading(false);
     }
   };
 
-  /**
-   * 認証トークンを取得
-   */
-  const getToken = async (): Promise<string | null> => {
-    return localStorage.getItem('auth_token');
+  // ログアウト
+  const logoutUser = async () => {
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      await AuthService.logout();
+      setUserProfile(null);
+    } catch (err) {
+      console.error('ログアウトエラー:', err);
+      setError('ログアウト中にエラーが発生しました');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  // コンテキスト値の設定
+  // パスワードリセットメールの送信
+  const resetPassword = async (email: string) => {
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      await AuthService.sendPasswordReset(email);
+    } catch (err: any) {
+      console.error('パスワードリセットエラー:', err);
+      if (err.code === 'auth/user-not-found') {
+        setError('このメールアドレスに登録されたユーザーがいません');
+      } else if (err.code === 'auth/invalid-email') {
+        setError('無効なメールアドレスです');
+      } else {
+        setError('パスワードリセットメールの送信中にエラーが発生しました');
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // プロフィール更新
+  const updateProfile = async (data: Partial<UserProfile>) => {
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      if (!currentUser) {
+        throw new Error('ユーザーがログインしていません');
+      }
+      
+      await AuthService.updateUserProfile(currentUser.uid, data);
+      
+      // 更新後のプロフィールを再取得
+      const updatedProfile = await AuthService.getUserProfile(currentUser.uid);
+      setUserProfile(updatedProfile);
+    } catch (err) {
+      console.error('プロフィール更新エラー:', err);
+      setError('プロフィールの更新中にエラーが発生しました');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // プロフィール画像のアップロード
+  const uploadProfileImage = async (file: File): Promise<string> => {
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      if (!currentUser) {
+        throw new Error('ユーザーがログインしていません');
+      }
+      
+      const downloadURL = await AuthService.uploadProfileImage(file, currentUser.uid);
+      
+      // ユーザープロフィールを更新
+      if (userProfile) {
+        setUserProfile({
+          ...userProfile,
+          photoURL: downloadURL
+        });
+      }
+      
+      return downloadURL;
+    } catch (err) {
+      console.error('画像アップロードエラー:', err);
+      setError('プロフィール画像のアップロード中にエラーが発生しました');
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // アカウント削除
+  const deleteAccount = async () => {
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      await AuthService.deleteUserAccount();
+      setUserProfile(null);
+    } catch (err) {
+      console.error('アカウント削除エラー:', err);
+      setError('アカウントの削除中にエラーが発生しました');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // モーダル表示関数
+  const openLoginModal = () => {
+    console.log('Opening login modal - AuthContext');
+    // さらに明示的に状態をデバッグ出力
+    console.log('Modal state before:', modals);
+    setModals({ showLogin: true, showSignup: false });
+    // 状態が更新されたことを確認するためにタイムアウトを追加
+    setTimeout(() => {
+      console.log('Modal state after timeout:', { ...modals });
+    }, 100);
+  };
+
+  const openSignupModal = () => {
+    console.log('Opening signup modal - AuthContext');
+    console.log('Modal state before:', modals);
+    setModals({ showLogin: false, showSignup: true });
+    setTimeout(() => {
+      console.log('Modal state after timeout:', { ...modals });
+    }, 100);
+  };
+
+  const closeAuthModals = () => {
+    console.log('Closing auth modals - AuthContext');
+    console.log('Modal state before:', modals);
+    setModals({ showLogin: false, showSignup: false });
+    setTimeout(() => {
+      console.log('Modal state after timeout:', { ...modals });
+    }, 100);
+  };
+
+  // コンテキスト値
   const value: AuthContextType = {
-    user,
-    isAuthenticated,
+    currentUser,
+    userProfile,
     isLoading,
     error,
-    login,
-    logout,
-    register,
-    getToken
+    isAuthenticated: !!currentUser,
+    modals, // モーダル表示状態を追加
+    registerUser,
+    loginUser,
+    loginWithGoogle,
+    logoutUser,
+    resetPassword,
+    updateProfile,
+    uploadProfileImage,
+    deleteAccount,
+    openLoginModal,
+    openSignupModal,
+    closeAuthModals,
+    
+    // 互換性のためのエイリアス
+    user: currentUser ? {
+      ...currentUser,
+      id: currentUser.uid,
+      name: currentUser.displayName || 'ユーザー',  // nullの場合はデフォルト値
+      photoUrl: currentUser.photoURL,
+    } : null,
+    logout: logoutUser,
+    updateAuthUser: updateProfile,
+    login: loginUser,
+    signup: registerUser
   };
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+    </AuthContext.Provider>
+  );
+};
+
+// カスタムフック
+export const useAuth = (): AuthContextType => {
+  const context = useContext(AuthContext);
+  
+  if (context === undefined) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  
+  return context;
 };

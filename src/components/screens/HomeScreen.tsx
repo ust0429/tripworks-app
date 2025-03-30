@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Search, MapPin, Calendar, Clock, Music, Camera, Utensils, Coffee, Gift, UserPlus, ArrowRight } from 'lucide-react';
-import { useAuth } from '../../AuthComponents';
+import { useAuth } from '../../contexts/AuthContext';
 import { AttenderType } from '../../types';
 import AttenderCard from '../AttenderCard';
 
