@@ -1,6 +1,6 @@
 import React, { useState, createContext, useContext, ReactNode, useEffect } from 'react';
 import { X, Mail, Lock, User, Eye, EyeOff } from 'lucide-react';
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'firebase/auth';
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, updateProfile } from 'firebase/auth';
 import { auth } from './config/firebaseConfig';
 
 // 認証コンテキストの型定義
@@ -10,6 +10,7 @@ interface AuthContextType {
   currentUser: CurrentUserType | null;
   login: (email: string, password: string) => Promise<boolean>;
   signup: (name: string, email: string, password: string) => Promise<boolean>;
+  loginWithGoogle: () => Promise<boolean>;
   logout: () => void;
   openLoginModal: () => void;
   openSignupModal: () => void;
@@ -108,6 +109,76 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return () => unsubscribe();
   }, []);
 
+  // Google認証プロバイダーを初期化
+  const googleProvider = new GoogleAuthProvider();
+  googleProvider.addScope('profile');
+  googleProvider.addScope('email');
+  
+  // 新しいOAuthクライアントIDがあれば設定
+  if ((window as any).GOOGLE_OAUTH_CLIENT_ID) {
+    googleProvider.setCustomParameters({
+      'client_id': (window as any).GOOGLE_OAUTH_CLIENT_ID
+    });
+  }
+
+  // Googleでログイン処理
+  const loginWithGoogle = async (): Promise<boolean> => {
+    try {
+      console.log('Starting Google sign-in process');
+      // Googleポップアップでサインイン
+      const result = await signInWithPopup(auth, googleProvider);
+      
+      // リザルト確認用ログ
+      console.log('Google sign-in successful:', result);
+      
+      const user = result.user;
+      
+      if (user) {
+        // ユーザー情報を作成
+        const userData: UserType = {
+          id: user.uid,
+          name: user.displayName || 'Googleユーザー',
+          email: user.email || '',
+          profileImage: user.photoURL
+        };
+        
+        const currentUserData: CurrentUserType = {
+          id: user.uid,
+          name: user.displayName || 'Googleユーザー',
+          email: user.email || '',
+          photoUrl: user.photoURL,
+          type: 'user' as const
+        };
+        
+        // ユーザー情報をlocalStorageに保存
+        localStorage.setItem('echo_user', JSON.stringify(userData));
+        localStorage.setItem('echo_currentUser', JSON.stringify(currentUserData));
+        
+        setUser(userData);
+        setCurrentUser(currentUserData);
+        setIsAuthenticated(true);
+        setShowLoginModal(false);
+        setShowSignupModal(false);
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error('Google login error:', error);
+      // エラーの詳細情報をコンソールに表示
+      if (error instanceof Error) {
+        console.error('Error details:', {
+          name: error.name,
+          message: error.message,
+          stack: error.stack,
+          code: (error as any).code || 'unknown'
+        });
+      }
+      
+      // エラーを再スローしてコンポーネントで処理できるようにする
+      throw error;
+    }
+  };
+
   // ログイン処理（Firebase認証）
   const login = async (email: string, password: string): Promise<boolean> => {
     try {
@@ -187,7 +258,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const firebaseUser = userCredential.user;
       
-      // Firebaseユーザー情報の更新は別途で行う必要がある
+      // Firebaseユーザー情報を更新
+      try {
+        await updateProfile(firebaseUser, {
+          displayName: name
+        });
+        console.log('Profile updated successfully');
+      } catch (profileError) {
+        console.error('Error updating profile:', profileError);
+        // プロフィール更新失敗はクリティカルではないので処理を続行
+      }
       
       if (firebaseUser) {
         const userData: UserType = {
@@ -277,6 +357,43 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setShowSignupModal(true);
   };
 
+  // Firebase redirectの結果を取得（ページロード時）
+  useEffect(() => {
+    const handleRedirectResult = async () => {
+      try {
+        const result = await getRedirectResult(auth);
+        if (result && result.user) {
+          // リダイレクト後のユーザー情報を処理
+          const userData: UserType = {
+            id: result.user.uid,
+            name: result.user.displayName || 'Googleユーザー',
+            email: result.user.email || '',
+            profileImage: result.user.photoURL
+          };
+          
+          const currentUserData: CurrentUserType = {
+            id: result.user.uid,
+            name: result.user.displayName || 'Googleユーザー',
+            email: result.user.email || '',
+            photoUrl: result.user.photoURL,
+            type: 'user' as const
+          };
+          
+          localStorage.setItem('echo_user', JSON.stringify(userData));
+          localStorage.setItem('echo_currentUser', JSON.stringify(currentUserData));
+          
+          setUser(userData);
+          setCurrentUser(currentUserData);
+          setIsAuthenticated(true);
+        }
+      } catch (error) {
+        console.error('Error handling redirect result:', error);
+      }
+    };
+
+    handleRedirectResult();
+  }, []);
+
   return (
     <AuthContext.Provider
       value={{
@@ -285,6 +402,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         currentUser,
         login,
         signup,
+        loginWithGoogle,
         logout,
         openLoginModal,
         openSignupModal,
@@ -314,7 +432,7 @@ interface LoginModalProps {
 }
 
 const LoginModal = ({ onClose, onSignupClick }: LoginModalProps) => {
-  const { login } = useAuth();
+  const { login, loginWithGoogle } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -452,12 +570,45 @@ const LoginModal = ({ onClose, onSignupClick }: LoginModalProps) => {
           </div>
         </div>
         
-        <div className="mt-6 grid grid-cols-2 gap-3">
-          <button className="w-full py-2 px-4 border border-gray-300 rounded-lg font-medium text-sm text-gray-700 hover:bg-gray-50">
+        <div className="mt-6 grid grid-cols-1 gap-3">
+          <button 
+            onClick={(e) => {
+              e.preventDefault();
+              setIsLoading(true);
+              setError('');
+              loginWithGoogle()
+                .then(success => {
+                  if (!success) {
+                    setError('Googleログインに失敗しました。別の方法でお試しください。');
+                  }
+                })
+                .catch((err) => {
+                  console.error('Login error in component:', err);
+                  if (err.code === 'auth/cancelled-popup-request') {
+                    setError('ログインがキャンセルされました');
+                  } else if (err.code === 'auth/popup-blocked') {
+                    setError('ポップアップがブロックされました。ブラウザの設定を確認してください。');
+                  } else if (err.code === 'auth/popup-closed-by-user') {
+                    setError('ログイン画面が閉じられました');
+                  } else if (err.code === 'auth/api-key-not-valid') {
+                    setError('認証サービスの構成に問題があります。サポートにお問い合わせください。');
+                  } else {
+                    setError('Googleログイン中にエラーが発生しました');
+                  }
+                })
+                .finally(() => {
+                  setIsLoading(false);
+                });
+            }}
+            className="w-full py-2 px-4 border border-gray-300 rounded-lg font-medium text-sm text-gray-700 hover:bg-gray-50 flex items-center justify-center gap-2"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="18px" height="18px">
+              <path fill="#FFC107" d="M43.611,20.083H42V20H24v8h11.303c-1.649,4.657-6.08,8-11.303,8c-6.627,0-12-5.373-12-12c0-6.627,5.373-12,12-12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C12.955,4,4,12.955,4,24c0,11.045,8.955,20,20,20c11.045,0,20-8.955,20-20C44,22.659,43.862,21.35,43.611,20.083z"/>
+              <path fill="#FF3D00" d="M6.306,14.691l6.571,4.819C14.655,15.108,18.961,12,24,12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C16.318,4,9.656,8.337,6.306,14.691z"/>
+              <path fill="#4CAF50" d="M24,44c5.166,0,9.86-1.977,13.409-5.192l-6.19-5.238C29.211,35.091,26.715,36,24,36c-5.202,0-9.619-3.317-11.283-7.946l-6.522,5.025C9.505,39.556,16.227,44,24,44z"/>
+              <path fill="#1976D2" d="M43.611,20.083H42V20H24v8h11.303c-0.792,2.237-2.231,4.166-4.087,5.571c0.001-0.001,0.002-0.001,0.003-0.002l6.19,5.238C36.971,39.205,44,34,44,24C44,22.659,43.862,21.35,43.611,20.083z"/>
+            </svg>
             Googleで続ける
-          </button>
-          <button className="w-full py-2 px-4 border border-gray-300 rounded-lg font-medium text-sm text-gray-700 hover:bg-gray-50">
-            Appleで続ける
           </button>
         </div>
       </div>
@@ -472,7 +623,7 @@ interface SignupModalProps {
 }
 
 const SignupModal = ({ onClose, onLoginClick }: SignupModalProps) => {
-  const { signup } = useAuth();
+  const { signup, loginWithGoogle } = useAuth();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -641,6 +792,57 @@ const SignupModal = ({ onClose, onLoginClick }: SignupModalProps) => {
             className="text-black ml-1 font-medium hover:underline"
           >
             ログイン
+          </button>
+        </div>
+
+        <div className="relative mt-6">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t border-gray-300"></div>
+          </div>
+          <div className="relative flex justify-center text-sm">
+            <span className="px-2 bg-white text-gray-500">または</span>
+          </div>
+        </div>
+        
+        <div className="mt-6 grid grid-cols-1 gap-3">
+          <button 
+            onClick={(e) => {
+              e.preventDefault();
+              setIsLoading(true);
+              setError('');
+              loginWithGoogle()
+                .then(success => {
+                  if (!success) {
+                    setError('Googleログインに失敗しました。別の方法でお試しください。');
+                  }
+                })
+                .catch((err) => {
+                  console.error('Login error in component:', err);
+                  if (err.code === 'auth/cancelled-popup-request') {
+                    setError('ログインがキャンセルされました');
+                  } else if (err.code === 'auth/popup-blocked') {
+                    setError('ポップアップがブロックされました。ブラウザの設定を確認してください。');
+                  } else if (err.code === 'auth/popup-closed-by-user') {
+                    setError('ログイン画面が閉じられました');
+                  } else if (err.code === 'auth/api-key-not-valid') {
+                    setError('認証サービスの構成に問題があります。サポートにお問い合わせください。');
+                  } else {
+                    setError('Googleログイン中にエラーが発生しました');
+                  }
+                })
+                .finally(() => {
+                  setIsLoading(false);
+                });
+            }}
+            className="w-full py-2 px-4 border border-gray-300 rounded-lg font-medium text-sm text-gray-700 hover:bg-gray-50 flex items-center justify-center gap-2"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="18px" height="18px">
+              <path fill="#FFC107" d="M43.611,20.083H42V20H24v8h11.303c-1.649,4.657-6.08,8-11.303,8c-6.627,0-12-5.373-12-12c0-6.627,5.373-12,12-12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C12.955,4,4,12.955,4,24c0,11.045,8.955,20,20,20c11.045,0,20-8.955,20-20C44,22.659,43.862,21.35,43.611,20.083z"/>
+              <path fill="#FF3D00" d="M6.306,14.691l6.571,4.819C14.655,15.108,18.961,12,24,12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C16.318,4,9.656,8.337,6.306,14.691z"/>
+              <path fill="#4CAF50" d="M24,44c5.166,0,9.86-1.977,13.409-5.192l-6.19-5.238C29.211,35.091,26.715,36,24,36c-5.202,0-9.619-3.317-11.283-7.946l-6.522,5.025C9.505,39.556,16.227,44,24,44z"/>
+              <path fill="#1976D2" d="M43.611,20.083H42V20H24v8h11.303c-0.792,2.237-2.231,4.166-4.087,5.571c0.001-0.001,0.002-0.001,0.003-0.002l6.19,5.238C36.971,39.205,44,34,44,24C44,22.659,43.862,21.35,43.611,20.083z"/>
+            </svg>
+            Googleで登録
           </button>
         </div>
       </div>
