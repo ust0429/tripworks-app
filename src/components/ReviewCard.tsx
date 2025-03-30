@@ -120,7 +120,7 @@ const ReviewCard: React.FC<ReviewCardProps> = ({ review, onHelpfulToggle }) => {
         userId: currentUser.id,
         userName: currentUser.name,
         userType: currentUser.type || 'user',
-        userImage: currentUser.photoUrl,
+        userImage: currentUser.photoUrl || undefined,
         content
       });
       

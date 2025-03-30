@@ -1,5 +1,7 @@
 import React, { useState, createContext, useContext, ReactNode, useEffect } from 'react';
 import { X, Mail, Lock, User, Eye, EyeOff } from 'lucide-react';
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'firebase/auth';
+import { auth } from './config/firebaseConfig';
 
 // 認証コンテキストの型定義
 interface AuthContextType {
@@ -19,7 +21,7 @@ interface UserType {
   id: string;
   name: string;
   email: string;
-  profileImage?: string;
+  profileImage?: string | null;
   isAttender?: boolean;
 }
 
@@ -28,7 +30,7 @@ interface CurrentUserType {
   id: string;
   name: string;
   email: string;
-  photoUrl?: string;
+  photoUrl?: string | null;
   type?: 'user' | 'attender' | 'admin';
 }
 
@@ -45,49 +47,87 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   // 初期化時に認証状態を確認
   useEffect(() => {
-    // ローカルストレージから認証情報を読み込む
-    const storedUser = localStorage.getItem('echo_user');
-    const storedCurrentUser = localStorage.getItem('echo_currentUser');
-    
-    if (storedUser && storedCurrentUser) {
-      try {
-        const parsedUser = JSON.parse(storedUser);
-        const parsedCurrentUser = JSON.parse(storedCurrentUser);
-        
-        setUser(parsedUser);
-        setCurrentUser(parsedCurrentUser);
-        setIsAuthenticated(true);
-      } catch (error) {
-        console.error('Failed to parse stored auth data:', error);
-        // 解析エラーが発生した場合は認証情報をクリア
-        localStorage.removeItem('echo_user');
-        localStorage.removeItem('echo_currentUser');
-      }
-    }
-  }, []);
-
-  // ログイン処理（モック）
-  const login = async (email: string, password: string): Promise<boolean> => {
-    // ここでは簡易的に成功させる
-    // 実際のアプリでは、APIリクエストを行い、返ってきた結果によって処理
-    try {
-      // モック用に少し遅延を入れる
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // テスト用アカウント
-      if (email === 'test@example.com' && password === 'password') {
-        const userData = {
-          id: '1',
-          name: 'テストユーザー',
-          email: email,
-          profileImage: undefined
+    // Firebaseの認証状態を監視
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+      if (firebaseUser) {
+        // ユーザーがログインしている場合
+        const userData: UserType = {
+          id: firebaseUser.uid,
+          name: firebaseUser.displayName || 'ユーザー',
+          email: firebaseUser.email || '',
+          profileImage: firebaseUser.photoURL
         };
         
-        const currentUserData = {
-          id: '1',
-          name: 'テストユーザー',
-          email: email,
-          photoUrl: undefined,
+        const currentUserData: CurrentUserType = {
+          id: firebaseUser.uid,
+          name: firebaseUser.displayName || 'ユーザー',
+          email: firebaseUser.email || '',
+          photoUrl: firebaseUser.photoURL,
+          type: 'user' as const
+        };
+        
+        // ユーザー情報をlocalStorageに保存
+        localStorage.setItem('echo_user', JSON.stringify(userData));
+        localStorage.setItem('echo_currentUser', JSON.stringify(currentUserData));
+        
+        setUser(userData);
+        setCurrentUser(currentUserData);
+        setIsAuthenticated(true);
+      } else {
+        // ユーザーがログアウトしている場合
+        // localStorage から認証情報を読み込んでみる（オフライン対応）
+        const storedUser = localStorage.getItem('echo_user');
+        const storedCurrentUser = localStorage.getItem('echo_currentUser');
+        
+        if (storedUser && storedCurrentUser) {
+          try {
+            const parsedUser = JSON.parse(storedUser);
+            const parsedCurrentUser = JSON.parse(storedCurrentUser);
+            
+            setUser(parsedUser);
+            setCurrentUser(parsedCurrentUser);
+            setIsAuthenticated(true);
+          } catch (error) {
+            console.error('Failed to parse stored auth data:', error);
+            // 解析エラーが発生した場合は認証情報をクリア
+            localStorage.removeItem('echo_user');
+            localStorage.removeItem('echo_currentUser');
+            setUser(null);
+            setCurrentUser(null);
+            setIsAuthenticated(false);
+          }
+        } else {
+          setUser(null);
+          setCurrentUser(null);
+          setIsAuthenticated(false);
+        }
+      }
+    });
+    
+    // クリーンアップ関数
+    return () => unsubscribe();
+  }, []);
+
+  // ログイン処理（Firebase認証）
+  const login = async (email: string, password: string): Promise<boolean> => {
+    try {
+      // Firebaseの認証を使用
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const firebaseUser = userCredential.user;
+      
+      if (firebaseUser) {
+        const userData: UserType = {
+          id: firebaseUser.uid,
+          name: firebaseUser.displayName || 'ユーザー',
+          email: firebaseUser.email || '',
+          profileImage: firebaseUser.photoURL
+        };
+        
+        const currentUserData: CurrentUserType = {
+          id: firebaseUser.uid,
+          name: firebaseUser.displayName || 'ユーザー',
+          email: firebaseUser.email || '',
+          photoUrl: firebaseUser.photoURL,
           type: 'user' as const
         };
         
@@ -107,28 +147,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       return false;
     }
   };
-
-  // サインアップ処理（モック）
-  const signup = async (name: string, email: string, password: string): Promise<boolean> => {
-    try {
-      // モック用に少し遅延を入れる
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      const userId = Date.now().toString(); // 仮のID生成
-      
-      // 実際にはここでAPIにリクエストを送信
-      const userData = {
-        id: userId,
-        name: name,
+  
+  // テスト用アカウントの場合はモック認証を許可
+  const mockLogin = async (email: string, password: string): Promise<boolean> => {
+    // テスト用アカウント
+    if (email === 'test@example.com' && password === 'password') {
+      const userData: UserType = {
+        id: 'mock-1',
+        name: 'テストユーザー',
         email: email,
-        profileImage: undefined
+        profileImage: null
       };
       
-      const currentUserData = {
-        id: userId,
-        name: name,
+      const currentUserData: CurrentUserType = {
+        id: 'mock-1',
+        name: 'テストユーザー',
         email: email,
-        photoUrl: undefined,
+        photoUrl: null,
         type: 'user' as const
       };
       
@@ -139,8 +174,48 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setUser(userData);
       setCurrentUser(currentUserData);
       setIsAuthenticated(true);
-      setShowSignupModal(false);
+      setShowLoginModal(false);
       return true;
+    }
+    return false;
+  };
+
+  // サインアップ処理（Firebase認証）
+  const signup = async (name: string, email: string, password: string): Promise<boolean> => {
+    try {
+      // Firebaseの認証を使用
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const firebaseUser = userCredential.user;
+      
+      // Firebaseユーザー情報の更新は別途で行う必要がある
+      
+      if (firebaseUser) {
+        const userData: UserType = {
+          id: firebaseUser.uid,
+          name: name, // 入力された名前を使用
+          email: email,
+          profileImage: null
+        };
+        
+        const currentUserData: CurrentUserType = {
+          id: firebaseUser.uid,
+          name: name,
+          email: email,
+          photoUrl: null,
+          type: 'user' as const
+        };
+        
+        // ユーザー情報をlocalStorageに保存
+        localStorage.setItem('echo_user', JSON.stringify(userData));
+        localStorage.setItem('echo_currentUser', JSON.stringify(currentUserData));
+        
+        setUser(userData);
+        setCurrentUser(currentUserData);
+        setIsAuthenticated(true);
+        setShowSignupModal(false);
+        return true;
+      }
+      return false;
     } catch (error) {
       console.error('Signup error:', error);
       return false;
@@ -148,14 +223,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   // ログアウト処理
-  const logout = () => {
-    // localStorageから認証情報を削除
-    localStorage.removeItem('echo_user');
-    localStorage.removeItem('echo_currentUser');
-    
-    setUser(null);
-    setCurrentUser(null);
-    setIsAuthenticated(false);
+  const logout = async () => {
+    try {
+      // Firebaseのログアウトを実行
+      await signOut(auth);
+      
+      // localStorageから認証情報を削除
+      localStorage.removeItem('echo_user');
+      localStorage.removeItem('echo_currentUser');
+      
+      setUser(null);
+      setCurrentUser(null);
+      setIsAuthenticated(false);
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
   };
 
   // 認証ユーザー情報の更新
