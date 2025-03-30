@@ -282,9 +282,17 @@ const AppContent = () => {
               onClick={() => setMenuOpen(!menuOpen)}
               className="p-2 rounded-full hover:bg-gray-800 flex items-center space-x-2"
             >
-              <div className="w-8 h-8 bg-gray-600 rounded-full flex items-center justify-center text-white text-sm">
-                {user?.name.charAt(0)}
-              </div>
+              {user?.profileImage ? (
+                <img 
+                  src={user.profileImage} 
+                  alt={user.name} 
+                  className="w-8 h-8 rounded-full object-cover"
+                />
+              ) : (
+                <div className="w-8 h-8 bg-gray-600 rounded-full flex items-center justify-center text-white text-sm">
+                  {user?.name.charAt(0)}
+                </div>
+              )}
               {menuOpen ? <X size={20} /> : <Menu size={20} />}
             </button>
           ) : (
@@ -356,9 +364,17 @@ const AppContent = () => {
             <div className="p-4 border-b">
               {isAuthenticated ? (
                 <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center text-gray-700 text-lg font-medium">
-                    {user?.name.charAt(0)}
-                  </div>
+                  {user?.profileImage ? (
+                    <img 
+                      src={user.profileImage} 
+                      alt={user.name} 
+                      className="w-10 h-10 rounded-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center text-gray-700 text-lg font-medium">
+                      {user?.name.charAt(0)}
+                    </div>
+                  )}
                   <div>
                     <p className="font-medium">{user?.name}</p>
                     <p className="text-sm text-gray-500">{user?.email}</p>
