@@ -5,7 +5,7 @@
  */
 
 import { v4 as uuidv4 } from 'uuid';
-import api, { logApiRequest, logApiResponse } from '../utils/apiClient';
+import api, { logApiRequest, logApiResponse } from '../utils/apiClientEnhanced';
 import { ENDPOINTS } from '../config/api';
 import { isDevelopment } from '../config/env';
 import { getAuth } from 'firebase/auth';

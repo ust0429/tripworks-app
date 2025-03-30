@@ -1,179 +1,163 @@
 /**
- * APIエラー処理ユーティリティ
+ * エラー処理ユーティリティ
  * 
- * APIレスポンスからユーザーフレンドリーなエラーメッセージを生成します
+ * APIエラーの処理と表示のためのユーティリティ関数
  */
 
-import { ApiResponse } from './apiClient';
+import { ApiResponse } from './apiClientEnhanced';
 
-// エラーコードごとのメッセージマッピング
-const ERROR_MESSAGES: Record<string, string> = {
-  // 認証関連エラー
-  'auth/invalid-email': 'メールアドレスの形式が正しくありません',
-  'auth/user-disabled': 'このアカウントは無効になっています',
-  'auth/user-not-found': 'ユーザーが見つかりません',
-  'auth/wrong-password': 'パスワードが正しくありません',
-  'auth/email-already-in-use': 'このメールアドレスは既に使用されています',
-  'auth/weak-password': 'パスワードが脆弱です。より強力なパスワードを設定してください',
-  'auth/requires-recent-login': '再認証が必要です。再度ログインしてください',
-  'auth/unauthorized': '認証されていないか、権限がありません',
-  
-  // API関連エラー
-  'UNAUTHORIZED': 'ログインが必要です',
-  'FORBIDDEN': 'この操作を行う権限がありません',
-  'NOT_FOUND': 'リクエストされたリソースが見つかりません',
-  'VALIDATION_ERROR': '入力データに問題があります',
-  'SERVER_ERROR': 'サーバーエラーが発生しました',
-  'NETWORK_ERROR': 'ネットワーク接続に問題があります',
-  'TIMEOUT': 'リクエストがタイムアウトしました',
-  
-  // ビジネスロジックエラー
-  'BOOKING_ALREADY_CANCELLED': '予約は既にキャンセルされています',
-  'BOOKING_ALREADY_COMPLETED': '完了済みの予約に対して操作できません',
-  'BOOKING_NOT_CONFIRMED': '予約が確定されていないため、操作できません',
-  'REVIEW_OWN_CONTENT': '自分自身のコンテンツに対してレビューできません',
-  'UNAVAILABLE_TIME': '指定された時間は予約できません',
-  'INSUFFICIENT_POINTS': 'ポイントが足りません',
-  
-  // その他のエラー
-  'UPLOAD_ERROR': 'ファイルのアップロードに失敗しました',
-  'UNKNOWN_ERROR': '予期せぬエラーが発生しました'
+// エラータイプの定義
+export type ErrorType = 
+  | 'network'      // ネットワーク関連エラー
+  | 'auth'         // 認証関連エラー
+  | 'validation'   // 入力検証エラー
+  | 'notFound'     // リソースが見つからないエラー
+  | 'permission'   // 権限関連エラー
+  | 'server'       // サーバーエラー
+  | 'unknown';     // 不明なエラー
+
+// エラーコードとエラータイプのマッピング
+const ERROR_TYPE_MAPPING: Record<string, ErrorType> = {
+  'NETWORK_ERROR': 'network',
+  'TIMEOUT': 'network',
+  'ABORTED': 'network',
+  'INVALID_TOKEN': 'auth',
+  'UNAUTHORIZED': 'auth',
+  'AUTH_REQUIRED': 'auth',
+  'VALIDATION_ERROR': 'validation',
+  'INVALID_INPUT': 'validation',
+  'RESOURCE_NOT_FOUND': 'notFound',
+  'NOT_FOUND': 'notFound',
+  'PERMISSION_DENIED': 'permission',
+  'INSUFFICIENT_PERMISSIONS': 'permission',
+  'SERVER_ERROR': 'server',
+  'INTERNAL_ERROR': 'server',
 };
 
 /**
- * APIエラーからユーザーフレンドリーなメッセージを取得
+ * APIエラーからエラータイプを判定
  * 
- * @param error APIエラーまたはエラーコード
- * @returns ユーザーフレンドリーなエラーメッセージ
+ * @param error APIレスポンスのエラー情報
+ * @param status HTTPステータスコード
+ * @returns エラータイプ
  */
-export function getErrorMessage(error: any): string {
-  // エラーコードが文字列の場合
-  if (typeof error === 'string') {
-    return ERROR_MESSAGES[error] || error;
+export function getErrorType(error?: { code: string; message: string; details?: any }, status?: number): ErrorType {
+  // エラーコードからの判定
+  if (error?.code && ERROR_TYPE_MAPPING[error.code]) {
+    return ERROR_TYPE_MAPPING[error.code];
   }
   
-  // Firebase認証エラーの場合
-  if (error && error.code && typeof error.code === 'string') {
-    return ERROR_MESSAGES[error.code] || error.message || '不明なエラーが発生しました';
+  // HTTPステータスコードからの判定
+  if (status) {
+    if (status === 401 || status === 403) {
+      return 'auth';
+    } else if (status === 404) {
+      return 'notFound';
+    } else if (status >= 400 && status < 500) {
+      return 'validation';
+    } else if (status >= 500) {
+      return 'server';
+    }
   }
   
-  // APIレスポンスの場合
-  if (error && error.error && error.error.code) {
-    return ERROR_MESSAGES[error.error.code] || error.error.message || '不明なエラーが発生しました';
-  }
-  
-  // 通常のError型の場合
-  if (error instanceof Error) {
-    return error.message;
-  }
-  
-  // それ以外の場合
-  return '不明なエラーが発生しました';
+  // どちらにも当てはまらない場合
+  return 'unknown';
 }
 
 /**
- * APIレスポンスからエラーを抽出してユーザーフレンドリーなメッセージを返す
+ * ユーザーフレンドリーなエラーメッセージを生成
  * 
  * @param response APIレスポンス
- * @returns エラーメッセージ（エラーがない場合はnull）
+ * @returns ユーザー向けのエラーメッセージ
  */
-export function getApiErrorMessage<T>(response: ApiResponse<T>): string | null {
-  if (response.success) {
-    return null;
-  }
+export function getErrorMessage(response: ApiResponse): string {
+  const errorType = getErrorType(response.error, response.status);
+  const defaultMessage = response.error?.message || '予期せぬエラーが発生しました';
   
-  // エラーオブジェクトがある場合
-  if (response.error) {
-    // カスタムエラーメッセージがある場合はそれを返す
-    if (response.error.message) {
-      return response.error.message;
-    }
+  switch (errorType) {
+    case 'network':
+      return 'ネットワークに接続できません。インターネット接続をご確認ください。';
     
-    // エラーコードがある場合はマッピングされたメッセージを返す
-    if (response.error.code && ERROR_MESSAGES[response.error.code]) {
-      return ERROR_MESSAGES[response.error.code];
-    }
+    case 'auth':
+      if (response.status === 401) {
+        return 'セッションの有効期限が切れました。再度ログインしてください。';
+      }
+      if (response.status === 403) {
+        return 'この操作を行う権限がありません。';
+      }
+      return defaultMessage;
+    
+    case 'validation':
+      return response.error?.message || '入力内容に問題があります。確認して再試行してください。';
+    
+    case 'notFound':
+      return '該当する情報が見つかりませんでした。URLが正しいか確認してください。';
+    
+    case 'permission':
+      return '権限がありません。アクセス権を確認してください。';
+    
+    case 'server':
+      return 'サーバー側でエラーが発生しました。しばらくたってから再試行してください。';
+    
+    default:
+      return defaultMessage;
   }
-  
-  // エラーステータスコードに基づいたメッセージ
-  if (response.status === 401) {
-    return 'ログインが必要です';
-  } else if (response.status === 403) {
-    return '権限がありません';
-  } else if (response.status === 404) {
-    return 'リクエストされたリソースが見つかりません';
-  } else if (response.status >= 400 && response.status < 500) {
-    return 'リクエストに問題があります';
-  } else if (response.status >= 500) {
-    return 'サーバーエラーが発生しました';
-  }
-  
-  return '不明なエラーが発生しました';
 }
 
 /**
- * ネットワークエラーかどうかを判定
+ * フィールドごとのエラーメッセージを抽出
  * 
- * @param error エラーオブジェクト
- * @returns ネットワークエラーの場合true
+ * @param response APIレスポンス
+ * @returns フィールド名をキーとし、エラーメッセージを値とするオブジェクト
  */
-export function isNetworkError(error: any): boolean {
-  if (!error) return false;
-  
-  // 一般的なネットワークエラーパターン
-  if (error instanceof Error && 
-      (error.message.includes('network') || 
-       error.message.includes('Network') ||
-       error.message.includes('fetch') ||
-       error.message.includes('connection') ||
-       error.message.includes('timeout'))) {
-    return true;
+export function getFieldErrors(response: ApiResponse): Record<string, string> {
+  if (response.error?.details?.fieldErrors) {
+    return response.error.details.fieldErrors as Record<string, string>;
   }
   
-  // APIクライアントのネットワークエラーパターン
-  if (error.error && error.error.code === 'NETWORK_ERROR') {
-    return true;
-  }
-  
-  // ステータスコードがない場合（サーバー到達前のエラー）
-  if (error.status === 0) {
-    return true;
-  }
-  
-  return false;
+  return {};
 }
 
 /**
- * 認証エラーかどうかを判定
+ * エラーをコンソールに詳細にログ出力
  * 
- * @param error エラーオブジェクトまたはAPIレスポンス
- * @returns 認証エラーの場合true
+ * @param response APIレスポンス
+ * @param context エラーが発生した状況の説明
  */
-export function isAuthError(error: any): boolean {
-  if (!error) return false;
+export function logDetailedError(response: ApiResponse, context: string): void {
+  const errorType = getErrorType(response.error, response.status);
   
-  // Firebase認証エラー
-  if (error.code && typeof error.code === 'string' && error.code.startsWith('auth/')) {
-    return true;
+  console.group(`🔴 API Error [${errorType}]: ${context}`);
+  console.log('Status:', response.status);
+  console.log('Error Code:', response.error?.code);
+  console.log('Error Message:', response.error?.message);
+  
+  if (response.error?.details) {
+    console.log('Details:', response.error.details);
   }
   
-  // APIレスポンスの認証エラー
-  if (error.status === 401 || error.status === 403) {
-    return true;
+  console.groupEnd();
+}
+
+/**
+ * エラー情報をスタックトレース付きでログ出力
+ * 
+ * @param error JavaScriptエラーオブジェクト
+ * @param context エラー発生状況の説明
+ */
+export function logErrorWithTrace(error: unknown, context: string): void {
+  if (error instanceof Error) {
+    console.error(`🔴 Error in ${context}:`, error.message);
+    console.error(error.stack);
+  } else {
+    console.error(`🔴 Unknown error in ${context}:`, error);
   }
-  
-  // APIクライアントの認証エラー
-  if (error.error && 
-      (error.error.code === 'UNAUTHORIZED' || error.error.code === 'FORBIDDEN')) {
-    return true;
-  }
-  
-  return false;
 }
 
 export default {
+  getErrorType,
   getErrorMessage,
-  getApiErrorMessage,
-  isNetworkError,
-  isAuthError
+  getFieldErrors,
+  logDetailedError,
+  logErrorWithTrace
 };

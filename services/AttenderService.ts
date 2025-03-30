@@ -18,7 +18,7 @@ import {
   LanguageSkill,
   FormStatusType
 } from '../types/attender/index';
-import api, { logApiRequest, logApiResponse } from '../utils/apiClient';
+import api, { logApiRequest, logApiResponse } from '../utils/apiClientEnhanced';
 import { ENDPOINTS } from '../config/api';
 import { isDevelopment } from '../config/env';
 
@@ -627,6 +627,168 @@ export async function addPortfolioItem(attenderId: string, portfolioItem: Omit<P
     throw error instanceof Error 
       ? error 
       : new Error('ポートフォリオアイテムの追加中に予期せぬエラーが発生しました');
+  }
+}
+
+/**
+ * 最新のアテンダードラフトを取得
+ * 
+ * @param userId ユーザーID
+ * @returns ドラフトデータまたはnull
+ */
+export async function getDraftApplication(userId: string): Promise<Partial<AttenderApplicationData> | null> {
+  try {
+    console.info(`ユーザー[${userId}]のアテンダー申請ドラフトを取得中...`);
+    
+    // 開発環境ではモックデータを使用
+    if (isDevelopment()) {
+      // ドラフト模擬データを取得
+      const userDrafts = Object.entries(DRAFT_APPLICATIONS)
+        .filter(([key]) => key.includes(`draft_${userId}`))
+        .map(([_, draft]) => draft);
+      
+      if (userDrafts.length === 0) {
+        console.info('ドラフトが見つかりませんでした');
+        return null;
+      }
+      
+      // 最新のドラフトを取得
+      const latestDraft = userDrafts.reduce((latest, current) => {
+        const latestTime = new Date(latest.lastSaved || 0).getTime();
+        const currentTime = new Date(current.lastSaved || 0).getTime();
+        return currentTime > latestTime ? current : latest;
+      });
+      
+      console.info(`ドラフトが見つかりました。最終保存: ${latestDraft.lastSaved}`);
+      return latestDraft;
+    }
+    
+    // 本番環境ではAPIを使用
+    logApiRequest('GET', ENDPOINTS.ATTENDER.GET_DRAFT(userId), {});
+    
+    const response = await api.get<{draft: Partial<AttenderApplicationData>}>(ENDPOINTS.ATTENDER.GET_DRAFT(userId));
+    
+    logApiResponse('GET', ENDPOINTS.ATTENDER.GET_DRAFT(userId), response);
+    
+    if (response.success && response.data) {
+      console.info('ドラフトを正常に取得しました');
+      return response.data.draft;
+    }
+    
+    // ドラフトが見つからない場合
+    if (response.status === 404) {
+      console.info('ドラフトが見つかりませんでした');
+      return null;
+    }
+    
+    // その他のエラー
+    console.warn('ドラフト取得エラー:', response.error);
+    return null;
+  } catch (error) {
+    console.error('ドラフト取得エラー:', error);
+    return null; // エラー時はnullを返す
+  }
+}
+
+/**
+ * ユーザーのアテンダー申請ステータスを確認
+ * 
+ * @param userId ユーザーID
+ * @returns ステータス情報またはnull
+ */
+export async function checkApplicationStatus(userId: string): Promise<{
+  hasApplication: boolean;
+  status?: 'pending' | 'approved' | 'rejected';
+  applicationId?: string;
+  submittedAt?: string;
+  attenderId?: string;
+} | null> {
+  try {
+    console.info(`ユーザー[${userId}]のアテンダー申請ステータスを確認中...`);
+    
+    // 開発環境ではモックデータを使用
+    if (isDevelopment()) {
+      // 本来はサーバーからステータスを取得するが、開発環境ではモックデータを返す
+      const hasPendingApp = Object.values(PENDING_APPLICATIONS).length > 0;
+      
+      // アテンダーが既に存在するか確認
+      const isAttender = Object.values(MOCK_ATTENDERS).some(att => att.userId === userId);
+      
+      if (isAttender) {
+        const attender = Object.values(MOCK_ATTENDERS).find(att => att.userId === userId);
+        return {
+          hasApplication: true,
+          status: 'approved',
+          applicationId: 'app_mock123',
+          submittedAt: '2025-01-15T10:30:00Z',
+          attenderId: attender?.id
+        };
+      }
+      
+      if (hasPendingApp) {
+        return {
+          hasApplication: true,
+          status: 'pending',
+          applicationId: 'app_mock456',
+          submittedAt: '2025-03-20T14:45:00Z'
+        };
+      }
+      
+      return { hasApplication: false };
+    }
+    
+    // 本番環境ではAPIを使用
+    const response = await api.get(`${getApiBaseUrl()}/api/${API_VERSION}/users/${userId}/attender-status`);
+    
+    if (response.success && response.data) {
+      return response.data;
+    }
+    
+    console.warn('アテンダー申請ステータス確認エラー:', response.error);
+    return null;
+  } catch (error) {
+    console.error('アテンダー申請ステータス確認エラー:', error);
+    return null;
+  }
+}
+
+/**
+ * アテンダー申請のキャンセル
+ * 
+ * @param applicationId 申請ID
+ * @returns 成功した場合はtrue
+ */
+export async function cancelApplication(applicationId: string): Promise<boolean> {
+  try {
+    console.info(`アテンダー申請[${applicationId}]をキャンセル中...`);
+    
+    // 開発環境ではモックデータを使用
+    if (isDevelopment()) {
+      // 申請キャンセルを模擬するために遅延
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // モックデータから削除
+      delete PENDING_APPLICATIONS[applicationId];
+      
+      console.info('申請のキャンセルが完了しました');
+      return true;
+    }
+    
+    // 本番環境ではAPIを使用
+    const response = await api.delete(`${getApiBaseUrl()}/api/${API_VERSION}/attenders/application/${applicationId}`);
+    
+    if (response.success) {
+      console.info('申請のキャンセルが完了しました');
+      return true;
+    }
+    
+    console.warn('申請キャンセルエラー:', response.error);
+    throw new Error(response.error?.message || '申請のキャンセルに失敗しました');
+  } catch (error) {
+    console.error('申請キャンセルエラー:', error);
+    throw error instanceof Error 
+      ? error 
+      : new Error('申請のキャンセル中に予期せぬエラーが発生しました');
   }
 }
 

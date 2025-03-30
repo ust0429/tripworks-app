@@ -3,36 +3,21 @@
  * 
  * Firebase Authentication認証トークンを自動的にAPIリクエストに追加します。
  */
-// Firebase Authのモックまたは実際のものを取得する試み
-let getAuth: any;
-let onAuthStateChanged: any;
-let getIdToken: any;
-
-try {
-  // 実際のFirebaseが利用可能ならそれを使う
-  const firebaseAuth = require('firebase/auth');
-  getAuth = firebaseAuth.getAuth;
-  onAuthStateChanged = firebaseAuth.onAuthStateChanged;
-  getIdToken = firebaseAuth.getIdToken;
-} catch (e) {
-  // Firebaseが利用できない場合はモックを使用
-  console.warn('Firebase Auth not available, using mock implementation');
-  
-  // モック実装
-  getAuth = () => ({
-    currentUser: null
-  });
-  onAuthStateChanged = (_auth: any, callback: (user: any) => void) => {
-    callback(null);
-    return () => {}; // unsubscribe関数
-  };
-  getIdToken = async () => null;
-}
+import { getAuth, onAuthStateChanged, getIdToken } from 'firebase/auth';
 import { isDevelopment, isDebugMode } from '../config/env';
 
-// 元の apiClient から ApiResponse 型をインポート
-import apiClient from './apiClient';
-import type { ApiResponse } from './apiClient';
+// APIレスポンスの型定義
+export interface ApiResponse<T = any> {
+  success: boolean;
+  data?: T;
+  error?: {
+    code: string;
+    message: string;
+    details?: any;
+  };
+  status: number;
+  headers: Headers;
+}
 
 // API設定
 const API_TIMEOUT = 30000; // 30秒
@@ -472,8 +457,5 @@ const enhancedApiClient = {
   uploadFile,
   getAuthToken
 };
-
-// ApiResponse型を再エクスポート
-export type { ApiResponse };
 
 export default enhancedApiClient;

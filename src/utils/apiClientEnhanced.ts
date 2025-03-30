@@ -508,9 +508,16 @@ export function logApiResponse<T = any>(method: string, url: string, response: A
   apiClientLogApiResponse(method, url, response);
 }
 
+// APIクライアントをエクスポート
 export default {
   client,
   cloudRunApiClient,
+  get,
+  post,
+  put,
+  patch,
+  delete: del,
+  uploadFile,
   getAuthToken,
   setupAuthListener
 };

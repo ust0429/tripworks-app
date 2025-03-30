@@ -9,6 +9,11 @@ export interface AttenderProfile {
   location: string;
   specialties: string[];
   profileImage?: string;
+  profilePhoto?: string;
+  socialMediaLinks?: SocialMediaLinks;
+  emailAddress?: string;
+  biography?: string;
+  lastActiveDate?: string;
   imageUrl?: string;
   email?: string;
   isLocalResident?: boolean;
@@ -154,6 +159,8 @@ export interface ProfileContextState {
   editMode: ProfileEditMode;
   loadingState: 'idle' | 'loading' | 'success' | 'error';
   error: string | null;
+  completionScore: number;
+  improvementTips: string[];
 }
 
 /**

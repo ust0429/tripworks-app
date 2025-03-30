@@ -1,22 +1,25 @@
-import React, { createContext, useContext, useReducer, ReactNode } from 'react';
+import React, { createContext, useContext, useReducer, ReactNode, useEffect } from 'react';
+import AttenderService from '../services/AttenderService';
+import { calculateProfileCompletionScore, generateProfileImprovementTips } from '../utils/profileCompletionScore';
 import { 
   AttenderProfile, 
   ProfileContextState, 
   ProfileEditMode, 
   ProfileUpdateOperation 
 } from '../types/attender/profile';
+import { ExperienceSample, AvailabilityTimeSlot } from '../types/attender/index';
 
 // 初期状態
 const initialState: ProfileContextState = {
   profile: null,
   editMode: 'view',
   loadingState: 'idle',
-  error: null
+  error: null,
+  completionScore: 0,
+  improvementTips: []
 };
 
 // アクションの型定義
-// ExperienceSample型を利用するためにインポートが必要
-import { ExperienceSample } from '../types/attender/index';
 
 // 型が渡された際に変換を行うアダプター関数
 const convertExperienceSample = (sample: any): any => {
@@ -33,7 +36,9 @@ type ProfileAction =
   | { type: 'ADD_EXPERIENCE_SAMPLE'; payload: ExperienceSample }
   | { type: 'UPDATE_EXPERIENCE_SAMPLE'; payload: { id: string; data: Partial<ExperienceSample> } }
   | { type: 'REMOVE_EXPERIENCE_SAMPLE'; payload: string }
-  | { type: 'UPDATE_AVAILABILITY'; payload: AttenderProfile['availability'] };
+  | { type: 'UPDATE_AVAILABILITY'; payload: AvailabilityTimeSlot[] }
+  | { type: 'UPDATE_COMPLETION_SCORE'; payload: number }
+  | { type: 'UPDATE_IMPROVEMENT_TIPS'; payload: string[] };
 
 // コンテキストの型定義
 interface ProfileContextValue extends ProfileContextState {
@@ -45,7 +50,11 @@ interface ProfileContextValue extends ProfileContextState {
   addExperienceSample: (sample: ExperienceSample) => void;
   updateExperienceSample: (id: string, data: Partial<ExperienceSample>) => void;
   removeExperienceSample: (id: string) => void;
-  updateAvailability: (availability: AttenderProfile['availability']) => void;
+  updateAvailability: (availability: AvailabilityTimeSlot[]) => void;
+  saveProfileToBackend: () => Promise<void>;
+  updateCompletionScore: (score: number) => void;
+  updateImprovementTips: (tips: string[]) => void;
+  recalculateProfileScore: () => void;
 }
 
 // コンテキストの作成
@@ -118,9 +127,15 @@ const profileReducer = (state: ProfileContextState, action: ProfileAction): Prof
         ...state,
         profile: {
           ...state.profile,
-          availability: action.payload
+          availableTimes: action.payload
         }
       };
+    
+    case 'UPDATE_COMPLETION_SCORE':
+      return { ...state, completionScore: action.payload };
+    
+    case 'UPDATE_IMPROVEMENT_TIPS':
+      return { ...state, improvementTips: action.payload };
     
     default:
       return state;
@@ -168,8 +183,61 @@ export const AttenderProfileProvider: React.FC<ProfileProviderProps> = ({ childr
   const removeExperienceSample = (id: string) => 
     dispatch({ type: 'REMOVE_EXPERIENCE_SAMPLE', payload: id });
   
-  const updateAvailability = (availability: AttenderProfile['availability']) => 
+  const updateAvailability = (availability: AvailabilityTimeSlot[]) => 
     dispatch({ type: 'UPDATE_AVAILABILITY', payload: availability });
+  
+  const updateCompletionScore = (score: number) => 
+    dispatch({ type: 'UPDATE_COMPLETION_SCORE', payload: score });
+  
+  const updateImprovementTips = (tips: string[]) => 
+    dispatch({ type: 'UPDATE_IMPROVEMENT_TIPS', payload: tips });
+  
+  // プロフィール完成度スコアの再計算
+  const recalculateProfileScore = () => {
+    if (!state.profile) return;
+    
+    // 完成度スコアを計算
+    const score = calculateProfileCompletionScore(state.profile);
+    updateCompletionScore(score);
+    
+    // 改善アドバイスを生成
+    const tips = generateProfileImprovementTips(state.profile);
+    updateImprovementTips(tips);
+  };
+  
+  // プロフィールが変更されたときに完成度スコアを再計算
+  useEffect(() => {
+    if (state.profile) {
+      recalculateProfileScore();
+    }
+  }, [state.profile]);
+  // バックエンドとの連携メソッド
+  const saveProfileToBackend = async () => {
+    if (!state.profile) return;
+    
+    setLoadingState('loading');
+    try {
+      // プロフィール更新APIを呼び出す
+      await AttenderService.updateAttenderProfile(state.profile, {
+        name: state.profile.name,
+        bio: state.profile.bio,
+        specialties: state.profile.specialties,
+        languages: state.profile.languages,
+        expertise: state.profile.expertise,
+        imageUrl: state.profile.profilePhoto || state.profile.imageUrl
+      });
+      
+      // 成功時の処理
+      setLoadingState('success');
+      
+      // 完成度スコアを再計算
+      recalculateProfileScore();
+    } catch (error) {
+      console.error('プロフィール保存エラー:', error);
+      setError(error instanceof Error ? error.message : '予期せぬエラーが発生しました');
+      setLoadingState('error');
+    }
+  };
   
   const value = {
     ...state,
@@ -181,7 +249,11 @@ export const AttenderProfileProvider: React.FC<ProfileProviderProps> = ({ childr
     addExperienceSample,
     updateExperienceSample,
     removeExperienceSample,
-    updateAvailability
+    updateAvailability,
+    saveProfileToBackend,
+    updateCompletionScore,
+    updateImprovementTips,
+    recalculateProfileScore
   };
   
   return (

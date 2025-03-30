@@ -50,6 +50,13 @@ export const ENDPOINTS = {
     CREATE: `${getApiBaseUrl()}/api/${API_VERSION}/attenders`,
     UPDATE: (id: string) => `${getApiBaseUrl()}/api/${API_VERSION}/attenders/${id}`,
     EXPERIENCES: (id: string) => `${getApiBaseUrl()}/api/${API_VERSION}/attenders/${id}/experiences`,
+    APPLICATION: `${getApiBaseUrl()}/api/${API_VERSION}/attenders/application`,
+    SAVE_DRAFT: `${getApiBaseUrl()}/api/${API_VERSION}/attenders/draft`,
+    GET_DRAFT: (userId: string) => `${getApiBaseUrl()}/api/${API_VERSION}/attenders/draft/${userId}`,
+    FILTER: `${getApiBaseUrl()}/api/${API_VERSION}/attenders/filter`,
+    UPDATE_PROFILE: (id: string) => `${getApiBaseUrl()}/api/${API_VERSION}/attenders/${id}/profile`,
+    UPDATE_AVAILABILITY: (id: string) => `${getApiBaseUrl()}/api/${API_VERSION}/attenders/${id}/availability`,
+    ADD_PORTFOLIO: (id: string) => `${getApiBaseUrl()}/api/${API_VERSION}/attenders/${id}/portfolio`,
   },
   
   // 体験関連
