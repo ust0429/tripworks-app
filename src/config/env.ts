@@ -7,11 +7,6 @@ export const isDevelopment = (): boolean => {
   return process.env.NODE_ENV === 'development';
 };
 
-// 本番環境かどうか
-export const isProduction = (): boolean => {
-  return process.env.NODE_ENV === 'production';
-};
-
 // デバッグモードかどうか
 export const isDebugMode = (): boolean => {
   return process.env.REACT_APP_DEBUG === 'true';

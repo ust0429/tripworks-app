@@ -11,7 +11,7 @@ import {
   unmuteConversation,
   deleteConversation 
 } from '../../mockData';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth } from '../../AuthComponents';
 import ConversationMenu from './ConversationMenu';
 
 interface ConversationsListProps {

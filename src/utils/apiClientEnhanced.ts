@@ -4,9 +4,25 @@
  * Firebase Authentication認証トークンを自動的にAPIリクエストに追加します。
  */
 
-// 直接Firebaseモジュールをインポート
-import { auth } from '../config/firebaseInit';
-import { onAuthStateChanged, getIdToken } from 'firebase/auth';
+// Firebase Authのインポート（条件付き）
+let getAuth: () => any;
+let onAuthStateChanged: (auth: any, callback: (user: any) => void) => void;
+let getIdToken: (user: any, forceRefresh?: boolean) => Promise<string>;
+
+try {
+  // Firebase Authを動的にインポート
+  const firebaseAuth = require('firebase/auth');
+  getAuth = firebaseAuth.getAuth;
+  onAuthStateChanged = firebaseAuth.onAuthStateChanged;
+  getIdToken = firebaseAuth.getIdToken;
+} catch (e) {
+  // Firebaseが利用できない場合はモック関数を使用
+  console.warn('Firebase Auth is not available, using mock functions');
+  getAuth = () => ({ currentUser: { uid: 'mock-user-id' } });
+  onAuthStateChanged = (_, callback) => callback(null);
+  getIdToken = () => Promise.resolve('mock-token');
+}
+
 import { isDevelopment, isDebugMode } from "../config/env";
 import api, {
   ApiResponse,
@@ -41,6 +57,7 @@ let tokenExpiryTime: number = 0;
  */
 export async function getAuthToken(): Promise<string | null> {
   try {
+    const auth = getAuth();
     const user = auth.currentUser;
 
     if (!user) {
@@ -71,6 +88,7 @@ export async function getAuthToken(): Promise<string | null> {
  * 認証状態の変更を監視し、トークンキャッシュをクリア
  */
 export function setupAuthListener(): void {
+  const auth = getAuth();
   onAuthStateChanged(auth, (user) => {
     if (!user) {
       // ログアウト時はキャッシュをクリア

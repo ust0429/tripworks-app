@@ -5,7 +5,7 @@
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import enhancedApi, { ApiResponse } from '../utils/apiClientEnhanced';
+import api, { ApiResponse } from '../utils/apiClient';
 import { getApiErrorMessage, isNetworkError, isAuthError } from '../utils/errorHandler';
 
 // キャッシュの設定
@@ -120,19 +120,19 @@ function useApiRequest<T = any>(
 
       switch (method) {
         case 'get':
-          response = await enhancedApi.get<T>(url, payloadRef.current);
+          response = await api.get<T>(url, payloadRef.current);
           break;
         case 'post':
-          response = await enhancedApi.post<T>(url, payloadRef.current);
+          response = await api.post<T>(url, payloadRef.current);
           break;
         case 'put':
-          response = await enhancedApi.put<T>(url, payloadRef.current);
+          response = await api.put<T>(url, payloadRef.current);
           break;
         case 'patch':
-          response = await enhancedApi.patch<T>(url, payloadRef.current);
+          response = await api.patch<T>(url, payloadRef.current);
           break;
         case 'delete':
-          response = await enhancedApi.delete<T>(url);
+          response = await api.delete<T>(url);
           break;
         default:
           throw new Error(`Unsupported method: ${method}`);

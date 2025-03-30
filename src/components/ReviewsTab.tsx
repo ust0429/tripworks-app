@@ -1,7 +1,7 @@
 // src/components/ReviewsTab.tsx
 import React, { useState } from 'react';
 import { Plus } from 'lucide-react';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../AuthComponents';
 import ReviewsList from './ReviewsList';
 import ReviewForm from './ReviewForm';
 import { Review } from '../types';
@@ -61,7 +61,7 @@ const ReviewsTab: React.FC<ReviewsTabProps> = ({
       const newReview = addReview({
         attenderId,
         userId: user.id,
-        userName: user.name || '名前なし',
+        userName: user.name,
         rating: reviewData.rating,
         comment: reviewData.comment,
         experienceTitle

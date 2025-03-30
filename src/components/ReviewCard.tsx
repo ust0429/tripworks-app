@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { Star, User, ThumbsUp, MoreVertical, Flag, Calendar, Award, Clock, Image, MessageCircle } from 'lucide-react';
 import { Review, ReviewReply } from '../types';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../AuthComponents';
 import ReviewPhotoViewer from './ReviewPhotoViewer';
 import ReviewReplyComponent from './ReviewReply';
 import ReviewReplyForm from './ReviewReplyForm';
@@ -117,10 +117,10 @@ const ReviewCard: React.FC<ReviewCardProps> = ({ review, onHelpfulToggle }) => {
       // 返信を追加
       const newReply = addReviewReply({
         reviewId,
-        userId: currentUser.uid,
-        userName: currentUser.displayName || '名前なし',
-        userType: 'user',
-        userImage: currentUser.photoURL || undefined,
+        userId: currentUser.id,
+        userName: currentUser.name,
+        userType: currentUser.type || 'user',
+        userImage: currentUser.photoUrl,
         content
       });
       
@@ -328,7 +328,7 @@ const ReviewCard: React.FC<ReviewCardProps> = ({ review, onHelpfulToggle }) => {
                 <ReviewReplyComponent
                   key={reply.id}
                   reply={reply}
-                  isOwner={currentUser ? currentUser.uid === reply.userId : false}
+                  isOwner={currentUser ? currentUser.id === reply.userId : false}
                   onEdit={handleEditReply}
                   onDelete={handleDeleteReply}
                 />

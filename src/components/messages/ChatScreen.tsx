@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { ArrowLeft, Send, X, Search, Paperclip } from 'lucide-react';
 import { Message, MessageAttachment, MessageStatus } from '../../types';
 import { getMessagesByConversationId, addMessage, markConversationAsRead } from '../../mockData';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth } from '../../AuthComponents';
 import { webSocketService, ConnectionStatus } from '../../utils/websocketService';
 import MessageSearch from './MessageSearch';
 import ChatMessage from './ChatMessage';
@@ -55,7 +55,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ conversationId, onBack }) => {
       }
       
       // メッセージを既読にする
-      markConversationAsRead(conversationId, user.id || 'user1');
+      markConversationAsRead(conversationId, user.id);
       
       setLoading(false);
     }
@@ -65,7 +65,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ conversationId, onBack }) => {
   useEffect(() => {
     if (user && conversationId && otherParticipantId) {
       // WebSocket接続
-      webSocketService.connect(user.id || 'user1', 'dummy-token');
+      webSocketService.connect(user.id, 'dummy-token');
       
       // 接続状態のリスナー
       const removeConnectionListener = webSocketService.addConnectionListener((status) => {
@@ -94,7 +94,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ conversationId, onBack }) => {
           
           // 自分宛てでないメッセージを既読にする
           if (newMsg.senderId !== user.id) {
-            markConversationAsRead(conversationId, user.id || 'user1');
+            markConversationAsRead(conversationId, user.id);
           }
         }
       });
@@ -195,7 +195,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ conversationId, onBack }) => {
     
     // 実際のアプリではAPIリクエストを送信
     const messageData = {
-      senderId: user.id || 'user1',
+      senderId: user.id,
       receiverId: otherParticipantId,
       content: newMessage,
       attachments: currentAttachment ? [currentAttachment] : undefined,
@@ -208,7 +208,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ conversationId, onBack }) => {
     // メッセージを仮表示（送信中状態）
     const optimisticMessage: Message = {
       id: tempId,
-      senderId: user.id || 'user1',
+      senderId: user.id,
       receiverId: otherParticipantId,
       content: newMessage,
       timestamp: new Date().toISOString(),

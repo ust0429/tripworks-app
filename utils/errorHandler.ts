@@ -4,8 +4,7 @@
  * APIレスポンスからユーザーフレンドリーなエラーメッセージを生成します
  */
 
-import { ApiResponse } from './apiClientEnhanced';
-import * as ErrorTypes from './errorTypes';
+import { ApiResponse } from './apiClient';
 
 // エラーコードごとのメッセージマッピング
 const ERROR_MESSAGES: Record<string, string> = {
@@ -27,7 +26,6 @@ const ERROR_MESSAGES: Record<string, string> = {
   'SERVER_ERROR': 'サーバーエラーが発生しました',
   'NETWORK_ERROR': 'ネットワーク接続に問題があります',
   'TIMEOUT': 'リクエストがタイムアウトしました',
-  'CONFLICT': 'データの競合が発生しました',
   
   // ビジネスロジックエラー
   'BOOKING_ALREADY_CANCELLED': '予約は既にキャンセルされています',
@@ -39,44 +37,8 @@ const ERROR_MESSAGES: Record<string, string> = {
   
   // その他のエラー
   'UPLOAD_ERROR': 'ファイルのアップロードに失敗しました',
-  'UNKNOWN_ERROR': '予期せぬエラーが発生しました',
-  'DATA_FETCH_ERROR': 'データの取得に失敗しました',
-  'UNEXPECTED_ERROR': '予期せぬエラーが発生しました'
+  'UNKNOWN_ERROR': '予期せぬエラーが発生しました'
 };
-
-/**
- * エラーの種類に基づいてリトライ可能かどうかを判定
- * 
- * @param error エラーオブジェクト
- * @returns リトライ可能ならtrue
- */
-export function isRetryableError(error: any): boolean {
-  // ネットワークエラーやタイムアウトはリトライ可能
-  if (ErrorTypes.isNetworkError(error) || ErrorTypes.isTimeoutError(error)) {
-    return true;
-  }
-  
-  // サーバーエラー(500系)はリトライ可能
-  if (ErrorTypes.isServerError(error)) {
-    return true;
-  }
-  
-  // 特定のエラーコードをリトライ不可としてマーク
-  const nonRetryableCodes = [
-    'VALIDATION_ERROR',
-    'NOT_FOUND',
-    'UNAUTHORIZED',
-    'FORBIDDEN',
-    'CONFLICT'
-  ];
-  
-  if (error && error.code && nonRetryableCodes.includes(error.code)) {
-    return false;
-  }
-  
-  // デフォルトではリトライ不可
-  return false;
-}
 
 /**
  * APIエラーからユーザーフレンドリーなメッセージを取得
@@ -88,11 +50,6 @@ export function getErrorMessage(error: any): string {
   // エラーコードが文字列の場合
   if (typeof error === 'string') {
     return ERROR_MESSAGES[error] || error;
-  }
-  
-  // エラータイプのインスタンスの場合
-  if (error instanceof ErrorTypes.ApiError) {
-    return error.message || ERROR_MESSAGES[error.code] || '不明なエラーが発生しました';
   }
   
   // Firebase認証エラーの場合
@@ -155,48 +112,68 @@ export function getApiErrorMessage<T>(response: ApiResponse<T>): string | null {
 }
 
 /**
- * APIレスポンスからエラーオブジェクトを作成
+ * ネットワークエラーかどうかを判定
  * 
- * @param response APIレスポンス
- * @returns 適切なエラーオブジェクト
+ * @param error エラーオブジェクト
+ * @returns ネットワークエラーの場合true
  */
-export function createErrorFromResponse<T>(response: ApiResponse<T>): ErrorTypes.ApiError {
-  return ErrorTypes.createErrorFromResponse(response);
+export function isNetworkError(error: any): boolean {
+  if (!error) return false;
+  
+  // 一般的なネットワークエラーパターン
+  if (error instanceof Error && 
+      (error.message.includes('network') || 
+       error.message.includes('Network') ||
+       error.message.includes('fetch') ||
+       error.message.includes('connection') ||
+       error.message.includes('timeout'))) {
+    return true;
+  }
+  
+  // APIクライアントのネットワークエラーパターン
+  if (error.error && error.error.code === 'NETWORK_ERROR') {
+    return true;
+  }
+  
+  // ステータスコードがない場合（サーバー到達前のエラー）
+  if (error.status === 0) {
+    return true;
+  }
+  
+  return false;
 }
 
 /**
- * エラーメッセージを特定のコンテキスト向けにカスタマイズ
+ * 認証エラーかどうかを判定
  * 
- * @param error エラーオブジェクト
- * @param context エラーが発生したコンテキスト名（例：'予約作成'）
- * @returns コンテキスト化されたエラーメッセージ
+ * @param error エラーオブジェクトまたはAPIレスポンス
+ * @returns 認証エラーの場合true
  */
-export function getContextualErrorMessage(error: any, context: string): string {
-  const baseMessage = getErrorMessage(error);
+export function isAuthError(error: any): boolean {
+  if (!error) return false;
   
-  // 認証エラーの場合は特別なメッセージ
-  if (ErrorTypes.isAuthenticationError(error)) {
-    return `${context}するには、ログインが必要です`;
+  // Firebase認証エラー
+  if (error.code && typeof error.code === 'string' && error.code.startsWith('auth/')) {
+    return true;
   }
   
-  // 権限エラーの場合は特別なメッセージ
-  if (ErrorTypes.isPermissionError(error)) {
-    return `${context}する権限がありません`;
+  // APIレスポンスの認証エラー
+  if (error.status === 401 || error.status === 403) {
+    return true;
   }
   
-  // ネットワークエラーやタイムアウトの場合は特別なメッセージ
-  if (ErrorTypes.isNetworkError(error) || ErrorTypes.isTimeoutError(error)) {
-    return `ネットワーク接続の問題により、${context}できませんでした。インターネット接続を確認して再試行してください`;
+  // APIクライアントの認証エラー
+  if (error.error && 
+      (error.error.code === 'UNAUTHORIZED' || error.error.code === 'FORBIDDEN')) {
+    return true;
   }
   
-  // コンテキストを前置詞付きで追加（一般的なエラー）
-  return `${context}中にエラーが発生しました: ${baseMessage}`;
+  return false;
 }
 
 export default {
   getErrorMessage,
   getApiErrorMessage,
-  isRetryableError,
-  createErrorFromResponse,
-  getContextualErrorMessage
+  isNetworkError,
+  isAuthError
 };

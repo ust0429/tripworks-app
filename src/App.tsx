@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { BrowserRouter as Router, Routes, Route, useNavigate } from 'react-router-dom';
 import { MessageCircle, Menu, X, User, Home, Compass, Heart, Users, ShoppingBag, Gift, Calendar, LogOut, Bell } from 'lucide-react';
+import { AuthProvider, useAuth } from './AuthComponents';
 import { LocaleProvider } from './contexts/LocaleContext';
 import { FraudDetectionProvider } from './components/security';
 import SettingsScreen from './components/settings/SettingsScreen';
@@ -9,9 +10,8 @@ import { NotificationCenter, NotificationBadge } from './components/notification
 import AttenderDetailScreen from './components/AttenderDetailScreen';
 import ExperienceDetailScreen from './components/ExperienceDetailScreen';
 import ExploreScreen from './components/ExploreScreen';
-import AppContentWrapper from './AppContentWrapper';
-import BookingConfirmationScreen from './components/BookingConfirmationScreen';
 import { MessagesScreen } from './components/messages';
+import BookingConfirmationScreen from './components/BookingConfirmationScreen';
 import OnboardingScreen from './components/screens/OnboardingScreen';
 import BookingHistoryScreen from './components/screens/BookingHistoryScreen';
 import { HomeScreen } from './components/screens';
@@ -22,10 +22,6 @@ import EnhancedUserProfile from './components/user/EnhancedUserProfile';
 import AttenderProfileEditPage from './components/attender/profile/AttenderProfileEditPage';
 import CreateExperienceForm from './components/attender/experience/CreateExperienceForm';
 import ExperienceListPage from './components/attender/experience/ExperienceListPage';
-
-import { AuthProvider, useAuth } from './contexts/AuthContext';
-import AuthModals from './components/auth/AuthModals';
-import AuthDebugHelper from './components/auth/AuthDebugHelper';
 
 // 完全版スクリーンのインポート
 import MarketScreen from './components/screens/MarketScreen';
@@ -107,7 +103,7 @@ const PaymentProviderWithNavigate = ({ children }: { children: React.ReactNode }
 };
 
 // アプリのコンテンツ部分
-export const AppContent = () => {
+const AppContent = () => {
   const [showAttenderInfo, setShowAttenderInfo] = useState(false);
   const [activeTab, setActiveTab] = useState('home');
   const [menuOpen, setMenuOpen] = useState(false);
@@ -125,7 +121,7 @@ export const AppContent = () => {
     price: number;
   } | null>(null);
   const [showOnboarding, setShowOnboarding] = useState(false);
-  const { isAuthenticated, currentUser, userProfile, logoutUser, openLoginModal } = useAuth();
+  const { isAuthenticated, user, logout, openLoginModal } = useAuth();
 
   // URLに基づく状態管理
   useEffect(() => {
@@ -243,12 +239,6 @@ export const AppContent = () => {
         <OnboardingScreen onComplete={handleOnboardingComplete} />
       )}
 
-      {/* 認証モーダル */}
-      <AuthModals />
-
-      {/* デバッグヘルパー */}
-      <AuthDebugHelper />
-
       {/* ヘッダー */}
       <header className="bg-black text-white p-4 flex justify-between items-center">
         <div className="flex items-center">
@@ -267,7 +257,7 @@ export const AppContent = () => {
               <Bell size={20} />
               {isAuthenticated && (
                 <NotificationBadge 
-                  userId={currentUser?.uid || 'user123'} 
+                  userId={user?.id || 'user123'} 
                   className="absolute -top-1 -right-1"
                 />
               )}
@@ -279,7 +269,7 @@ export const AppContent = () => {
                 className="absolute top-12 right-0 z-50"
               >
                 <NotificationCenter 
-                  userId={currentUser?.uid || 'user123'} 
+                  userId={user?.id || 'user123'} 
                   onClose={() => setNotificationOpen(false)}
                   onNavigate={handleNotificationNavigate}
                 />
@@ -293,17 +283,14 @@ export const AppContent = () => {
               className="p-2 rounded-full hover:bg-gray-800 flex items-center space-x-2"
             >
               <div className="w-8 h-8 bg-gray-600 rounded-full flex items-center justify-center text-white text-sm">
-                {userProfile?.displayName?.charAt(0) || currentUser?.displayName?.charAt(0) || '?'}
+                {user?.name.charAt(0)}
               </div>
               {menuOpen ? <X size={20} /> : <Menu size={20} />}
             </button>
           ) : (
             <>
               <button
-                onClick={() => {
-                  console.log('Login button clicked');
-                  openLoginModal();
-                }}
+                onClick={openLoginModal}
                 className="py-1 px-3 border border-white rounded-full text-sm hover:bg-white hover:text-black transition duration-200"
               >
                 ログイン
@@ -370,11 +357,11 @@ export const AppContent = () => {
               {isAuthenticated ? (
                 <div className="flex items-center space-x-3">
                   <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center text-gray-700 text-lg font-medium">
-                    {userProfile?.displayName?.charAt(0) || currentUser?.displayName?.charAt(0) || '?'}
+                    {user?.name.charAt(0)}
                   </div>
                   <div>
-                    <p className="font-medium">{userProfile?.displayName || currentUser?.displayName}</p>
-                    <p className="text-sm text-gray-500">{userProfile?.email || currentUser?.email}</p>
+                    <p className="font-medium">{user?.name}</p>
+                    <p className="text-sm text-gray-500">{user?.email}</p>
                   </div>
                 </div>
               ) : (
@@ -459,7 +446,7 @@ export const AppContent = () => {
                   <li
                     className="border-t my-2 pt-2 flex items-center space-x-3 text-red-600 hover:text-red-700 cursor-pointer"
                     onClick={() => {
-                      logoutUser();
+                      logout();
                       setMenuOpen(false);
                     }}
                   >
@@ -527,9 +514,13 @@ const TripworksApp = () => {
               <Route path="/apply-to-be-attender" element={<AttenderApplicationFormWrapper />} />
               <Route path="/profile" element={<EnhancedUserProfile />} />
               <Route path="/attender/profile/edit" element={<AttenderProfileEditPage />} />
-              <Route path="/experiences/create" element={<CreateExperienceForm />} />
-              <Route path="/attender/experiences" element={<ExperienceListPage />} />
-              <Route path="*" element={<AppContentWrapper />} />
+            <Route path="/experiences/create" element={<CreateExperienceForm />} />
+            <Route path="/attender/experiences" element={<ExperienceListPage />} />
+            <Route path="*" element={
+                <PaymentProviderWithNavigate>
+                  <AppContent />
+                </PaymentProviderWithNavigate>
+              } />
             </Routes>
           </FraudDetectionProvider>
         </LocaleProvider>

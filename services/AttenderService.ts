@@ -18,7 +18,7 @@ import {
   LanguageSkill,
   FormStatusType
 } from '../types/attender/index';
-import enhancedApi, { logApiRequest, logApiResponse, ApiResponse } from '../utils/apiClientEnhanced';
+import api, { logApiRequest, logApiResponse } from '../utils/apiClient';
 import { ENDPOINTS } from '../config/api';
 import { isDevelopment } from '../config/env';
 
@@ -108,7 +108,7 @@ export async function getAttender(attenderId: string): Promise<Attender | null> 
     }
     
     // 本番環境ではAPIを使用
-    const response = await enhancedApi.get<Attender>(ENDPOINTS.ATTENDER.DETAIL(attenderId));
+    const response = await api.get<Attender>(ENDPOINTS.ATTENDER.DETAIL(attenderId));
     
     if (response.success && response.data) {
       return response.data;
@@ -146,7 +146,7 @@ export async function getAllAttenders(filters?: {
     }
     
     // 本番環境ではAPIを使用
-    const response = await enhancedApi.post<Attender[]>(ENDPOINTS.ATTENDER.FILTER, filters);
+    const response = await api.post<Attender[]>(ENDPOINTS.ATTENDER.FILTER, filters);
     
     if (response.success && response.data) {
       return response.data;
@@ -383,7 +383,7 @@ export async function saveDraftApplication(userId: string, applicationData: Part
     // 本番環境ではAPIを使用
     logApiRequest('POST', ENDPOINTS.ATTENDER.SAVE_DRAFT, { dataSize: JSON.stringify(applicationData).length });
     
-    const response = await enhancedApi.post<{ draftId: string }>(
+    const response = await api.post<{ draftId: string }>(
       ENDPOINTS.ATTENDER.SAVE_DRAFT,
       { userId, applicationData }
     );
@@ -467,7 +467,7 @@ export async function submitAttenderApplication(applicationData: AttenderApplica
     logApiRequest('POST', ENDPOINTS.ATTENDER.APPLICATION, { dataSize: JSON.stringify(applicationData).length });
     console.info('本番環境でアテンダー申請を送信中...');
     
-    const response = await enhancedApi.post<{ applicationId: string }>(
+    const response = await api.post<{ applicationId: string }>(
       ENDPOINTS.ATTENDER.APPLICATION,
       applicationData
     );
@@ -532,7 +532,7 @@ export async function updateAttenderProfile(attenderId: string, profileData: Par
     }
     
     // 本番環境ではAPIを使用
-    const response = await enhancedApi.patch(
+    const response = await api.patch(
       ENDPOINTS.ATTENDER.UPDATE_PROFILE(attenderId),
       profileData
     );
@@ -568,7 +568,7 @@ export async function updateAvailableTimes(attenderId: string, availableTimes: A
     }
     
     // 本番環境ではAPIを使用
-    const response = await enhancedApi.patch(
+    const response = await api.patch(
       ENDPOINTS.ATTENDER.UPDATE_AVAILABILITY(attenderId),
       { availableTimes }
     );
@@ -612,7 +612,7 @@ export async function addPortfolioItem(attenderId: string, portfolioItem: Omit<P
     }
     
     // 本番環境ではAPIを使用
-    const response = await enhancedApi.post<{ portfolioItemId: string }>(
+    const response = await api.post<{ portfolioItemId: string }>(
       ENDPOINTS.ATTENDER.ADD_PORTFOLIO(attenderId),
       portfolioItem
     );
@@ -661,7 +661,7 @@ export async function addExperienceToAttender(attenderId: string, experienceId: 
     }
     
     // 本番環境ではAPIを使用
-    const response = await enhancedApi.post(
+    const response = await api.post(
       ENDPOINTS.ATTENDER.DETAIL(attenderId) + '/experiences',
       { experienceId }
     );

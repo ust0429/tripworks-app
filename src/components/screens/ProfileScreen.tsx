@@ -1,6 +1,6 @@
 // src/components/screens/ProfileScreen.tsx
 import React from 'react';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth } from '../../AuthComponents';
 
 const ProfileScreen: React.FC = () => {
   const { user, logout } = useAuth();
@@ -12,10 +12,10 @@ const ProfileScreen: React.FC = () => {
       <div className="bg-white rounded-lg shadow-sm p-6">
         <div className="flex items-center space-x-4 mb-6">
           <div className="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center text-gray-700 text-2xl font-medium">
-            {user?.displayName?.charAt(0) || '?'}
+            {user?.name.charAt(0)}
           </div>
           <div>
-            <h2 className="text-xl font-bold">{user?.displayName || 'ユーザー'}</h2>
+            <h2 className="text-xl font-bold">{user?.name}</h2>
             <p className="text-gray-600">{user?.email}</p>
           </div>
         </div>
@@ -26,7 +26,7 @@ const ProfileScreen: React.FC = () => {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <p className="text-sm text-gray-500">名前</p>
-                <p>{user?.displayName || 'ユーザー'}</p>
+                <p>{user?.name}</p>
               </div>
               <div>
                 <p className="text-sm text-gray-500">メールアドレス</p>

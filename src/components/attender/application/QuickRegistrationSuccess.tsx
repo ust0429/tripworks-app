@@ -9,7 +9,7 @@ import { Link } from 'react-router-dom';
 import { navigateToProfile } from '../../../utils/navigation';
 import { CheckCircle, Home, User, Mail, ArrowRight, Calendar, FileText, AlertTriangle, Copy, Check, Award } from 'lucide-react';
 import { updateUserProfile } from '../../../services/UserService';
-import { useAuth } from '../../../contexts/AuthContext';
+import { useAuth } from '../../../AuthComponents';
 
 interface QuickRegistrationSuccessProps {
   applicationId: string;
