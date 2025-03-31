@@ -56,7 +56,6 @@ interface ProfileContextValue extends ProfileContextState {
   updateCompletionScore: (score: number) => void;
   updateImprovementTips: (tips: string[]) => void;
   recalculateProfileScore: () => void;
-  uploadProfilePhoto: (file: File, onProgress?: (progress: number) => void) => Promise<string>;
 }
 
 // コンテキストの作成
@@ -354,41 +353,6 @@ export const AttenderProfileProvider: React.FC<ProfileProviderProps> = ({ childr
     }
   };
   
-  // プロフィール写真のアップロード
-  const uploadProfilePhoto = async (file: File, onProgress?: (progress: number) => void): Promise<string> => {
-    if (!state.profile) {
-      throw new Error('プロフィールが存在しません');
-    }
-
-    try {
-      setLoadingState('loading');
-      
-      const attenderId = state.profile.id;
-      console.info('プロフィール写真をアップロード中...', { attenderId, fileName: file.name });
-      
-      const imageUrl = await AttenderService.uploadAndUpdateProfilePhoto(
-        attenderId,
-        file,
-        state.profile,
-        onProgress
-      );
-      
-      // プロフィールデータに画像URLを設定
-      updateProfileField({ field: 'profileImage', value: imageUrl });
-      updateProfileField({ field: 'imageUrl', value: imageUrl });
-      
-      setLoadingState('success');
-      console.info('プロフィール写真のアップロードと更新が完了しました');
-      
-      return imageUrl;
-    } catch (error) {
-      console.error('プロフィール写真アップロードエラー:', error);
-      setError(error instanceof Error ? error.message : 'プロフィール写真のアップロードに失敗しました');
-      setLoadingState('error');
-      throw error;
-    }
-  };
-  
   const value = {
     ...state,
     setProfile,
@@ -403,8 +367,7 @@ export const AttenderProfileProvider: React.FC<ProfileProviderProps> = ({ childr
     saveProfileToBackend,
     updateCompletionScore,
     updateImprovementTips,
-    recalculateProfileScore,
-    uploadProfilePhoto
+    recalculateProfileScore
   };
   
   return (
