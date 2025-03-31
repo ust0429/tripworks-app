@@ -11,33 +11,49 @@ import AttenderService from '../services/AttenderService';
 import imageUploadTest from './imageUploadTest';
 import profileScoreTest from './profileScoreTest';
 
+async function fetchImageFile(url: string, name: string = 'test-image.jpg'): Promise<File> {
+  try {
+    const response = await fetch(url);
+    const blob = await response.blob();
+    return new File([blob], name, { type: blob.type });
+  } catch (error) {
+    console.error('テスト画像取得失敗:', error);
+    const dummyBlob = new Blob(['test'], { type: 'image/jpeg' });
+    return new File([dummyBlob], name, { type: 'image/jpeg' });
+  }
+}
+
+async function testNewUploadFeature(attenderId: string): Promise<string> {
+  console.info('新しいアップロード機能テスト実行中...');
+  try {
+    const imageFile = await fetchImageFile('https://picsum.photos/200/300');
+    const onProgress = (progress: number) => {
+      console.info(`アップロード進捗: ${progress}%`);
+    };
+    return await AttenderService.uploadAttenderProfilePhoto(attenderId, imageFile, onProgress);
+  } catch (error) {
+    console.error('テスト失敗:', error);
+    throw error;
+  }
+}
+
 // window.echoDevTools オブジェクトを作成
 if (isDevelopment() && typeof window !== 'undefined') {
-  // 既存のオブジェクトがあれば拡張、なければ新規作成
   (window as any).echoDevTools = {
     ...(window as any).echoDevTools,
-    
-    // サービス
     services: {
       attender: AttenderService
     },
-    
-    // テストユーティリティ
     test: {
       imageUpload: imageUploadTest,
-      profileScore: profileScoreTest
+      profileScore: profileScoreTest,
+      newUpload: testNewUploadFeature
     },
-    
-    // ヘルパー関数
     helpers: {
-      // サンプルアテンダープロフィールの作成
       createSampleProfile: profileScoreTest.createSampleProfile,
-      
-      // 簡単なアップロードテスト
       testUpload: async (attenderId: string) => {
         console.info('画像アップロードテスト実行中...');
         try {
-          // テスト用サンプル画像URLを使用（実際のリクエストは行われません）
           const imageUrl = 'https://picsum.photos/200/300';
           return await imageUploadTest.testImageUpload(attenderId, imageUrl);
         } catch (error) {
@@ -45,8 +61,7 @@ if (isDevelopment() && typeof window !== 'undefined') {
           throw error;
         }
       },
-      
-      // プロフィールスコアテスト
+      testNewUpload: testNewUploadFeature,
       testProfileScore: () => {
         console.info('プロフィールスコアテスト実行中...');
         try {
@@ -58,8 +73,6 @@ if (isDevelopment() && typeof window !== 'undefined') {
           throw error;
         }
       },
-      
-      // プロフィール改善シミュレーション
       simulateProfileImprovements: () => {
         console.info('プロフィール改善シミュレーション実行中...');
         try {
