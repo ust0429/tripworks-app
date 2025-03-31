@@ -618,6 +618,71 @@ export const saveDraftApplication = async (userId: string, applicationData: any)
   }
 };
 
+/**
+ * アテンダープロフィールをバックエンドに保存する
+ * @param profile アテンダープロフィール
+ * @returns 保存の成否
+ */
+export const saveProfile = async (profile: AttenderProfile): Promise<boolean> => {
+  try {
+    console.info(`アテンダープロフィール[${profile.id}]を保存中...`);
+    
+    const attenderId = profile.id;
+    if (!attenderId) {
+      throw new Error('アテンダーIDが見つかりません');
+    }
+    
+    if (USE_CLOUD_RUN_API) {
+      // Cloud Run APIを使用
+      try {
+        // 後に実装予定の場合は以下のコードを使用
+        const response = await api.client.patch(
+          `/api/attenders/${attenderId}/profile`,
+          {
+            name: profile.name,
+            description: profile.bio || profile.biography,
+            specialties: profile.specialties,
+            languages: profile.languages,
+            expertise: profile.expertise,
+            profilePhoto: profile.profilePhoto || profile.imageUrl
+          }
+        );
+        
+        if (response.success) {
+          console.info('プロフィールが正常に保存されました');
+          return true;
+        } else {
+          console.error('プロフィール保存エラー:', response.error);
+          return false;
+        }
+      } catch (error) {
+        console.error('プロフィール保存APIエラー:', error);
+        return false;
+      }
+    } else {
+      // 開発環境ではモックデータを使用
+      // updateAttenderProfileを使用する
+      try {
+        await updateAttenderProfile(profile, {
+          name: profile.name,
+          bio: profile.bio,
+          specialties: profile.specialties,
+          languages: profile.languages,
+          expertise: profile.expertise
+        });
+        console.info('プロフィールが正常に保存されました');
+        return true;
+      } catch (error) {
+        console.error('プロフィール保存エラー:', error);
+        return false;
+      }
+    }
+  } catch (error) {
+    console.error('プロフィール保存エラー:', error);
+    return false;
+  }
+};
+
 export default {
   getAttenderProfile,
   updateAttenderProfile,
@@ -633,5 +698,6 @@ export default {
   getAttenderStats,
   submitAttenderApplication,
   getAttenderApplicationStatus,
-  saveDraftApplication
+  saveDraftApplication,
+  saveProfile
 };

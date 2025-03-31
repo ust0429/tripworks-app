@@ -493,7 +493,7 @@ export async function submitAttenderApplication(applicationData: AttenderApplica
 /**
  * アテンダープロフィール情報を更新
  */
-export async function updateAttenderProfile(attenderId: string, profileData: Partial<{
+export async function updateAttenderProfile(profile: any, profileData: Partial<{
   name: string;
   profileImage: string;
   biography: string;
@@ -503,6 +503,12 @@ export async function updateAttenderProfile(attenderId: string, profileData: Par
   socialMediaLinks: Record<string, string>;
 }>): Promise<void> {
   try {
+    // アテンダーIDを取得
+    const attenderId = profile.id;
+    if (!attenderId) {
+      throw new Error('アテンダーIDが見つかりません');
+    }
+    
     // 開発環境ではモックデータを使用
     if (isDevelopment()) {
       const attender = MOCK_ATTENDERS[attenderId];
@@ -844,3 +850,66 @@ export async function addExperienceToAttender(attenderId: string, experienceId: 
       : new Error('体験の追加中に予期せぬエラーが発生しました');
   }
 }
+
+/**
+ * アテンダープロフィールをバックエンドに保存する
+ * 
+ * @param profile アテンダープロフィール
+ * @returns 保存が成功したかどうか
+ */
+export async function saveProfile(profile: any): Promise<boolean> {
+  try {
+    console.info(`アテンダープロフィール[${profile.id}]を保存中...`);
+    
+    const attenderId = profile.id;
+    if (!attenderId) {
+      throw new Error('アテンダーIDが見つかりません');
+    }
+    
+    // バックエンドAPIにデータを送信
+    logApiRequest('PATCH', ENDPOINTS.ATTENDER.UPDATE_PROFILE(attenderId), { dataSize: JSON.stringify(profile).length });
+    
+    const response = await api.patch(
+      ENDPOINTS.ATTENDER.UPDATE_PROFILE(attenderId),
+      {
+        name: profile.name,
+        bio: profile.bio || profile.biography,
+        specialties: profile.specialties,
+        languages: profile.languages,
+        expertise: profile.expertise,
+        profilePhoto: profile.profilePhoto || profile.imageUrl
+      }
+    );
+    
+    logApiResponse('PATCH', ENDPOINTS.ATTENDER.UPDATE_PROFILE(attenderId), response);
+    
+    if (!response.success) {
+      console.error('プロフィール保存エラー:', response.error);
+      return false;
+    }
+    
+    console.info('プロフィールが正常に保存されました');
+    return true;
+  } catch (error) {
+    console.error('プロフィール保存エラー:', error);
+    return false;
+  }
+}
+
+// エクスポートする関数をオブジェクトにまとめる
+const AttenderService = {
+  getAttender,
+  getAllAttenders,
+  saveDraftApplication,
+  submitAttenderApplication,
+  updateAttenderProfile,
+  updateAvailableTimes,
+  addPortfolioItem,
+  getDraftApplication,
+  checkApplicationStatus,
+  cancelApplication,
+  addExperienceToAttender,
+  saveProfile
+};
+
+export default AttenderService;

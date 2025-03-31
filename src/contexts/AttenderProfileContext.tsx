@@ -217,21 +217,23 @@ export const AttenderProfileProvider: React.FC<ProfileProviderProps> = ({ childr
     
     setLoadingState('loading');
     try {
-      // プロフィール更新APIを呼び出す
-      await AttenderService.updateAttenderProfile(state.profile, {
-        name: state.profile.name,
-        bio: state.profile.bio,
-        specialties: state.profile.specialties,
-        languages: state.profile.languages,
-        expertise: state.profile.expertise,
-        imageUrl: state.profile.profilePhoto || state.profile.imageUrl
-      });
+      console.log('プロフィールをバックエンドに保存中...', state.profile);
       
-      // 成功時の処理
-      setLoadingState('success');
+      // AttenderServiceのsaveProfileメソッドを使用
+      const success = await AttenderService.saveProfile(state.profile);
       
-      // 完成度スコアを再計算
-      recalculateProfileScore();
+      if (success) {
+        // 成功時の処理
+        setLoadingState('success');
+        console.log('プロフィールが正常に保存されました');
+        
+        // 完成度スコアを再計算
+        recalculateProfileScore();
+      } else {
+        // 保存失敗時のエラー処理
+        setError('プロフィールの保存に失敗しました');
+        setLoadingState('error');
+      }
     } catch (error) {
       console.error('プロフィール保存エラー:', error);
       setError(error instanceof Error ? error.message : '予期せぬエラーが発生しました');
