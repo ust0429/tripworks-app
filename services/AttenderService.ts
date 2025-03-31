@@ -18,7 +18,7 @@ import {
   LanguageSkill,
   FormStatusType
 } from '../types/attender/index';
-import api, { logApiRequest, logApiResponse } from '../utils/apiClientEnhanced';
+import api, { logApiRequest, logApiResponse } from '../utils/apiClient';
 import { ENDPOINTS } from '../config/api';
 import { isDevelopment, isDebugMode } from '../config/env';
 

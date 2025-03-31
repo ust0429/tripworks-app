@@ -1,12 +1,12 @@
 /**
  * API モジュール
- * 
+ *
  * すべてのAPIサービスをまとめたエントリーポイント
  */
 
 // API クライアント
 import cloudRunApiClient from "./cloudRunClient";
-import enhancedApiClient, { cloudRunConfig } from "../utils/apiClientEnhanced";
+import enhancedApiClient, { cloudRunConfig } from "../utils/apiClient";
 
 // サービス
 import attenderService from "./services/attenderService";
@@ -29,36 +29,36 @@ export { default as notificationService } from "./services/notificationService";
 export { default as uploadService } from "./services/uploadService";
 
 // API共通設定
-const API_VERSION = '1.0';
-const DEFAULT_LOCALE = 'ja';
+const API_VERSION = "1.0";
+const DEFAULT_LOCALE = "ja";
 
 /**
  * APIクライアントの設定
- * 
+ *
  * @param token 認証トークン（オプション）
  * @param locale ロケール（オプション）
  */
 export function configureApi(token?: string, locale: string = DEFAULT_LOCALE) {
   // ヘッダー設定
   const headers: Record<string, string> = {
-    'Accept-Language': locale,
-    'X-API-Version': API_VERSION
+    "Accept-Language": locale,
+    "X-API-Version": API_VERSION,
   };
 
   // トークンがあれば追加
   if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
+    headers["Authorization"] = `Bearer ${token}`;
   }
 
   return {
     headers,
-    locale
+    locale,
   };
 }
 
 /**
  * エラーハンドラー設定
- * 
+ *
  * @param callback エラー処理コールバック
  */
 export function setErrorHandler(callback: (error: any) => void) {
@@ -72,12 +72,12 @@ let apiErrorHandler: ((error: any) => void) | null = null;
 
 /**
  * API共通エラーハンドリング
- * 
+ *
  * @param error エラーオブジェクト
  */
 export function handleApiError(error: any) {
   // コンソールにエラーを記録
-  console.error('API Error:', error);
+  console.error("API Error:", error);
 
   // カスタムエラーハンドラーがあれば実行
   if (apiErrorHandler) {
@@ -87,7 +87,7 @@ export function handleApiError(error: any) {
 
 /**
  * レスポンスの解析と処理
- * 
+ *
  * @param response APIレスポンス
  * @returns データまたはnull
  */
@@ -133,17 +133,17 @@ export const StatusCodes = {
   NOT_FOUND: 404,
   CONFLICT: 409,
   INTERNAL_SERVER_ERROR: 500,
-  SERVICE_UNAVAILABLE: 503
+  SERVICE_UNAVAILABLE: 503,
 };
 
 /**
  * レスポンスタイプ
  */
 export enum ResponseType {
-  JSON = 'json',
-  TEXT = 'text',
-  BLOB = 'blob',
-  ARRAY_BUFFER = 'arraybuffer'
+  JSON = "json",
+  TEXT = "text",
+  BLOB = "blob",
+  ARRAY_BUFFER = "arraybuffer",
 }
 
 /**
@@ -175,5 +175,5 @@ export default {
   handleApiError,
   parseApiResponse,
   StatusCodes,
-  ResponseType
+  ResponseType,
 };

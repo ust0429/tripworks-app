@@ -1,12 +1,18 @@
 /**
  * 認証コンテキスト
- * 
+ *
  * ユーザーの認証状態とAPIとの連携を管理します。
  */
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { getAuth, onAuthStateChanged, User } from 'firebase/auth';
-import apiClient, { getAuthToken } from '../utils/apiClientEnhanced';
-import { ENDPOINTS } from '../config/api';
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  ReactNode,
+} from "react";
+import { getAuth, onAuthStateChanged, User } from "firebase/auth";
+import apiClient, { getAuthToken } from "../utils/apiClient";
+import { ENDPOINTS } from "../config/api";
 
 // ユーザープロフィール型定義
 interface UserProfile {
@@ -37,35 +43,39 @@ const AuthContext = createContext<AuthContextType>({
   user: null,
   userProfile: null,
   error: null,
-  refreshProfile: async () => {}
+  refreshProfile: async () => {},
 });
 
 // 認証コンテキストプロバイダーコンポーネント
-export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+export const AuthProvider: React.FC<{ children: ReactNode }> = ({
+  children,
+}) => {
   const [user, setUser] = useState<User | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
   // ユーザープロフィール情報の取得
-  const fetchUserProfile = async (userId: string): Promise<UserProfile | null> => {
+  const fetchUserProfile = async (
+    userId: string
+  ): Promise<UserProfile | null> => {
     try {
       console.log(`ユーザープロフィールを取得中... ユーザーID: ${userId}`);
-      
+
       // API経由でプロフィール情報を取得
       const response = await apiClient.get(`${ENDPOINTS.USER.PROFILE}`);
-      
+
       if (response.success && response.data) {
-        console.log('ユーザープロフィール取得成功:', response.data);
+        console.log("ユーザープロフィール取得成功:", response.data);
         return response.data;
       } else {
-        console.error('ユーザープロフィール取得エラー:', response.error);
-        setError('プロフィール情報の取得に失敗しました');
+        console.error("ユーザープロフィール取得エラー:", response.error);
+        setError("プロフィール情報の取得に失敗しました");
         return null;
       }
     } catch (err) {
-      console.error('ユーザープロフィール取得中に例外が発生:', err);
-      setError('プロフィール情報の取得中にエラーが発生しました');
+      console.error("ユーザープロフィール取得中に例外が発生:", err);
+      setError("プロフィール情報の取得中にエラーが発生しました");
       return null;
     }
   };
@@ -73,7 +83,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   // プロフィール情報の再取得
   const refreshProfile = async (): Promise<void> => {
     if (!user) return;
-    
+
     try {
       setIsLoading(true);
       const profile = await fetchUserProfile(user.uid);
@@ -81,7 +91,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setUserProfile(profile);
       }
     } catch (err) {
-      console.error('プロフィール再取得エラー:', err);
+      console.error("プロフィール再取得エラー:", err);
     } finally {
       setIsLoading(false);
     }
@@ -90,13 +100,16 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   // 認証状態の監視
   useEffect(() => {
     const auth = getAuth();
-    
+
     const unsubscribe = onAuthStateChanged(auth, async (authUser) => {
       try {
-        console.log('認証状態が変更されました:', authUser ? `ユーザーID: ${authUser.uid}` : '未認証');
-        
+        console.log(
+          "認証状態が変更されました:",
+          authUser ? `ユーザーID: ${authUser.uid}` : "未認証"
+        );
+
         setUser(authUser);
-        
+
         if (authUser) {
           // 認証ユーザーのプロフィール情報を取得
           const profile = await fetchUserProfile(authUser.uid);
@@ -108,13 +121,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           setIsAuthenticated(false);
         }
       } catch (err) {
-        console.error('認証状態処理エラー:', err);
-        setError('認証情報の処理中にエラーが発生しました');
+        console.error("認証状態処理エラー:", err);
+        setError("認証情報の処理中にエラーが発生しました");
       } finally {
         setIsLoading(false);
       }
     });
-    
+
     // クリーンアップ関数
     return () => unsubscribe();
   }, []);
@@ -129,14 +142,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     user,
     userProfile,
     error,
-    refreshProfile
+    refreshProfile,
   };
 
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
 // カスタムフック

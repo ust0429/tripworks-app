@@ -2,7 +2,7 @@
   "name": "echo",
   "version": "0.1.0",
   "private": true,
-  "homepage": "https://ust0429.github.io/tripworks-app",
+  "homepage": "https://echo-app-staging.web.app",
   "dependencies": {
     "@emotion/react": "^11.11.4",
     "@emotion/styled": "^11.11.4",

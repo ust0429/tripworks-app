@@ -148,6 +148,9 @@ dist
 # production
 /build
 
+# Firebase サービスアカウントキー
+/echo-backend/config/echo-app-staging-de2e41155ae3.json
+
 # misc
 .DS_Store
 .env.local
