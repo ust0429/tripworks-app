@@ -1,14 +1,23 @@
 # Echo アプリ バックエンド統合進捗レポート
 
-## 更新日: 2025年3月31日 - 更新版6
+## 更新日: 2025年3月31日 - 更新版8
 
 ## 最新実装完了分（バックエンド統合）
 
-1. **画像アップロード機能の強化**
-   - `uploadAttenderProfilePhoto` メソッドの大幅改善（ファイルバリデーション・エラーハンドリング）
-   - `uploadAndUpdateProfilePhoto` メソッドの新規実装（画像アップロードとプロフィール更新の統合）
-   - 画像アップロード統合テスト用ユーティリティの実装（`imageUploadTest.ts`）
-   - 詳細なログ記録と進捗追跡機能の実装
+1. **画像アップロード機能の完全実装**
+   - `AttenderService` クラスへの画像アップロード関連の新メソッド追加
+   - `uploadAttenderProfilePhoto` と `uploadAndUpdateProfilePhoto` の機能統合
+   - `AttenderProfileContext` にアップロード機能の追加
+   - ローカルストレージと連携した状態管理の強化
+   - 開発者向けテスト環境の拡充
+   - ファイル形式とサイズのバリデーション機能の実装
+   - 進捗表示用コールバック機能の強化
+
+2. **バックエンドAPI統合の総合的改善**
+   - 認証トークン連携機能の実装（`getAuthToken`）
+   - ファイルアップロード機能と標準APIの統合
+   - エラーハンドリングとリカバリー機能の強化
+   - アップロード進捗モニタリングの実装
 
 2. **プロフィール完成度計算機能の強化**
    - `calculateProfileCompletionScore` アルゴリズムの改善
@@ -126,9 +135,11 @@
 
 3. **ファイル管理システムの実装**
    - ✅ Firebase Storageと連携した画像アップロード機能の完成
+   - ✅ 進捗表示機能とエラー処理の実装
    - 画像最適化処理の自動化（サーバーサイド処理） → `2025年Q2`
    - 動的画像プレビューとクロップ機能の実装
    - ファイルキャッシュ管理システムの実装
+   - 大きなファイルの分割アップロード対応 → `2025年Q2`
    - 複数画像のバッチアップロード機能の実装
 
 4. **通知システムの実装**
@@ -161,15 +172,19 @@
    ```
    - ブラウザでアプリにアクセス後、開発者コンソールを開く
    - `window.echoDevTools` オブジェクトにアクセス
-   - 画像アップロードテスト: `window.echoDevTools.helpers.testUpload('アテンダーID')`
-   - プロフィールスコアテスト: `window.echoDevTools.helpers.testProfileScore()`
-   - プロフィール改善シミュレーション: `window.echoDevTools.helpers.simulateProfileImprovements()`
+   - 画像アップロードテスト(旧方式): `window.echoDevTools.testUpload('アテンダーID')`
+   - 画像アップロードテスト(新方式): `window.echoDevTools.test.newUpload('アテンダーID')`
+   - プロフィールスコアテスト: `window.echoDevTools.testProfileScore()`
+   - プロフィール改善シミュレーション: `window.echoDevTools.simulateProfileImprovements()`
+   - 統合テスト: `window.echoDevTools.helpers.testNewUpload('アテンダーID')`
 
 2. **画像アップロード機能のテスト**
    - アテンダープロフィール編集画面で画像アップロード機能を使用
    - コンソールでログ出力を確認（進捗状況、成功/失敗通知）
    - 異なるファイル形式でのバリデーションテスト
    - Networkタブで「Offline」を有効にしてエラー処理をテスト
+   - 大きなファイル（5MB超）での柔軟なエラー処理を確認
+   - アップロード進捗表示の確認
 
 3. **APIテスターを使用したテスト**
    - `/development/ApiTester` にアクセス
