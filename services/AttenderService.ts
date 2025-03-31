@@ -20,7 +20,7 @@ import {
 } from '../types/attender/index';
 import api, { logApiRequest, logApiResponse } from '../utils/apiClientEnhanced';
 import { ENDPOINTS } from '../config/api';
-import { isDevelopment, isDebugMode } from '../config/env';
+import { isDevelopment } from '../config/env';
 
 // アテンダー申請検証結果の型定義
 export interface ApplicationValidationResult {
@@ -896,99 +896,6 @@ export async function saveProfile(profile: any): Promise<boolean> {
   }
 }
 
-/**
- * アテンダープロフィール画像をアップロードする
- */
-export async function uploadAttenderProfilePhoto(
-  attenderId: string,
-  file: File,
-  progressCallback?: (progress: number) => void
-): Promise<string> {
-  try {
-    if (!file.type.startsWith('image/')) {
-      throw new Error('画像ファイルのみアップロード可能です');
-    }
-    
-    const MAX_SIZE = 5 * 1024 * 1024;
-    if (file.size > MAX_SIZE) {
-      throw new Error('画像サイズは5MB以下にしてください');
-    }
-    
-    if (isDevelopment()) {
-      if (progressCallback) {
-        let progress = 0;
-        const interval = setInterval(() => {
-          progress += 10;
-          progressCallback(progress);
-          if (progress >= 100) clearInterval(interval);
-        }, 300);
-      }
-      
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      return `https://example.com/profiles/${attenderId}/${file.name}?t=${Date.now()}`;
-    }
-    
-    const additionalData = { attenderId };
-    
-    const response = await api.uploadFile(
-      ENDPOINTS.UPLOAD.PROFILE_PHOTO,
-      file,
-      'profilePhoto',
-      additionalData,
-      {},
-      progressCallback
-    );
-    
-    if (response.success && response.data && response.data.url) {
-      return response.data.url;
-    }
-    
-    throw new Error(response.error?.message || 'アップロード失敗');
-  } catch (error) {
-    console.error('プロフィール写真アップロードエラー:', error);
-    throw error;
-  }
-}
-
-/**
- * 画像をアップロードし、プロフィールを更新する
- */
-export async function uploadAndUpdateProfilePhoto(
-  attenderId: string,
-  file: File,
-  profile: any,
-  progressCallback?: (progress: number) => void
-): Promise<string> {
-  try {
-    const imageUrl = await uploadAttenderProfilePhoto(attenderId, file, progressCallback);
-    
-    await updateAttenderProfile(profile, {
-      profileImage: imageUrl
-    });
-    
-    if (isDevelopment()) {
-      try {
-        const attenderProfileKey = 'attenderProfile';
-        const storedProfile = localStorage.getItem(attenderProfileKey);
-        
-        if (storedProfile) {
-          const profileData = JSON.parse(storedProfile);
-          profileData.profileImage = imageUrl;
-          profileData.imageUrl = imageUrl;
-          localStorage.setItem(attenderProfileKey, JSON.stringify(profileData));
-        }
-      } catch (e) {
-        console.warn('ローカルストレージ更新エラー:', e);
-      }
-    }
-    
-    return imageUrl;
-  } catch (error) {
-    console.error('画像アップロードとプロフィール更新エラー:', error);
-    throw error;
-  }
-}
-
 // エクスポートする関数をオブジェクトにまとめる
 const AttenderService = {
   getAttender,
@@ -1002,9 +909,7 @@ const AttenderService = {
   checkApplicationStatus,
   cancelApplication,
   addExperienceToAttender,
-  saveProfile,
-  uploadAttenderProfilePhoto,
-  uploadAndUpdateProfilePhoto
+  saveProfile
 };
 
 export default AttenderService;
