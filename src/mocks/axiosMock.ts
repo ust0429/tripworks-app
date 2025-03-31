@@ -50,7 +50,8 @@ interface AxiosStatic extends AxiosInstance {
   spread<T, R>(callback: (...args: T[]) => R): (array: T[]) => R;
 }
 
-// ユーザープロフィールのモックデータ
+// モックユーザープロフィール
+// isAttenderフラグを同期するためのモックデータ
 const mockUserProfile = {
   id: '1',
   displayName: 'テストユーザー',
@@ -62,6 +63,32 @@ const mockUserProfile = {
   profileImage: 'https://via.placeholder.com/150',
   isAttender: false,
   createdAt: '2023-01-01T00:00:00Z'
+};
+
+// モックアテンダープロフィール
+const mockAttenderProfile = {
+  id: '1',
+  name: 'テストユーザー',
+  bio: 'よろしくお願いします。アテンダーとして多様な体験を提供します。',
+  location: '東京都',
+  specialties: ['アート・クラフト', '料理・グルメ', '音楽・ライブ'],
+  imageUrl: 'https://via.placeholder.com/150',
+  profilePhoto: 'https://via.placeholder.com/150',
+  experienceSamples: [],
+  languages: [
+    { language: '日本語', proficiency: 'native' },
+    { language: '英語', proficiency: 'intermediate' }
+  ],
+  isLocalResident: true,
+  isMigrant: false,
+  expertise: [],
+  availableTimes: [],
+  rating: 0,
+  reviewCount: 0,
+  createdAt: '2023-01-01T00:00:00Z',
+  updatedAt: '2023-01-01T00:00:00Z',
+  completionScore: 40,
+  verified: false
 };
 
 // localStorageからユーザープロフィールを取得するヘルパー関数
@@ -90,23 +117,61 @@ axiosMock.defaults = {};
 
 // GET リクエストのモック
 axiosMock.get = ((url: string, config?: AxiosRequestConfig) => {
-  if (url.includes('/users/profile')) {
+  console.log('[MOCK] GET request:', url);
+  
+  if (url.includes('/users/profile') || url.includes('/users/me')) {
     // ユーザープロフィールを取得
-return Promise.resolve({ 
-      data: getUserProfileFromStorage(), 
+    const userData = getUserProfileFromStorage();
+    console.log('[MOCK] Returning user profile:', userData);
+    
+    return Promise.resolve({ 
+      data: userData, 
       status: 200, 
       statusText: 'OK', 
       headers: {}, 
       config: config || {} 
     });
   }
+  
+  // アテンダープロフィールのエンドポイント対応
+  if (url.includes('/attenders/')) {
+    // ユーザーがアテンダーか確認
+    const userData = getUserProfileFromStorage();
+    
+    if (userData.isAttender) {
+      // アテンダーの場合はモックアテンダープロフィールを返す
+      console.log('[MOCK] Returning attender profile for user:', userData.id);
+      return Promise.resolve({ 
+        data: { ...mockAttenderProfile, id: userData.id, name: userData.displayName }, 
+        status: 200, 
+        statusText: 'OK', 
+        headers: {}, 
+        config: config || {} 
+      });
+    } else {
+      // アテンダーでない場合は404エラー
+      console.log('[MOCK] User is not an attender, returning 404');
+      return Promise.reject({
+        response: {
+          data: { error: 'Attender profile not found' },
+          status: 404,
+          statusText: 'Not Found',
+          headers: {},
+          config: config || {}
+        }
+      });
+    }
+  }
 
+  // その他のエンドポイントは空のレスポンスを返す
   return Promise.resolve({ data: {}, status: 200, statusText: 'OK', headers: {}, config: config || {} });
 }) as any;
 
 // PUT リクエストのモック
 axiosMock.put = ((url: string, data?: any, config?: AxiosRequestConfig) => {
-  if (url.includes('/users/profile') && data) {
+  console.log('[MOCK] PUT request:', url, data);
+  
+  if ((url.includes('/users/profile') || url.includes('/users/me')) && data) {
     // 保存されているユーザープロフィールを取得
     const currentProfile = getUserProfileFromStorage();
     
@@ -116,8 +181,24 @@ axiosMock.put = ((url: string, data?: any, config?: AxiosRequestConfig) => {
     // ローカルストレージに保存
     try {
       localStorage.setItem('echo_user', JSON.stringify(updatedProfile));
+      // 認証状態も更新
+      if (data.isAttender !== undefined) {
+        try {
+          const storedCurrentUser = localStorage.getItem('echo_currentUser');
+          if (storedCurrentUser) {
+            const currentUserData = JSON.parse(storedCurrentUser);
+            currentUserData.isAttender = data.isAttender;
+            localStorage.setItem('echo_currentUser', JSON.stringify(currentUserData));
+            console.log('[MOCK] Updated auth state isAttender:', data.isAttender);
+          }
+        } catch (e) {
+          console.error('[MOCK] Failed to update auth state:', e);
+        }
+      }
+      
+      console.log('[MOCK] Updated user profile:', updatedProfile);
     } catch (e) {
-      console.error('Failed to save user profile to localStorage:', e);
+      console.error('[MOCK] Failed to save user profile to localStorage:', e);
     }
     
     return Promise.resolve({ 
@@ -127,6 +208,36 @@ axiosMock.put = ((url: string, data?: any, config?: AxiosRequestConfig) => {
       headers: {}, 
       config: config || {} 
     });
+  }
+  
+  // アテンダープロフィールの更新処理
+  if (url.includes('/attenders/') && data) {
+    // ユーザーがアテンダーか確認
+    const userData = getUserProfileFromStorage();
+    
+    if (userData.isAttender) {
+      console.log('[MOCK] Updating attender profile:', data);
+      // アテンダープロフィールを更新して返す
+      return Promise.resolve({ 
+        data: { ...mockAttenderProfile, ...data, id: userData.id }, 
+        status: 200, 
+        statusText: 'OK', 
+        headers: {}, 
+        config: config || {} 
+      });
+    } else {
+      // アテンダーでない場合は403エラー
+      console.log('[MOCK] User is not an attender, returning 403');
+      return Promise.reject({
+        response: {
+          data: { error: 'User is not an attender' },
+          status: 403,
+          statusText: 'Forbidden',
+          headers: {},
+          config: config || {}
+        }
+      });
+    }
   }
   
   return Promise.resolve({ data: data || {}, status: 200, statusText: 'OK', headers: {}, config: config || {} });

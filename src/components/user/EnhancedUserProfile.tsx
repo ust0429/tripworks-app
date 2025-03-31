@@ -61,45 +61,82 @@ const EnhancedUserProfile: React.FC = () => {
     'サブカルチャー', 'スポーツ・体験', 'フェス・イベント'
   ];
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        
-        // ユーザープロフィールの取得
-        const userData = await getUserProfile();
-        setUser(userData);
-        
-        // フォームデータを初期化
-        setFormData({
-          displayName: userData.displayName || '',
-          email: userData.email || '',
-          phoneNumber: userData.phoneNumber || '',
-          bio: userData.bio || '',
-          location: userData.location || '',
-          interests: userData.interests || [],
-          profileImage: userData.profileImage || '',
-        });
-        
-        // アテンダープロフィールの取得（アテンダーの場合）
-        if (userData.isAttender && authUser?.id) {
+  // ユーザーデータとアテンダープロフィールを取得する関数
+  const fetchUserAndAttenderData = async (forceRefresh = false) => {
+    try {
+      setLoading(true);
+      console.info('プロフィールデータ取得開始...');
+      
+      // ユーザープロフィールの取得
+      const userData = await getUserProfile();
+      setUser(userData);
+      console.info('ユーザープロフィール取得完了:', { isAttender: userData.isAttender });
+      
+      // フォームデータを初期化
+      setFormData({
+        displayName: userData.displayName || '',
+        email: userData.email || '',
+        phoneNumber: userData.phoneNumber || '',
+        bio: userData.bio || '',
+        location: userData.location || '',
+        interests: userData.interests || [],
+        profileImage: userData.profileImage || '',
+      });
+      
+      // アテンダープロフィールの取得（アテンダーの場合）
+      if (userData.isAttender && authUser?.id) {
+        console.info('アテンダープロフィール取得開始...');
+        try {
+          const attenderData = await getAttenderProfile(authUser.id);
+          console.info('アテンダープロフィール取得成功');
+          setAttenderProfile(attenderData);
+        } catch (err) {
+          console.error('アテンダープロフィール取得失敗:', err);
+          // ストレージから手動でisAttender状態を確認
           try {
-            const attenderData = await getAttenderProfile(authUser.id);
-            setAttenderProfile(attenderData);
-          } catch (err) {
-            console.error('Failed to fetch attender profile:', err);
+            const storedUser = localStorage.getItem('echo_user');
+            if (storedUser) {
+              const parsedUser = JSON.parse(storedUser);
+              console.info('ローカルストレージのユーザー情報:', { isAttender: parsedUser.isAttender });
+            }
+          } catch (e) {
+            console.error('ローカルストレージ確認エラー:', e);
+          }
+          
+          if (forceRefresh) {
+            // 強制リフレッシュ時のエラーは通知する
+            setError('アテンダープロフィールの取得に失敗しました。ページを再読み込みしてください。');
           }
         }
-      } catch (err) {
-        setError('プロフィールデータの取得に失敗しました。');
-        console.error('Failed to fetch profile data:', err);
-      } finally {
-        setLoading(false);
+      } else {
+        console.info('アテンダーではないため、アテンダープロフィールは取得しません');
       }
-    };
+    } catch (err) {
+      setError('プロフィールデータの取得に失敗しました。');
+      console.error('プロフィールデータ取得エラー:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    fetchData();
+  // 初回マウント時にデータを取得
+  useEffect(() => {
+    fetchUserAndAttenderData();
   }, [authUser?.id]);
+  
+  // ページがフォーカスされた時にデータを再取得
+  useEffect(() => {
+    const handleFocus = () => {
+      console.info('ウィンドウがフォーカスされました。データを再取得します...');
+      fetchUserAndAttenderData(false); // フォーカス時は静かに再取得
+    };
+    
+    window.addEventListener('focus', handleFocus);
+    
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, []);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -144,6 +181,8 @@ const EnhancedUserProfile: React.FC = () => {
   };
 
   const handleBecomeAttender = () => {
+    // アテンダー情報ページに遷移
+    console.info('アテンダー申請ページに遷移します');
     navigate('/attender/info');
   };
 
@@ -152,6 +191,8 @@ const EnhancedUserProfile: React.FC = () => {
   };
 
   const handleEditAttenderProfile = () => {
+    // アテンダープロフィール編集ページに遷移
+    console.info('アテンダープロフィール編集ページに遷移します');
     navigate('/attender/profile/edit');
   };
 

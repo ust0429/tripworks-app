@@ -108,9 +108,22 @@ export const navigateToHome = (): void => {
 
 /**
  * マイページに遷移する
+ * 必要に応じて強制リロードするオプションを追加
  */
-export const navigateToProfile = (): void => {
-  navigateTo('/profile');
+export const navigateToProfile = (options?: { forceReload?: boolean; refreshParam?: boolean }): void => {
+  const { forceReload = false, refreshParam = false } = options || {};
+  
+  if (forceReload) {
+    // 強制リロードが必要な場合
+    const profileUrl = refreshParam 
+      ? `/profile?refresh=${Date.now()}` 
+      : '/profile';
+      
+    window.location.href = window.location.origin + profileUrl;
+  } else {
+    // 通常のナビゲーション
+    navigateTo('/profile');
+  }
 };
 
 /**

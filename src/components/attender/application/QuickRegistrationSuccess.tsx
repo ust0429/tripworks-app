@@ -32,12 +32,36 @@ const QuickRegistrationSuccess: React.FC<QuickRegistrationSuccessProps> = ({
     const updateUserAttenderStatus = async () => {
       try {
         if (user) {
+          console.info('ユーザープロフィールのisAttenderフラグを更新開始...');
+          
           // ユーザープロフィールを更新してisAttenderをtrueに設定
           await updateUserProfile({ isAttender: true });
           
           // 認証情報も更新（ローカルストレージなどのキャッシュも更新されるように）
           if (updateAuthUser) {
             updateAuthUser({ ...user, isAttender: true });
+            console.info('認証情報のisAttenderフラグを更新しました');
+          }
+          
+          // ローカルストレージの更新を確実にするために直接セット
+          try {
+            const storedUser = localStorage.getItem('echo_user');
+            if (storedUser) {
+              const userData = JSON.parse(storedUser);
+              userData.isAttender = true;
+              localStorage.setItem('echo_user', JSON.stringify(userData));
+              console.info('ローカルストレージのユーザー情報を更新しました');
+            }
+            
+            const storedCurrentUser = localStorage.getItem('echo_currentUser');
+            if (storedCurrentUser) {
+              const currentUserData = JSON.parse(storedCurrentUser);
+              currentUserData.isAttender = true;
+              localStorage.setItem('echo_currentUser', JSON.stringify(currentUserData));
+              console.info('ローカルストレージの現在のユーザー情報を更新しました');
+            }
+          } catch (storageError) {
+            console.error('ローカルストレージの更新に失敗しました:', storageError);
           }
           
           console.info('ユーザープロフィールのisAttenderフラグを更新しました');
@@ -63,6 +87,13 @@ const QuickRegistrationSuccess: React.FC<QuickRegistrationSuccessProps> = ({
     
     return () => clearInterval(timer);
   }, [applicationId, user, updateAuthUser]);
+  
+  // カウントダウン終了時にホームに自動で戻る
+  useEffect(() => {
+    if (countdown === 0 && onReturnHome) {
+      onReturnHome();
+    }
+  }, [countdown, onReturnHome]);
   
   // 申請IDをクリップボードにコピー
   const copyToClipboard = () => {
@@ -164,7 +195,8 @@ const QuickRegistrationSuccess: React.FC<QuickRegistrationSuccessProps> = ({
         className="px-6 py-3 bg-mono-light text-mono-black rounded-md hover:bg-mono-gray-light transition-colors flex items-center justify-center gap-2"
           onClick={(e) => {
           e.preventDefault();
-          navigateToProfile();
+          // 更新されたnavigateToProfile関数を使用して強制リロード
+          navigateToProfile({ forceReload: true, refreshParam: true });
           }}
         >
         <User className="w-5 h-5" />

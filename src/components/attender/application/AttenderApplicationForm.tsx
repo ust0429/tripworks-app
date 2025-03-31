@@ -229,11 +229,28 @@ const AttenderApplicationFormContent: React.FC = () => {
   
   // ホームに戻る
   const handleReturnHome = useCallback(() => {
-    navigateToHome();
+    // 引数なしでlocation.hrefを使用するとキャッシュを強制的にリフレッシュして読み込む
+    window.location.href = window.location.origin + '/?refresh=' + Date.now();
   }, []);
   
   // 申請が完了した場合
   if (applicationId) {
+    // 認証情報にアテンダーフラグを設定しておく
+    if (user && !user.isAttender) {
+      // ローカルストレージのユーザー情報を直接更新
+      try {
+        const storedUser = localStorage.getItem('echo_user');
+        if (storedUser) {
+          const userData = JSON.parse(storedUser);
+          userData.isAttender = true;
+          localStorage.setItem('echo_user', JSON.stringify(userData));
+          console.info('ローカルストレージのユーザー情報を更新しました (ApplicationForm)');
+        }
+      } catch (e) {
+        console.error('ローカルストレージの更新に失敗しました (ApplicationForm):', e);
+      }
+    }
+    
     // 基本登録成功画面を表示
     return (
       <QuickRegistrationSuccess 

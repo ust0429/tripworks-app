@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useReducer, ReactNode, useEffect } from 'react';
+import { isDevelopment, isDebugMode } from '../config/env';
 import AttenderService from '../services/AttenderService';
 import { calculateProfileCompletionScore, generateProfileImprovementTips } from '../utils/profileCompletionScore';
 import { 
@@ -151,22 +152,47 @@ export const AttenderProfileProvider: React.FC<ProfileProviderProps> = ({ childr
   const [state, dispatch] = useReducer(profileReducer, initialState);
   
   // アクションクリエイター
-  const setProfile = (profile: AttenderProfile) => 
+  const setProfile = (profile: AttenderProfile) => {
+    console.info('プロフィール設定:', { id: profile.id, name: profile.name });
     dispatch({ type: 'SET_PROFILE', payload: profile });
+  };
   
-  const setLoadingState = (loadingState: ProfileContextState['loadingState']) => 
+  const setLoadingState = (loadingState: ProfileContextState['loadingState']) => {
+    if (isDevelopment() || isDebugMode()) {
+      console.info('ローディング状態変更:', loadingState);
+    }
     dispatch({ type: 'SET_LOADING_STATE', payload: loadingState });
+  };
   
-  const setError = (error: string | null) => 
+  const setError = (error: string | null) => {
+    if (error) {
+      console.error('エラー設定:', error);
+    } else if (state.error) {
+      console.info('エラークリア');
+    }
     dispatch({ type: 'SET_ERROR', payload: error });
+  };
   
-  const setEditMode = (mode: ProfileEditMode) => 
+  const setEditMode = (mode: ProfileEditMode) => {
+    console.info('編集モード変更:', { from: state.editMode, to: mode });
     dispatch({ type: 'SET_EDIT_MODE', payload: mode });
+  };
   
-  const updateProfileField = (operation: ProfileUpdateOperation) => 
+  const updateProfileField = (operation: ProfileUpdateOperation) => {
+    if (isDevelopment() || isDebugMode()) {
+      console.info('プロフィールフィールド更新:', { 
+        field: operation.field, 
+        valueType: typeof operation.value,
+        valuePreview: Array.isArray(operation.value) 
+          ? `Array(${operation.value.length})` 
+          : String(operation.value).substring(0, 50)
+      });
+    }
     dispatch({ type: 'UPDATE_PROFILE_FIELD', payload: operation });
+  };
   
   const addExperienceSample = (sample: ExperienceSample) => {
+    console.info('体験サンプル追加:', { title: sample.title });
     dispatch({ type: 'ADD_EXPERIENCE_SAMPLE', payload: convertExperienceSample(sample) });
   };
   
@@ -174,35 +200,73 @@ export const AttenderProfileProvider: React.FC<ProfileProviderProps> = ({ childr
     id: string, 
     data: Partial<ExperienceSample>
   ) => {
+    console.info('体験サンプル更新:', { id, fields: Object.keys(data) });
     dispatch({ 
       type: 'UPDATE_EXPERIENCE_SAMPLE', 
       payload: { id, data: convertExperienceSample(data) } 
     });
   };
   
-  const removeExperienceSample = (id: string) => 
+  const removeExperienceSample = (id: string) => {
+    console.info('体験サンプル削除:', { id });
     dispatch({ type: 'REMOVE_EXPERIENCE_SAMPLE', payload: id });
+  };
   
-  const updateAvailability = (availability: AvailabilityTimeSlot[]) => 
+  const updateAvailability = (availability: AvailabilityTimeSlot[]) => {
+    console.info('利用可能時間更新:', { count: availability.length });
     dispatch({ type: 'UPDATE_AVAILABILITY', payload: availability });
+  };
   
-  const updateCompletionScore = (score: number) => 
+  const updateCompletionScore = (score: number) => {
+    // 前回のスコアと比較して変化があった場合のみログを出力
+    if (score !== state.completionScore) {
+      console.info('完成度スコア更新:', { 
+        from: state.completionScore, 
+        to: score,
+        change: score - state.completionScore
+      });
+    }
     dispatch({ type: 'UPDATE_COMPLETION_SCORE', payload: score });
+  };
   
-  const updateImprovementTips = (tips: string[]) => 
+  const updateImprovementTips = (tips: string[]) => {
+    if (isDevelopment() || isDebugMode()) {
+      console.info('改善ヒント更新:', { count: tips.length });
+    }
     dispatch({ type: 'UPDATE_IMPROVEMENT_TIPS', payload: tips });
+  };
   
   // プロフィール完成度スコアの再計算
   const recalculateProfileScore = () => {
-    if (!state.profile) return;
+    if (!state.profile) {
+      console.warn('プロフィールが存在しないため、完成度スコアを計算できません');
+      return;
+    }
     
-    // 完成度スコアを計算
-    const score = calculateProfileCompletionScore(state.profile);
-    updateCompletionScore(score);
-    
-    // 改善アドバイスを生成
-    const tips = generateProfileImprovementTips(state.profile);
-    updateImprovementTips(tips);
+    try {
+      // 完成度スコアを計算
+      const score = calculateProfileCompletionScore(state.profile);
+      updateCompletionScore(score);
+      
+      // 改善アドバイスを生成
+      const tips = generateProfileImprovementTips(state.profile);
+      updateImprovementTips(tips);
+      
+      // ローカルストレージにキャッシュ
+      if (state.profile.id) {
+        try {
+          localStorage.setItem(
+            `profile_score_${state.profile.id}`, 
+            JSON.stringify({ score, date: new Date().toISOString() })
+          );
+        } catch (e) {
+          // ローカルストレージエラーは無視する
+          console.warn('ローカルストレージへの保存に失敗しました:', e);
+        }
+      }
+    } catch (error) {
+      console.error('完成度スコア計算エラー:', error);
+    }
   };
   
   // プロフィールが変更されたときに完成度スコアを再計算
@@ -213,11 +277,35 @@ export const AttenderProfileProvider: React.FC<ProfileProviderProps> = ({ childr
   }, [state.profile]);
   // バックエンドとの連携メソッド
   const saveProfileToBackend = async () => {
-    if (!state.profile) return;
+    if (!state.profile) {
+      console.error('保存対象のプロフィールが存在しません');
+      setError('プロフィールデータが見つかりません');
+      setLoadingState('error');
+      return;
+    }
     
+    // プロフィールデータのバリデーション
+    const requiredFields = ['name', 'bio', 'location'];
+    const missingFields = requiredFields.filter(field => {
+      const value = state.profile?.[field as keyof AttenderProfile];
+      return !value || (typeof value === 'string' && value.trim() === '');
+    });
+    
+    if (missingFields.length > 0) {
+      console.warn(`プロフィール保存警告: 必須フィールドが未入力です - ${missingFields.join(', ')}`);
+      // 警告だけで保存は続行する
+    }
+    
+    // ローディング状態を設定
     setLoadingState('loading');
+    
     try {
-      console.log('プロフィールをバックエンドに保存中...', state.profile);
+      // 保存前ログ
+      console.info('プロフィールをバックエンドに保存中...', {
+        id: state.profile.id,
+        name: state.profile.name,
+        fields: Object.keys(state.profile).length
+      });
       
       // AttenderServiceのsaveProfileメソッドを使用
       const success = await AttenderService.saveProfile(state.profile);
@@ -225,18 +313,42 @@ export const AttenderProfileProvider: React.FC<ProfileProviderProps> = ({ childr
       if (success) {
         // 成功時の処理
         setLoadingState('success');
-        console.log('プロフィールが正常に保存されました');
+        console.info('プロフィールが正常に保存されました:', state.profile.id);
         
         // 完成度スコアを再計算
         recalculateProfileScore();
+        
+        // 一定時間後にローディング状態をリセット
+        setTimeout(() => {
+          if (state.loadingState === 'success') {
+            setLoadingState('idle');
+          }
+        }, 3000);
       } else {
         // 保存失敗時のエラー処理
-        setError('プロフィールの保存に失敗しました');
+        const errorMessage = 'プロフィールの保存に失敗しました。ネットワーク接続を確認してください。';
+        console.error(errorMessage);
+        setError(errorMessage);
         setLoadingState('error');
       }
     } catch (error) {
-      console.error('プロフィール保存エラー:', error);
-      setError(error instanceof Error ? error.message : '予期せぬエラーが発生しました');
+      // 例外発生時のエラー処理
+      console.error('プロフィール保存時に例外が発生しました:', error);
+      
+      // ユーザーフレンドリーなエラーメッセージ
+      let errorMessage = '予期せぬエラーが発生しました';
+      if (error instanceof Error) {
+        // ネットワークエラーの特殊処理
+        if (error.message.includes('Network') || error.message.includes('network')) {
+          errorMessage = 'ネットワーク接続エラーが発生しました。インターネット接続を確認してください。';
+        } else if (error.message.includes('timeout') || error.message.includes('Timeout')) {
+          errorMessage = 'サーバーからの応答がタイムアウトしました。時間をおいて再試行してください。';
+        } else {
+          errorMessage = `エラー: ${error.message}`;
+        }
+      }
+      
+      setError(errorMessage);
       setLoadingState('error');
     }
   };
