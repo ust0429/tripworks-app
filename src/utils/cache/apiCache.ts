@@ -21,7 +21,7 @@ interface ApiCacheDB extends DBSchema {
     indexes: { 'by-url': string; 'by-expiry': number };
   };
   'api-queue': {
-    key: string;
+    key: number;  // タイムスタンプをkeyとして使用するため数値型に変更
     value: {
       url: string;
       method: string;
@@ -238,6 +238,7 @@ export async function getQueuedRequests(): Promise<any[]> {
 export async function removeQueuedRequest(timestamp: number): Promise<void> {
   try {
     const db = await getDB();
+    // タイプエラーを修正：timestampは数値なのでそのまま渡す
     await db.delete('api-queue', timestamp);
   } catch (error) {
     console.error('キューリクエスト削除エラー:', error);

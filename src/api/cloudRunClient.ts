@@ -4,8 +4,7 @@
  * Google Cloud Run上のサービスに対するAPI呼び出しを行うクライアント
  */
 
-import { ApiClient, ApiResponse, ApiOptions } from "../utils/apiClient";
-import { cloudRunConfig } from "../utils/apiClient";
+import { ApiClient, ApiResponse, ApiOptions, cloudRunConfig } from "../utils/apiClient";
 
 /**
  * Cloud Run APIリクエストオプション
@@ -376,12 +375,16 @@ const cloudRunApiClient: ApiClient = {
 
           // ヘッダーを設定
           Object.entries(cloudRunConfig.headers).forEach(([name, value]) => {
-            xhr.setRequestHeader(name, value);
+            if (typeof value === 'string') {
+              xhr.setRequestHeader(name, value);
+            }
           });
 
           if (options.headers) {
             Object.entries(options.headers).forEach(([name, value]) => {
-              xhr.setRequestHeader(name, value);
+              if (typeof value === 'string') {
+                xhr.setRequestHeader(name, value);
+              }
             });
           }
 

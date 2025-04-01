@@ -7,6 +7,17 @@ import { isDevelopment, isDebugMode } from '../config/env';
 import environmentManager from './environmentManager';
 import apiCache from './cache/apiCache';
 
+// Cloud Run API設定
+export const cloudRunConfig = {
+  baseUrl: process.env.REACT_APP_CLOUD_RUN_API_URL || 'https://api.echo-cloud.example',
+  timeout: 60000, // 60秒
+  maxRetries: 3,
+  retryDelay: 1000,
+  headers: {
+    'X-API-Version': '1.0'
+  }
+};
+
 export interface ApiOptions {
   headers?: Record<string, string>;
   params?: Record<string, any>;
@@ -223,7 +234,7 @@ async function request<T = any>(
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), settings.timeout);
       
-      let token = null;
+      let token: string | null = null;
       if (settings.requireAuth || envConfig.authEnabled) {
         token = await getAuthToken();
         
@@ -540,7 +551,7 @@ async function uploadFile<T = any>(
   const envConfig = environmentManager.getEnvironmentConfig();
   
   try {
-    let token = null;
+    let token: string | null = null;
     if (options.requireAuth || envConfig.authEnabled) {
       token = await getAuthToken();
       
@@ -718,6 +729,15 @@ async function uploadFile<T = any>(
           });
         }
         
+        // CloudRunConfig のヘッダーを適用
+        if (url.includes(cloudRunConfig.baseUrl)) {
+          Object.entries(cloudRunConfig.headers).forEach(([name, value]) => {
+            if (typeof value === 'string') {
+              xhr.setRequestHeader(name, value);
+            }
+          });
+        }
+        
         xhr.send(formData);
       });
     }
@@ -822,6 +842,27 @@ export function logApiResponse<T = any>(
 // アプリケーション起動時に認証リスナーを設定
 setupAuthListener();
 
+// 既存のAPIクライアント構造との互換性を保つため、clientプロパティを提供
+const client = {
+  get,
+  post,
+  put,
+  patch,
+  delete: del,
+  uploadFile
+};
+
+// Cloud Run API用のクライアント
+const cloudRunApiClient = {
+  get,
+  post,
+  put,
+  patch,
+  delete: del,
+  uploadFile
+};
+
+// APIクライアントをエクスポート
 const api = {
   get,
   post,
@@ -831,7 +872,10 @@ const api = {
   uploadFile,
   getAuthToken,
   setupAuthListener,
-  registerMock
+  registerMock,
+  // 既存の構造との互換性を維持
+  client,
+  cloudRunApiClient
 };
 
 export default api;
